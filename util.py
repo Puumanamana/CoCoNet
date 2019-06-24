@@ -52,24 +52,30 @@ def get_kmer_frequency(sequence,k=4):
 def get_coverage(pairs,coverage_h5,window_size,
                  columns=["sp","start","end"]):
     h5data = h5py.File(coverage_h5)
-    contigs = np.unique(np.concatenate((pairs.sp1,pairs.sp2)))
+    contigs = np.unique(np.concatenate((pairs.A.sp,
+                                        pairs.B.sp)))
     
-    coverage_data = { ctg: h5data.get(ctg) for ctg in contigs }
+    coverage_data = { ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs }
 
     pairs_sorted = pairs.stack(level=0).sort_values(by=columns)
-    order = np.argsort(pairs_sorted.idx)
+    order = np.argsort(pairs_sorted.index)
     
     # Calculate coverage for this order
-    frag_len,n_samples = list(coverage_data.values())[0].shape
-    X = np.zeros([len(pairs_sorted),int(frag_len/window_size),n_samples])
+    n_samples = np.array(list(coverage_data.values()))[0].shape[1]
+    frag_len = pairs_sorted.end.iloc[0] - pairs_sorted.start.iloc[0]
     
+    X = np.zeros([len(pairs_sorted),int(frag_len/window_size),n_samples])
     seen = {}
 
     for i,(sp,start,end) in enumerate(pairs_sorted[columns].values):
-        cov_sp = cov.get((sp,start),None)
+        cov_sp = seen.get((sp,start),None)
 
         if cov_sp is None:
-            cov_sp = avg_window(coverage_data[sp][start:end,:], window_size)
+            cov_sp = np.apply_along_axis(
+                lambda x: avg_window(x,window_size),
+                0,
+                coverage_data[sp][start:end,:]
+            )
             seen[(sp,start)] = cov_sp
 
         X[i] = cov_sp

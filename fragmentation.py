@@ -79,4 +79,9 @@ def make_pairs(contigs,n_frags,step,frag_len,output,N_samples=1e6):
     all_pairs = pd.concat([positive_pairs,negative_pairs])
     all_pairs.index = np.arange(len(all_pairs)).astype(int)
 
+    all_pairs.loc[:,("A",["start","end"])] = all_pairs.loc[:,("A",["start","end"])].astype(int)
+    all_pairs.loc[:,("A",["start","end"])] *= step
+    all_pairs.loc[:,("B",["start","end"])] = all_pairs.loc[:,("B",["start","end"])].astype(int)    
+    all_pairs.loc[:,("B",["start","end"])] *= step    
+    
     all_pairs.to_csv(output)

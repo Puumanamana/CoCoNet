@@ -10,7 +10,11 @@ print("WARNING: V4863 has been manually removed. See issue CAMISIM issue #60")
 
 metadata = pd.read_csv("metadata.csv",index_col="accession")
 metadata.V_id = metadata.V_id.str.split("_").str.get(0)
-mapping = metadata.groupby(level=0)["V_id"].agg("first")
+mapping = (metadata
+           .groupby("V_id")
+           .agg({"start": list,
+                 "end": list})
+)
 
 genomes_length = metadata.groupby("V_id")["end"].agg("last")
 
@@ -25,8 +29,13 @@ def convert(h5data,virus,depth_dir="camisim/coverage/*"):
         if dataset.size > 0:
             coverage[dataset.pos.values-1,i] = dataset.depth.values
 
-    h5data.create_dataset(virus,data=coverage, dtype='uint32')
+    contigs = mapping.loc[virus]
 
+    for i,(start,end) in enumerate(zip(contigs.start,contigs.end)):
+        h5data.create_dataset("{}_{}".format(virus,i),
+                              data=coverage[start:end,:],
+                              dtype='uint32')
+    
 h5data = h5py.File("coverage.h5")
 [ convert(h5data,virus) for virus in progressbar(genomes_length.drop("V4863").index) ]
 

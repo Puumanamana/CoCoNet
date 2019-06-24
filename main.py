@@ -1,3 +1,6 @@
+from Bio import SeqIO
+import numpy as np
+
 from config import io_path
 from config import frag_len,step,n_frags
 from fragmentation import make_pairs
