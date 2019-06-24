@@ -1,8 +1,11 @@
 simulation_util/*
 data
 *.npy
+*.h5
 *.pickle
 *.fast[aq]
 *.zip
 *.gz
 !*.py
+input_data
+output_data

@@ -1,0 +1,82 @@
+from itertools import combinations
+import pandas as pd
+import numpy as np
+
+from Bio import SeqIO
+from util import timer
+
+def calculate_optimal_dist(n_frags,fppc):
+    """
+    For a given contig, get the maximum distance between fragments, s.t.:
+       - A fragment step (step)
+       - A number of fragment pairs per contig (fppc)
+       - A number of fragment per contig (n_frags)
+    Explanation for formula in paper
+    """
+
+    min_steps = int(n_frags+0.5*(1-np.sqrt(8*fppc+1)))
+
+    return min_steps
+
+def make_positive_pairs(label,frag_steps,contig_frags,fppc):
+
+    min_step = calculate_optimal_dist(contig_frags,fppc)
+    
+    pairs_A, pairs_B = [ np.empty([fppc,3],dtype="<U16") ]*2
+    k = 0
+    for i,j in combinations(range(contig_frags),2):
+        if k==fppc:
+            break
+        if np.abs(j-i) >= min_step:
+            pairs_A[k,:] = [label,i,(j+frag_steps)]
+            pairs_B[k,:] = [label,j,(j+frag_steps)]            
+            k += 1
+
+    dfs = {'A': pd.DataFrame(pairs_A,columns=["sp","start","end"]),
+           'B': pd.DataFrame(pairs_B,columns=["sp","start","end"])}
+    
+    return pd.concat(dfs.values(),axis=1,keys=dfs.keys())
+
+@timer
+def make_negative_pairs(n_frags_all, N_samples, frag_steps):
+    # genome_frags: nb of fragments per genome
+    # 1) select genome pairs
+    # 2) select random fragments
+
+    pair_idx = np.random.choice(len(n_frags_all),
+                                [ 5*N_samples, 2 ])
+    
+    pair_idx = pair_idx[pair_idx[:,0] != pair_idx[:,1] ][:N_samples,:]
+
+    rd_frags = [[ np.random.choice(n_frags)
+                  for n_frags in n_frags_all.values[pair_idx[:,i]] ]
+                for i in range(2) ]
+
+    pairs = [ pd.DataFrame({"sp": n_frags_all.index[pair_idx[:,i]],
+                            "start": rd_frags[i],
+                            "end": np.array(rd_frags[i]) + frag_steps})
+              for i in range(2) ]
+    
+    dfs = {'A': pairs[0],
+           'B': pairs[1] }
+    
+    return pd.concat(dfs.values(),axis=1,keys=dfs.keys())
+
+def make_pairs(contigs,n_frags,step,frag_len,output,N_samples=1e6):
+    """
+    
+    """
+    contig_frags = pd.Series({ ctg.id: 1+int((len(ctg.seq)-frag_len)/step)
+                               for ctg in contigs})
+    frag_pairs_per_ctg = int(N_samples / len(contig_frags))
+
+    frag_steps = int(frag_len/step)
+    
+    positive_pairs = pd.concat([ make_positive_pairs(ctg,frag_steps,n_frags,frag_pairs_per_ctg)
+                                 for ctg,n_frags in contig_frags.items() ])
+    negative_pairs = make_negative_pairs(contig_frags, int(N_samples), frag_steps)
+
+    all_pairs = pd.concat([positive_pairs,negative_pairs])
+    all_pairs.index = np.arange(len(all_pairs)).astype(int)
+
+    all_pairs.to_csv(output)

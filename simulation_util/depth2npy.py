@@ -1,4 +1,4 @@
-import pickle
+import h5py
 from glob import glob
 
 import pandas as pd
@@ -6,28 +6,27 @@ import numpy as np
 
 from progressbar import progressbar
 
+print("WARNING: V4863 has been manually removed. See issue CAMISIM issue #60")
+
 metadata = pd.read_csv("metadata.csv",index_col="accession")
 metadata.V_id = metadata.V_id.str.split("_").str.get(0)
 mapping = metadata.groupby(level=0)["V_id"].agg("first")
 
 genomes_length = metadata.groupby("V_id")["end"].agg("last")
 
-def convert(virus,depth_dir="camisim/coverage/*"):
+def convert(h5data,virus,depth_dir="camisim/coverage/*"):
     datasets = [ pd.read_csv("{}/{}.txt".format(sample,virus),
                              header=None, sep="\t", names=["acc","pos","depth"])
                  for sample in sorted(glob(depth_dir)) ]
-    
+
     coverage = np.zeros([genomes_length[virus],len(datasets)],dtype=np.uint32)
 
     for i,dataset in enumerate(datasets):
         if dataset.size > 0:
             coverage[dataset.pos.values-1,i] = dataset.depth.values
 
-    return coverage
+    h5data.create_dataset(virus,data=coverage, dtype='uint32')
 
-coverages = { virus: convert(virus) for virus in progressbar(genomes_length.index) }
-
-with open("camisim/coverage_all.pickle","wb") as handle:
-    pickle.dump(handle)
-
+h5data = h5py.File("coverage.h5")
+[ convert(h5data,virus) for virus in progressbar(genomes_length.drop("V4863").index) ]
 
