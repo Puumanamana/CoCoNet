@@ -2,7 +2,6 @@ from itertools import combinations
 import pandas as pd
 import numpy as np
 
-from Bio import SeqIO
 from util import timer
 
 def calculate_optimal_dist(n_frags,fppc):
@@ -38,15 +37,15 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
     return pd.concat(dfs.values(),axis=1,keys=dfs.keys())
 
 @timer
-def make_negative_pairs(n_frags_all, N_samples, frag_steps):
+def make_negative_pairs(n_frags_all, n_examples, frag_steps):
     # genome_frags: nb of fragments per genome
     # 1) select genome pairs
     # 2) select random fragments
 
     pair_idx = np.random.choice(len(n_frags_all),
-                                [ 5*N_samples, 2 ])
+                                [ 5*n_examples, 2 ])
     
-    pair_idx = pair_idx[pair_idx[:,0] != pair_idx[:,1] ][:N_samples,:]
+    pair_idx = pair_idx[pair_idx[:,0] != pair_idx[:,1] ][:n_examples,:]
 
     rd_frags = [[ np.random.choice(n_frags)
                   for n_frags in n_frags_all.values[pair_idx[:,i]] ]
@@ -62,21 +61,20 @@ def make_negative_pairs(n_frags_all, N_samples, frag_steps):
     
     return pd.concat(dfs.values(),axis=1,keys=dfs.keys())
 
-def make_pairs(contigs,n_frags,step,frag_len,output,N_samples=1e6):
+def make_pairs(contigs,n_frags,step,frag_len,output,n_examples=1e6):
     """
     
     """
     contig_frags = pd.Series({ ctg.id: 1+int((len(ctg.seq)-frag_len)/step)
                                for ctg in contigs})
-    frag_pairs_per_ctg = int(N_samples / len(contig_frags))
-
+    frag_pairs_per_ctg = int(n_examples / len(contig_frags))
     frag_steps = int(frag_len/step)
     
     positive_pairs = pd.concat([ make_positive_pairs(ctg,frag_steps,n_frags,frag_pairs_per_ctg)
                                  for ctg,n_frags in contig_frags.items() ])
-    negative_pairs = make_negative_pairs(contig_frags, int(N_samples), frag_steps)
+    negative_pairs = make_negative_pairs(contig_frags, int(n_examples), frag_steps)
 
-    all_pairs = pd.concat([positive_pairs,negative_pairs])
+    all_pairs = pd.concat([positive_pairs,negative_pairs]).sample(frac=1)
     all_pairs.index = np.arange(len(all_pairs)).astype(int)
 
     all_pairs.loc[:,("A",["start","end"])] = all_pairs.loc[:,("A",["start","end"])].astype(int)

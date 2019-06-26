@@ -8,11 +8,18 @@ class CompositionGenerator(object):
     def __init__(self, fasta, pairs_file, batch_size=64, k=4):
         self.i = 0
         self.k = k
-        self.genomes = { contig.id: str(contig.seq)
-                         for contig in SeqIO.parse(fasta,"fasta") }
-        self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1]).values
+        self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
         self.batch_size = batch_size
-        self.n_batches = int(len(self.pairs) / self.batch_size)
+        self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
+
+        self.set_genomes(fasta)
+
+    def set_genomes(self,fasta):
+        contigs = set(self.pairs.stack(level=0).sp)
+        self.genomes = { contig.id: str(contig.seq)
+                         for contig in SeqIO.parse(fasta,"fasta")
+                         if contig.id in contigs }
+        self.pairs = self.pairs.values
 
     def __iter__(self):
         return self
@@ -45,10 +52,9 @@ class CoverageGenerator(object):
     Genearator for coverage data. 
     It loads the coverage every [load_batch] batches.
     """
-    def __init__(self, pairs_file, h5_coverage,
-                 batch_size=64, avg_len=16, load_batch=1000,window_size=16):
+    def __init__(self, h5_coverage, pairs_file,
+                 batch_size=64, load_batch=1000,window_size=16):
         self.i = 0
-        self.avg_len = avg_len
         self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
         self.h5_coverage = h5_coverage
         self.batch_size = batch_size
@@ -63,19 +69,23 @@ class CoverageGenerator(object):
         return self.n_batches
 
     def load(self):
-        pairs = self.pairs.iloc[self.i*self.load_batch:(self.i+1)*self.load_batch,:]
+        pairs = self.pairs.iloc[ self.i*self.load_batch*self.batch
+                                 : (self.i+1)*self.load_batch*self.batch, :]
         self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
 
     def __next__(self):
-        X1 = np.zeros([self.batch_size,], dtype=np.uint32)
-        X2 = np.zeros([self.batch_size,], dtype=np.uint32)
         
         if self.i < self.n_batches:
             if self.i % self.load_batch == 0:
                 self.load()
 
             self.i += 1
+            batch_indices = range((self.i-1)*self.batch_size,
+                                  (self.i)*self.batch_size)
 
-            return self.X1[self.i-1],self.X2[self.i-1]
+            return (
+                self.X1[batch_indices,:],
+                self.X2[batch_indices,:]
+            )
         else:
             raise StopIteration()
