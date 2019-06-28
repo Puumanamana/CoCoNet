@@ -5,15 +5,9 @@ from Bio import SeqIO
 import configparser
 
 def gen_fasta(database):
-    mapping = pd.read_csv("metadata.csv",index_col="accession")
-    mapping.V_id = mapping.V_id.str.split("_").str.get(0)
-    mapping = mapping.groupby(level=0)["V_id"].agg("first")
-
-    genomes = { genome.id: genome
-                for genome in SeqIO.parse(database,"fasta") }
-
-    for accession in mapping.index:
-        SeqIO.write(genomes[accession],"camisim/contigs_fasta/{}.fasta".format(mapping[accession]),"fasta")
+    
+    [ SeqIO.write(genome,"camisim/contigs_fasta/{}.fasta".format(genome.id),"fasta")
+      for genome in SeqIO.parse(database,"fasta") ]
 
 def gen_id_to_genome():
     mapping = pd.Series({ f.split(".")[0]: "contigs_fasta/{}".format(f) for f in os.listdir("camisim/contigs_fasta")})
@@ -34,6 +28,10 @@ def gen_metadata():
     metadata.to_csv("camisim/metadata_camisim.tsv",sep="\t")
 
 def gen_config():
+    db = os.path.expanduser("~/database/viral.genomic.ACGT.fasta")
+    
+    n_genomes = sum(1 for line in open(db) if line.startswith(">"))
+    
     config = configparser.ConfigParser()
     config['Main'] = {
         'seed': 42,
@@ -42,8 +40,8 @@ def gen_config():
         'dataset_id': 'vir_sim',
         'output_directory': 'sim',
         'temp_directory': '/tmp/',
-        'gsa': True,
-        'pooled_gsa': True,
+        'gsa': False,
+        'pooled_gsa': False,
         'anonymous': False,
         'compress': 0
     }
@@ -64,8 +62,8 @@ def gen_config():
     config['community0'] = {
         'metadata': 'metadata_camisim.tsv',
         'id_to_genome_file': 'id_to_genome.tsv',
-        'genomes_total': 6002,
-        'genomes_real': 6002,
+        'genomes_total': n_genomes,
+        'genomes_real': n_genomes,
         'max_strains_per_otu': 1,
         'ratio': 1,
         'mode': 'differential',

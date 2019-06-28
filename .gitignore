@@ -7,5 +7,6 @@ data
 *.zip
 *.gz
 !*.py
+!*.nf
 input_data
 output_data
