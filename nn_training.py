@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.metrics import confusion_matrix
 
 import torch.optim as optim
@@ -6,6 +7,8 @@ import torch
 
 from torch_models import CompositionModel, CoverageModel, CoCoNet
 from generators import CompositionGenerator, CoverageGenerator
+
+from progressbar import progressbar
 
 def initialize_model(model_type, input_shapes, composition_args=None, coverage_args=None, combination_args=None):
     if model_type == 'composition':
@@ -21,7 +24,7 @@ def initialize_model(model_type, input_shapes, composition_args=None, coverage_a
 
 def get_labels(pairs_file):
     pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
-    labels = (pairs.sp.A == pairs.sp.B).values
+    labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)
 
     return torch.from_numpy(labels)
 
@@ -36,28 +39,31 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
                           batch_size=batch_size,load_batch=load_batch,window_size=window_size)
     ]
 
-    n_test = sum(1 for _ in open(pairs_file["test"]))
-    
+    n_test = sum(1 for _ in open(pairs_file["test"]))-2
+
+    print("Loading test data")
     test_data = [
-        torch.from_numpy(next(CompositionGenerator(fasta,pairs_file["test"],
-                                                     batch_size=n_test, k=kmer))),
-        torch.from_numpy(next(CoverageGenerator(coverage_h5,pairs_file["test"],
-                                                batch_size=n_test, load_batch=1, window_size=window_size)))
+        next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer)),
+        next(CoverageGenerator(coverage_h5,pairs_file["test"],
+                               batch_size=n_test, load_batch=1, window_size=window_size))
     ]
 
+    print("Setting labels")
     labels = {
         "train": get_labels(pairs_file["train"]),
         "test": get_labels(pairs_file["test"])
     }
 
-    optimizer = optim.Adam(model.composition_model.parameters()
-                           + model.coverage_model.parameters()
-                           + model.parameters(),
+    optimizer = optim.Adam(list(model.composition_model.parameters())
+                           + list(model.coverage_model.parameters())
+                           + list(model.parameters()),
                            lr=learning_rate)
 
     running_loss = 0
 
-    for i, (X_compo, X_cover) in enumerate(zip(*training_generators)):
+    print("Training starts")
+    for i, (X_compo, X_cover) in progressbar(enumerate(zip(*training_generators)),
+                                             max_value=len(training_generators[0])):
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -65,7 +71,8 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
         truth = labels["train"][i*batch_size:(i+1)*batch_size]
 
         # forward + backward + optimize
-        outputs = model(X_compo,X_cover)
+        outputs = model(X_compo,
+                        X_cover)
         loss = model.compute_loss(outputs,truth)
 
         loss = model.compute_loss(outputs, truth)
@@ -76,7 +83,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
 
         # Get test results
         if i % 200 == 199:
-            outputs_test = model.forward(*test_data)
+            outputs_test = model(*test_data)
             print("Running Loss: {}".format(running_loss))
             get_confusion_table(outputs_test,labels["test"])
             
@@ -94,7 +101,8 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
 def get_confusion_table(preds,truth):
 
     for key,pred in preds.items():
-        conf_mat = pd.DataFrame(confusion_matrix(truth,pred),
+        conf_mat = pd.DataFrame(confusion_matrix(truth.detach().numpy().astype(int),
+                                                 pred.detach().numpy()[:,0].astype(int)),
                                 columns=["1 (True)","0 (True)"],
                                 index=["0 (Pred)","1 (Pred)"]
         )

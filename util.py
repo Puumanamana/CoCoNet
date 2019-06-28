@@ -61,10 +61,11 @@ def get_coverage(pairs,coverage_h5,window_size,
     order = np.argsort(pairs_sorted.index)
     
     # Calculate coverage for this order
-    n_samples = np.array(list(coverage_data.values()))[0].shape[1]
+    n_samples = np.array(list(coverage_data.values())[0]).shape[0]
     frag_len = pairs_sorted.end.iloc[0] - pairs_sorted.start.iloc[0]
     
-    X = np.zeros([len(pairs_sorted),int(frag_len/window_size),n_samples])
+    X = np.zeros([len(pairs_sorted),n_samples,int(frag_len/window_size)],
+                 dtype=np.float32)
     seen = {}
 
     for i,(sp,start,end) in enumerate(pairs_sorted[columns].values):
@@ -72,9 +73,7 @@ def get_coverage(pairs,coverage_h5,window_size,
 
         if cov_sp is None:
             cov_sp = np.apply_along_axis(
-                lambda x: avg_window(x,window_size),
-                0,
-                coverage_data[sp][start:end,:]
+                lambda x: avg_window(x,window_size), 1, coverage_data[sp][:,start:end]
             )
             seen[(sp,start)] = cov_sp
 

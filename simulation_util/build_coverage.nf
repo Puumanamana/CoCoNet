@@ -50,11 +50,11 @@ process TxtToNpy {
     datasets = [ pd.read_csv(f, header=None, sep='\\t', names=["acc","pos","depth"]) 
                  for f in files ]
 
-    coverage = np.zeros([${genome_len}, ${f.size()}],dtype=np.uint32)
+    coverage = np.zeros([${f.size()}, ${genome_len}],dtype=np.uint32)
 
     for i,dataset in enumerate(datasets):
         if dataset.size > 0:
-            coverage[dataset.pos.values-1,i] = dataset.depth.values
+            coverage[i,dataset.pos.values-1] = dataset.depth.values
 
     np.save("${contig}.npy",coverage)
     """
@@ -67,7 +67,8 @@ process NpyToH5 {
     input:
         file f from depth_npy.collect()
     output:
-	file("coverage.h5")
+	file("coverage_virus.h5")
+	file("coverage_contigs.h5")    
 
     script:
     """
@@ -75,15 +76,27 @@ process NpyToH5 {
 
     from glob import glob
     import numpy as np
+    import pandas as pd
     import h5py
 
-    cov_h5 = h5py.File("coverage.h5","w")
+    metadata = pd.read_csv("${PWD}/metadata.csv")
+    metadata['virus'] = metadata.V_id.str.split("_").str.get(0)
+
+    info = metadata.groupby("virus").agg(list)
+
+    cov_vir_h5 = h5py.File("coverage_virus.h5","w")
+    cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")
     
     for filename in glob("*.npy"):
         virus = filename.split(".")[0]
         matrix = np.load(filename)
-        cov_h5.create_dataset(virus,data=matrix)
-    cov_h5.close()
+
+        cov_vir_h5.create_dataset(virus,data=matrix)
+
+        for ctg,start,end in zip(info.loc[virus,"V_id"],info.loc[virus,"start"],info.loc[virus,"end"]):
+            cov_ctg_h5.create_dataset(ctg,data=matrix[:,start:end])
+    cov_ctg_h5.close()
+    cov_vir_h5.close()
     """
 }
 

@@ -14,9 +14,9 @@ class CompositionModel(nn.Module):
     def compute_repr(self,x):
         return F.relu(self.compo_shared(x))
 
-    def get_coconet_input(self,x):
+    def get_coconet_input(self,*x):
         x = [ self.compute_repr(xi) for xi in x ]
-        x = F.relu( self.compo_dense(torch.cat(x)) )
+        x = F.relu( self.compo_dense(torch.cat(x,axis=1)) )
 
         return x
 
@@ -36,7 +36,7 @@ class CoverageModel(nn.Module):
         conv_out_dim = (n_filters,n_samples,
                         int((input_size-kernel_size)/conv_stride)+1)
         self.pool = nn.MaxPool1d(pool_size,pool_stride)
-        pool_out_dim = (n_filters,n_samples,
+        pool_out_dim = (n_filters,
                         int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
         self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
         self.cover_dense = nn.Linear(2*neurons[0], neurons[1])
@@ -48,9 +48,9 @@ class CoverageModel(nn.Module):
         x = F.relu(self.cover_shared(x.view(x.shape[0],-1)))
         return x
         
-    def get_coconet_input(self, x):
+    def get_coconet_input(self, *x):
         x = [ self.compute_repr(xi) for xi in x ]
-        x = F.relu( self.cover_dense(torch.cat(x)) )
+        x = F.relu( self.cover_dense(torch.cat(x,axis=1)) )
         return x
 
     def forward(self,x):
@@ -79,26 +79,30 @@ class CoCoNet(nn.Module):
                 }
         
     def combine_repr(self,*latent_repr):
-        combined = self.dense(torch.cat(*latent_repr))
+        combined = self.dense(torch.cat(latent_repr,axis=1))
         x = torch.sigmoid(self.prob(combined))
 
         return x
     
     def forward(self, x1, x2):
-        compo_repr = self.composition_model.get_coconet_input()
-        cover_repr = self.coverage_model.get_coconet_input()
-        combined = self.dense(torch.cat(compo_repr,cover_repr))
+        compo_repr = self.composition_model.get_coconet_input(*x1)
+        cover_repr = self.coverage_model.get_coconet_input(*x2)
+        combined = self.dense(torch.cat([compo_repr,cover_repr],axis=1))
 
-        x = { 'composition': torch.sigmoid(self.composition_model.compo_prob(compo_repr)),
-              'coverage': torch.sigmoid(self.coverage_model.cover_prob(cover_repr)),
-              'combined': torch.sigmoid(self.prob(combined))
+        compo_prob = torch.sigmoid(self.composition_model.compo_prob(compo_repr))
+        cover_prob = torch.sigmoid(self.coverage_model.cover_prob(cover_repr))
+        combined_prob = torch.sigmoid(self.prob(combined))
+
+        x = { 'composition': compo_prob,
+              'coverage': cover_prob,
+              'combined': combined_prob
             }
         
         return x
     
     def compute_loss(self,pred,truth):
-        losses = [ self.loss_op(pred["compo"],truth),
-                   self.loss_op(pred["cover"],truth),
+        losses = [ self.loss_op(pred["composition"],truth),
+                   self.loss_op(pred["coverage"],truth),
                    self.loss_op(pred["combined"],truth) ]
         
         return sum(losses)

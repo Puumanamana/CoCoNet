@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from Bio import SeqIO
+import torch
 
 from util import get_kmer_frequency, get_coverage
 
@@ -28,8 +29,8 @@ class CompositionGenerator(object):
         return self.n_batches
 
     def __next__(self):
-        X1 = np.zeros([self.batch_size,4**self.k], dtype=np.uint32)
-        X2 = np.zeros([self.batch_size,4**self.k], dtype=np.uint32)
+        X1 = np.zeros([self.batch_size,4**self.k], dtype=np.float32)
+        X2 = np.zeros([self.batch_size,4**self.k], dtype=np.float32)
         
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
@@ -42,7 +43,7 @@ class CompositionGenerator(object):
 
             self.i += 1
 
-            return X1,X2
+            return torch.from_numpy(X1),torch.from_numpy(X2)
         else:
             raise StopIteration()
 
@@ -58,7 +59,7 @@ class CoverageGenerator(object):
         self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
         self.h5_coverage = h5_coverage
         self.batch_size = batch_size
-        self.n_batches = int(len(self.pairs) / self.batch_size)
+        self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
         self.load_batch = load_batch
         self.window_size = window_size
 
@@ -69,8 +70,9 @@ class CoverageGenerator(object):
         return self.n_batches
 
     def load(self):
-        pairs = self.pairs.iloc[ self.i*self.load_batch*self.batch
-                                 : (self.i+1)*self.load_batch*self.batch, :]
+        print("Loading next coverage batch")
+        pairs = self.pairs.iloc[ self.i*self.load_batch*self.batch_size
+                                 : (self.i+1)*self.load_batch*self.batch_size, :]
         self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
 
     def __next__(self):
@@ -80,12 +82,13 @@ class CoverageGenerator(object):
                 self.load()
 
             self.i += 1
+        
             batch_indices = range((self.i-1)*self.batch_size,
-                                  (self.i)*self.batch_size)
+                                  min((self.i)*self.batch_size,self.X1.shape[0]))
 
             return (
-                self.X1[batch_indices,:],
-                self.X2[batch_indices,:]
+                torch.from_numpy(self.X1[batch_indices,:,:]),
+                torch.from_numpy(self.X2[batch_indices,:,:])
             )
         else:
             raise StopIteration()

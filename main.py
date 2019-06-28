@@ -15,7 +15,7 @@ def run():
     # format_assembly()
 
     input_files = { "fasta": "{}/assembly.fasta".format(io_path["in"]),
-                    "coverage_h5": "{}/coverage.h5".format(io_path["in"])}
+                    "coverage_h5": "{}/coverage_contigs.h5".format(io_path["in"])}
 
     h5_cov = h5py.File(input_files['coverage_h5'],'r')
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
