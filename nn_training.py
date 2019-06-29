@@ -30,23 +30,35 @@ def get_labels(pairs_file):
 
 def train(model, pairs_file, output, fasta=None, coverage_h5=None,
           batch_size=64, kmer=4, window_size=16, load_batch=1000,
-          learning_rate=1e-4):
-
-    training_generators = [
-        CompositionGenerator(fasta,pairs_file["train"],
-                             batch_size=batch_size,k=kmer),
-        CoverageGenerator(coverage_h5, pairs_file["train"],
-                          batch_size=batch_size,load_batch=load_batch,window_size=window_size)
-    ]
+          learning_rate=1e-4, model_type=None):
 
     n_test = sum(1 for _ in open(pairs_file["test"]))-2
+    n_train = sum(1 for _ in open(pairs_file["train"]))-2    
 
-    print("Loading test data")
-    test_data = [
-        next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer)),
-        next(CoverageGenerator(coverage_h5,pairs_file["test"],
-                               batch_size=n_test, load_batch=1, window_size=window_size))
-    ]
+    if model_type == "composition":
+        generator = CompositionGenerator(fasta,pairs_file["train"],
+                                         batch_size=batch_size,k=kmer)
+        X_test = next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer))
+        
+    elif model_type == "coverage":
+        generator = CoverageGenerator(coverage_h5, pairs_file["train"],
+                                      batch_size=batch_size,load_batch=load_batch,window_size=window_size)
+        X_test = next(CoverageGenerator(coverage_h5,pairs_file["test"],
+                                        batch_size=n_test, load_batch=1, window_size=window_size))
+        
+    else:
+        generator = zip(*[
+            CompositionGenerator(fasta,pairs_file["train"],
+                                 batch_size=batch_size,k=kmer),
+            CoverageGenerator(coverage_h5, pairs_file["train"],
+                              batch_size=batch_size,load_batch=load_batch,window_size=window_size)
+        ])
+
+        X_test = [
+            next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer)),
+            next(CoverageGenerator(coverage_h5,pairs_file["test"],
+                                   batch_size=n_test, load_batch=1, window_size=window_size))
+        ]
 
     print("Setting labels")
     labels = {
@@ -54,16 +66,17 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
         "test": get_labels(pairs_file["test"])
     }
 
-    optimizer = optim.Adam(list(model.composition_model.parameters())
-                           + list(model.coverage_model.parameters())
-                           + list(model.parameters()),
-                           lr=learning_rate)
+    # optimizer = optim.Adam(list(model.composition_model.parameters())
+    #                        + list(model.coverage_model.parameters())
+    #                        + list(model.parameters()),
+    #                        lr=learning_rate)
+    optimizer = optim.Adam(list(model.parameters()),lr=learning_rate)
 
     running_loss = 0
 
     print("Training starts")
-    for i, (X_compo, X_cover) in progressbar(enumerate(zip(*training_generators)),
-                                             max_value=len(training_generators[0])):
+    for i, X in progressbar(enumerate(generator),
+                            max_value=int(n_train/batch_size)):
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -71,10 +84,13 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
         truth = labels["train"][i*batch_size:(i+1)*batch_size]
 
         # forward + backward + optimize
-        outputs = model(X_compo,
-                        X_cover)
-        loss = model.compute_loss(outputs,truth)
-
+        if model_type == "composition":
+            outputs = model(*X)
+        elif model_type == "coverage":
+            outputs = model(*X)
+        else:
+            outputs = model(*X)
+            
         loss = model.compute_loss(outputs, truth)
         loss.backward()
         optimizer.step()
@@ -83,7 +99,10 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
 
         # Get test results
         if i % 200 == 199:
-            outputs_test = model(*test_data)
+            model.eval()
+            outputs_test = model(*X_test)
+            model.train()
+            
             print("\nRunning Loss: {}".format(running_loss))
             get_confusion_table(outputs_test,labels["test"])
             
@@ -102,8 +121,8 @@ def get_confusion_table(preds,truth):
 
     for key,pred in preds.items():
         conf_mat = pd.DataFrame(confusion_matrix(truth.detach().numpy().astype(int),
-                                                 pred.detach().numpy()[:,0].astype(int)),
-                                columns=["1 (True)","0 (True)"],
+                                                 (pred.detach().numpy()[:,0]>0.5).astype(int)),
+                                columns=["0 (True)","1 (True)"],
                                 index=["0 (Pred)","1 (Pred)"]
         )
 

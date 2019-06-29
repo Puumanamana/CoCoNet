@@ -11,19 +11,20 @@ step = int(frag_len/8)
 n_frags = 50
 kmer = 4
 add_rc = False
+model_type = 'composition'
 
 train_args = {
     'batch_size': 64,
     'learning_rate': 1e-4,
     'window_size': 16,
-    'load_batch': 500,
-    'kmer': kmer
+    'load_batch': 5000,
+    'kmer': kmer,
 }
 
 nn_arch = {
-    'composition': { 'neurons': [128,128] },
+    'composition': { 'neurons': [128,128,64] },
     'coverage': { 'neurons': [128,128],
-                  'n_filters': 64, 'kernel_size': 8,'conv_stride': 4,
+                  'n_filters': 64, 'kernel_size': 16,'conv_stride': 8,
                   'pool_size': 4, 'pool_stride': 2},
     'combination': { 'neurons': [64] }
 }

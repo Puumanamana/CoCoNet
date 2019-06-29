@@ -8,23 +8,33 @@ class CompositionModel(nn.Module):
     def __init__(self, input_size, neurons=[128,64]):
         super(CompositionModel, self).__init__()
         self.compo_shared = nn.Linear(input_size,neurons[0])
-        self.compo_dense = nn.Linear(2*neurons[0],neurons[1])
-        self.compo_prob = nn.Linear(neurons[1],1)
+        self.compo_siam = nn.Linear(2*neurons[0],neurons[1])
+        self.compo_dense = nn.Linear(neurons[1],neurons[2])        
+        self.compo_prob = nn.Linear(neurons[2],1)
+
+        self.loss_op = nn.BCELoss()
 
     def compute_repr(self,x):
         return F.relu(self.compo_shared(x))
 
     def get_coconet_input(self,*x):
         x = [ self.compute_repr(xi) for xi in x ]
-        x = F.relu( self.compo_dense(torch.cat(x,axis=1)) )
+        
+        x_siam1 = F.relu( self.compo_siam(torch.cat(x,axis=1)) )
+        x_siam2 = F.relu( self.compo_siam(torch.cat(x[::-1],axis=1)) )
 
+        x = self.compo_dense(torch.max(x_siam1,x_siam2))
+        
         return x
 
     def forward(self, *x):
-        x = self.get_coconet_input(x)
+        x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.compo_prob(x))
         
-        return x
+        return {'composition': x}
+
+    def compute_loss(self,pred,truth):
+        return self.loss_op(pred["composition"],truth)
 
 class CoverageModel(nn.Module):
     def __init__(self, input_size, n_samples, neurons=[128,64],
@@ -43,6 +53,8 @@ class CoverageModel(nn.Module):
         self.cover_dense = nn.Linear(2*neurons[0], neurons[1])
         self.cover_prob = nn.Linear(neurons[1],1)
 
+        self.loss_op = nn.BCELoss()        
+
     def compute_repr(self,x):
         x = F.relu(self.conv_layer(x))
         # x = F.relu(self.pool(x))
@@ -54,9 +66,14 @@ class CoverageModel(nn.Module):
         x = F.relu( self.cover_dense(torch.cat(x,axis=1)) )
         return x
 
-    def forward(self,x):
-        x = self.get_coconet_input(x)
+    def forward(self, *x):
+        x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.cover_prob(x))
+
+        return {'coverage': x}
+
+    def compute_loss(self,pred,truth):
+        return self.loss_op(pred["coverage"],truth)        
  
 class CoCoNet(nn.Module):
     def __init__(self, composition_model, coverage_model, neurons=[32]):
@@ -80,7 +97,7 @@ class CoCoNet(nn.Module):
                 }
         
     def combine_repr(self,*latent_repr):
-        combined = self.dense(torch.cat(latent_repr,axis=1))
+        combined = F.relu(self.dense(torch.cat(latent_repr,axis=1)))
         x = torch.sigmoid(self.prob(combined))
 
         return x

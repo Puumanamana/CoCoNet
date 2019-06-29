@@ -72,7 +72,7 @@ class CoverageGenerator(object):
     def load(self):
         print("\nLoading next coverage batch")
         
-        pairs = self.pairs.iloc[ self.i: (self.i + self.load_batch*self.batch_size) ]
+        pairs = self.pairs.iloc[ self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size ]
         self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
 
     def __next__(self):

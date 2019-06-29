@@ -4,7 +4,7 @@ import numpy as np
 import h5py
 
 from config import io_path
-from config import frag_len,step,n_frags,kmer,add_rc
+from config import frag_len,step,n_frags,kmer,add_rc,model_type
 from config import nn_arch, train_args
 
 from fragmentation import make_pairs
@@ -28,7 +28,7 @@ def run():
     if not os.path.exists(pairs["train"]):
         assembly = [ contig for contig in SeqIO.parse(input_files["fasta"],"fasta") ]
 
-        assembly_idx = { 'test': np.random.choice(len(assembly),int(0.05*len(assembly))) }
+        assembly_idx = { 'test': np.random.choice(len(assembly),int(0.1*len(assembly))) }
         assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'] )
 
         n_examples = { 'train': int(1e6), 'test': int(1e4) }
@@ -47,13 +47,13 @@ def run():
             'coverage': (int(frag_len/train_args['window_size']), n_samples)
         }
         
-        model = initialize_model("CoCoNet", input_shapes,
+        model = initialize_model(model_type, input_shapes,
                                  composition_args=nn_arch["composition"],
                                  coverage_args=nn_arch["coverage"],
                                  combination_args=nn_arch["combination"]
         )
 
-        train(model, pairs, model_output, **train_args, **input_files)
+        train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
 
 if __name__ == '__main__':
     run()

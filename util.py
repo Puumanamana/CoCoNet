@@ -59,7 +59,10 @@ def get_coverage(pairs,coverage_h5,window_size,
 
     coverage_data = { ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs }
 
-    pairs_sorted = pairs.stack(level=0).sort_values(by=columns)
+    pairs_sorted = pairs.stack(level=0).swaplevel().sort_index()
+    pairs_sorted.index = np.arange(len(pairs_sorted))
+    pairs_sorted.sort_values(by=columns,inplace=True)
+    
     order = np.argsort(pairs_sorted.index)
     
     # Calculate coverage for this order
@@ -86,6 +89,6 @@ def get_coverage(pairs,coverage_h5,window_size,
             X[order[pairs.shape[0]:],:,:])
     
 
-def avg_window(x,window_size):
+def avg_window(x,window_size=4):
     return np.convolve(x,np.ones(window_size)/window_size,
                        mode="valid")[::window_size]
