@@ -7,6 +7,8 @@ import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 
+from progressbar import progressbar
+
 def timer(func):
     def wrapper(*args,**kwargs):
         t0 = time()
@@ -54,7 +56,7 @@ def get_coverage(pairs,coverage_h5,window_size,
     h5data = h5py.File(coverage_h5)
     contigs = np.unique(np.concatenate((pairs.A.sp,
                                         pairs.B.sp)))
-    
+
     coverage_data = { ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs }
 
     pairs_sorted = pairs.stack(level=0).sort_values(by=columns)
@@ -68,7 +70,8 @@ def get_coverage(pairs,coverage_h5,window_size,
                  dtype=np.float32)
     seen = {}
 
-    for i,(sp,start,end) in enumerate(pairs_sorted[columns].values):
+    for i,(sp,start,end) in progressbar(enumerate(pairs_sorted[columns].values),
+                                        max_value=pairs_sorted.shape[0]):
         cov_sp = seen.get((sp,start),None)
 
         if cov_sp is None:

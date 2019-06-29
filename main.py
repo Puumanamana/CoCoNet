@@ -21,8 +21,8 @@ def run():
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
 
     pairs = {
-        "test": "{}/pairs_train.csv".format(io_path["out"]),        
-        "train": "{}/pairs_test.csv".format(io_path["out"])
+        "test": "{}/pairs_test.csv".format(io_path["out"]),        
+        "train": "{}/pairs_train.csv".format(io_path["out"])
     }
 
     if not os.path.exists(pairs["train"]):

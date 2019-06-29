@@ -24,7 +24,7 @@ def initialize_model(model_type, input_shapes, composition_args=None, coverage_a
 
 def get_labels(pairs_file):
     pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
-    labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)
+    labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)[:,None]
 
     return torch.from_numpy(labels)
 
@@ -84,7 +84,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
         # Get test results
         if i % 200 == 199:
             outputs_test = model(*test_data)
-            print("Running Loss: {}".format(running_loss))
+            print("\nRunning Loss: {}".format(running_loss))
             get_confusion_table(outputs_test,labels["test"])
             
             running_loss = 0

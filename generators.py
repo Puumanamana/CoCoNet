@@ -70,9 +70,9 @@ class CoverageGenerator(object):
         return self.n_batches
 
     def load(self):
-        print("Loading next coverage batch")
-        pairs = self.pairs.iloc[ self.i*self.load_batch*self.batch_size
-                                 : (self.i+1)*self.load_batch*self.batch_size, :]
+        print("\nLoading next coverage batch")
+        
+        pairs = self.pairs.iloc[ self.i: (self.i + self.load_batch*self.batch_size) ]
         self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
 
     def __next__(self):
@@ -81,14 +81,14 @@ class CoverageGenerator(object):
             if self.i % self.load_batch == 0:
                 self.load()
 
+            idx_inf = (self.i % self.load_batch) * self.batch_size
+            idx_sup = idx_inf + self.batch_size
+            
             self.i += 1
-        
-            batch_indices = range((self.i-1)*self.batch_size,
-                                  min((self.i)*self.batch_size,self.X1.shape[0]))
-
+            
             return (
-                torch.from_numpy(self.X1[batch_indices,:,:]),
-                torch.from_numpy(self.X2[batch_indices,:,:])
+                torch.from_numpy(self.X1[idx_inf:idx_sup,:,:]),
+                torch.from_numpy(self.X2[idx_inf:idx_sup,:,:])
             )
         else:
             raise StopIteration()

@@ -21,9 +21,9 @@ train_args = {
 }
 
 nn_arch = {
-    'composition': { 'neurons': [128,64] },
-    'coverage': { 'neurons': [128,64],
+    'composition': { 'neurons': [128,128] },
+    'coverage': { 'neurons': [128,128],
                   'n_filters': 64, 'kernel_size': 8,'conv_stride': 4,
                   'pool_size': 4, 'pool_stride': 2},
-    'combination': { 'neurons': [32] }
+    'combination': { 'neurons': [64] }
 }

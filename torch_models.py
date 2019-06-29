@@ -33,18 +33,19 @@ class CoverageModel(nn.Module):
         super(CoverageModel, self).__init__()
 
         self.conv_layer = nn.Conv1d(n_samples,n_filters,kernel_size,conv_stride)
-        conv_out_dim = (n_filters,n_samples,
+        conv_out_dim = (n_filters,
                         int((input_size-kernel_size)/conv_stride)+1)
-        self.pool = nn.MaxPool1d(pool_size,pool_stride)
-        pool_out_dim = (n_filters,
-                        int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
-        self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
+        # self.pool = nn.MaxPool1d(pool_size,pool_stride)
+        # pool_out_dim = (n_filters,
+        #                 int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
+        # self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
+        self.cover_shared = nn.Linear(np.prod(np.prod(conv_out_dim)), neurons[0])
         self.cover_dense = nn.Linear(2*neurons[0], neurons[1])
         self.cover_prob = nn.Linear(neurons[1],1)
 
     def compute_repr(self,x):
         x = F.relu(self.conv_layer(x))
-        x = F.relu(self.pool(x))
+        # x = F.relu(self.pool(x))
         x = F.relu(self.cover_shared(x.view(x.shape[0],-1)))
         return x
         
