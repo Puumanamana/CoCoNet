@@ -6,12 +6,13 @@ import torch
 from util import get_kmer_frequency, get_coverage
 
 class CompositionGenerator(object):
-    def __init__(self, fasta, pairs_file, batch_size=64, k=4):
+    def __init__(self, fasta, pairs_file, batch_size=64, k=4, rc=False):
         self.i = 0
         self.k = k
         self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
         self.batch_size = batch_size
         self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
+        self.rc = rc
 
         self.set_genomes(fasta)
 
@@ -40,6 +41,13 @@ class CompositionGenerator(object):
                 freqB = get_kmer_frequency(self.genomes[spB][startB:endB])
                 X1[j,:] = freqA
                 X2[j,:] = freqB
+
+            if self.rc:
+                X1 += X1[:,::-1]
+                X1 = X1[:int(len(X1)/2)]
+                
+                X2 += X2[:,::-1]
+                X2 = X2[:int(len(X2)/2)]                
 
             self.i += 1
 

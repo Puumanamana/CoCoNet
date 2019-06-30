@@ -8,10 +8,8 @@ io_path = {
 frag_len = 1024
 min_genome_length = 2*frag_len
 step = int(frag_len/8)
-n_frags = 50
 kmer = 4
-add_rc = False
-model_type = 'composition'
+model_type = 'CoCoNet'
 
 train_args = {
     'batch_size': 64,
@@ -19,6 +17,7 @@ train_args = {
     'window_size': 16,
     'load_batch': 5000,
     'kmer': kmer,
+    'rc': False
 }
 
 nn_arch = {
@@ -28,3 +27,5 @@ nn_arch = {
                   'pool_size': 4, 'pool_stride': 2},
     'combination': { 'neurons': [64] }
 }
+
+n_frags = 50

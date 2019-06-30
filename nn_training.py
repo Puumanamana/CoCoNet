@@ -22,23 +22,28 @@ def initialize_model(model_type, input_shapes, composition_args=None, coverage_a
 
     return model
 
-def get_labels(pairs_file):
+def get_labels(pairs_file,sim=False):
     pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
-    labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)[:,None]
+    
+    if sim:
+        labels = (pairs.A.sp.str.split("_").str.get(0)
+                  == pairs.B.sp.str.split("_").str.get(0)).values.astype(np.float32)[:,None]
+    else:
+        labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)[:,None]
 
     return torch.from_numpy(labels)
 
 def train(model, pairs_file, output, fasta=None, coverage_h5=None,
           batch_size=64, kmer=4, window_size=16, load_batch=1000,
-          learning_rate=1e-4, model_type=None):
+          learning_rate=1e-4, model_type=None, rc=False):
 
     n_test = sum(1 for _ in open(pairs_file["test"]))-2
     n_train = sum(1 for _ in open(pairs_file["train"]))-2    
 
     if model_type == "composition":
         generator = CompositionGenerator(fasta,pairs_file["train"],
-                                         batch_size=batch_size,k=kmer)
-        X_test = next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer))
+                                         batch_size=batch_size,k=kmer,rc=rc)
+        X_test = next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer,rc=rc))
         
     elif model_type == "coverage":
         generator = CoverageGenerator(coverage_h5, pairs_file["train"],
@@ -49,13 +54,13 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
     else:
         generator = zip(*[
             CompositionGenerator(fasta,pairs_file["train"],
-                                 batch_size=batch_size,k=kmer),
+                                 batch_size=batch_size,k=kmer,rc=rc),
             CoverageGenerator(coverage_h5, pairs_file["train"],
                               batch_size=batch_size,load_batch=load_batch,window_size=window_size)
         ])
 
         X_test = [
-            next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer)),
+            next(CompositionGenerator(fasta,pairs_file["test"],batch_size=n_test, k=kmer, rc=rc)),
             next(CoverageGenerator(coverage_h5,pairs_file["test"],
                                    batch_size=n_test, load_batch=1, window_size=window_size))
         ]
@@ -63,7 +68,8 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
     print("Setting labels")
     labels = {
         "train": get_labels(pairs_file["train"]),
-        "test": get_labels(pairs_file["test"])
+        "test": get_labels(pairs_file["test"]),
+        "truth": get_labels(pairs_file["test"], sim=True)
     }
 
     # optimizer = optim.Adam(list(model.composition_model.parameters())
@@ -104,7 +110,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
             model.train()
             
             print("\nRunning Loss: {}".format(running_loss))
-            get_confusion_table(outputs_test,labels["test"])
+            get_confusion_table(outputs_test,labels["truth"])
             
             running_loss = 0
 
@@ -127,3 +133,4 @@ def get_confusion_table(preds,truth):
         )
 
         print("\033[1mConfusion matrix for {}\033[0m\n{}\n".format(key, conf_mat))
+

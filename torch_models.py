@@ -90,10 +90,10 @@ class CoCoNet(nn.Module):
 
     def compute_repr(self,x1,x2):
         compo_repr = self.composition_model.compute_repr(x1)
-        cover_repr = self.coverage_mode.compute_repr(x2)
+        cover_repr = self.coverage_model.compute_repr(x2)
 
-        return {'compo': compo_repr,
-                'cover': cover_repr
+        return {'composition': compo_repr,
+                'coverage': cover_repr
                 }
         
     def combine_repr(self,*latent_repr):

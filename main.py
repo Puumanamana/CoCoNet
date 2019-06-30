@@ -4,11 +4,13 @@ import numpy as np
 import h5py
 
 from config import io_path
-from config import frag_len,step,n_frags,kmer,add_rc,model_type
+from config import frag_len,step,kmer,model_type
 from config import nn_arch, train_args
+from config import n_frags
 
 from fragmentation import make_pairs
 from nn_training import initialize_model,train
+from clustering import save_repr_all, cluster
 
 def run():
 
@@ -19,6 +21,10 @@ def run():
 
     h5_cov = h5py.File(input_files['coverage_h5'],'r')
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
+
+    #######################
+    #### Fragmentation ####
+    #######################        
 
     pairs = {
         "test": "{}/pairs_test.csv".format(io_path["out"]),        
@@ -31,29 +37,45 @@ def run():
         assembly_idx = { 'test': np.random.choice(len(assembly),int(0.1*len(assembly))) }
         assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'] )
 
-        n_examples = { 'train': int(1e6), 'test': int(1e4) }
+        n_examples = { 'train': int(1e6), 'test': int(2e4) }
 
         for mode,pair in pairs.items():
             print("Making {} pairs".format(mode))
             make_pairs([ assembly[idx] for idx in assembly_idx[mode] ],
-                       n_frags,step,frag_len,pairs[mode],n_examples=n_examples[mode])
+                       step,frag_len,pairs[mode],n_examples=n_examples[mode])
 
+    #######################
+    ##### NN training #####
+    #######################    
+    
     model_output = "{}/CoCoNet.pth".format(io_path["out"])
     
+    input_shapes = {
+        'composition': int(4**kmer / (1+train_args['rc'])),
+        'coverage': (int(frag_len/train_args['window_size']), n_samples)
+    }
+
+    model = initialize_model(model_type, input_shapes,
+                             composition_args=nn_arch["composition"],
+                             coverage_args=nn_arch["coverage"],
+                             combination_args=nn_arch["combination"]
+    )
+    
     if not os.path.exists(model_output):
+        pass
+        # train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
 
-        input_shapes = {
-            'composition': int(4**kmer / (1+add_rc)),
-            'coverage': (int(frag_len/train_args['window_size']), n_samples)
-        }
-        
-        model = initialize_model(model_type, input_shapes,
-                                 composition_args=nn_arch["composition"],
-                                 coverage_args=nn_arch["coverage"],
-                                 combination_args=nn_arch["combination"]
-        )
+    ########################
+    ###### Clustering ######
+    ########################
 
-        train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
+    repr_outputs = {
+        "composition": "{}/representation_compo.h5".format(io_path["out"]),
+        "coverage": "{}/representation_cover.h5".format(io_path["out"])
+    }
+
+    save_repr_all(model,n_frags,frag_len,kmer,train_args['window_size'],
+                  outputs=repr_outputs,**input_files)
 
 if __name__ == '__main__':
     run()
