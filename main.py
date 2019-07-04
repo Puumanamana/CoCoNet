@@ -2,11 +2,12 @@ import os
 from Bio import SeqIO
 import numpy as np
 import h5py
+import torch
 
 from config import io_path
 from config import frag_len,step,kmer,model_type
 from config import nn_arch, train_args
-from config import n_frags
+from config import cluster_args
 
 from fragmentation import make_pairs
 from nn_training import initialize_model,train
@@ -48,7 +49,7 @@ def run():
     ##### NN training #####
     #######################    
     
-    model_output = "{}/CoCoNet.pth".format(io_path["out"])
+    model_output = "{}/{}.pth".format(io_path["out"],model_type)
     
     input_shapes = {
         'composition': int(4**kmer / (1+train_args['rc'])),
@@ -62,20 +63,30 @@ def run():
     )
     
     if not os.path.exists(model_output):
-        pass
-        # train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
+        train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
+    else:
+        checkpoint = torch.load(model_output)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
 
     ########################
     ###### Clustering ######
     ########################
 
+    n_frags = cluster_args['n_frags']
+
     repr_outputs = {
-        "composition": "{}/representation_compo.h5".format(io_path["out"]),
-        "coverage": "{}/representation_cover.h5".format(io_path["out"])
+        "composition": "{}/representation_compo_nf{}.h5".format(io_path["out"],n_frags),
+        "coverage": "{}/representation_cover_nf{}.h5".format(io_path["out"],n_frags)
     }
 
-    save_repr_all(model,n_frags,frag_len,kmer,train_args['window_size'],
-                  outputs=repr_outputs,**input_files)
+    if not os.path.exists(repr_outputs['coverage']):
+        save_repr_all(model,n_frags,frag_len,kmer,train_args['window_size'],
+                      outputs=repr_outputs,**input_files)
+
+    cluster(model,repr_outputs,io_path["out"],**cluster_args)
+
+    
 
 if __name__ == '__main__':
     run()

@@ -2,7 +2,7 @@ from itertools import combinations
 import pandas as pd
 import numpy as np
 
-from util import timer
+from progressbar import progressbar
 
 def calculate_optimal_dist(n_frags,fppc):
     """
@@ -36,7 +36,6 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
     
     return pd.concat(dfs.values(),axis=1,keys=dfs.keys())
 
-@timer
 def make_negative_pairs(n_frags_all, n_examples, frag_steps):
     """
     n_frags_all: nb of fragments per genome
@@ -76,7 +75,8 @@ def make_pairs(contigs,step,frag_len,output=None,n_examples=1e6):
     frag_steps = int(frag_len/step)
     
     positive_pairs = pd.concat([ make_positive_pairs(ctg,frag_steps,genome_frags,frag_pairs_per_ctg)
-                                 for ctg,genome_frags in contig_frags.items() ])
+                                 for ctg,genome_frags in progressbar(contig_frags.items(),
+                                                                     max_value=len(contigs)) ])
     negative_pairs = make_negative_pairs(contig_frags, int(n_examples), frag_steps)
 
     all_pairs = pd.concat([positive_pairs,negative_pairs]).sample(frac=1)
