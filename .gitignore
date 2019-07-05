@@ -1,6 +1,7 @@
 simulation_util/*
 data
 *.npy
+*.pkl
 *.h5
 *.pickle
 *.fast[aq]
