@@ -31,6 +31,11 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
             pairs_B[k,:] = [label,j,(j+frag_steps)]            
             k += 1
 
+    if k < fppc:
+        print("Error: cannot make {} unique pairs with genome of {} fragments"
+              .format(fppc,frag_steps))
+        import ipdb;ipdb.set_trace()
+        
     dfs = {'A': pd.DataFrame(pairs_A,columns=["sp","start","end"]),
            'B': pd.DataFrame(pairs_B,columns=["sp","start","end"])}
     
@@ -71,13 +76,13 @@ def make_pairs(contigs,step,frag_len,output=None,n_examples=1e6):
     """
     contig_frags = pd.Series({ ctg.id: 1+int((len(ctg.seq)-frag_len)/step)
                                for ctg in contigs})
-    frag_pairs_per_ctg = int(n_examples / len(contig_frags))
+    frag_pairs_per_ctg = int(n_examples / len(contig_frags) / 2)
     frag_steps = int(frag_len/step)
     
     positive_pairs = pd.concat([ make_positive_pairs(ctg,frag_steps,genome_frags,frag_pairs_per_ctg)
                                  for ctg,genome_frags in progressbar(contig_frags.items(),
                                                                      max_value=len(contigs)) ])
-    negative_pairs = make_negative_pairs(contig_frags, int(n_examples), frag_steps)
+    negative_pairs = make_negative_pairs(contig_frags, int(n_examples/2), frag_steps)
 
     all_pairs = pd.concat([positive_pairs,negative_pairs]).sample(frac=1)
     all_pairs.index = np.arange(len(all_pairs)).astype(int)

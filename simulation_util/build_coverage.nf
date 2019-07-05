@@ -91,6 +91,9 @@ process NpyToH5 {
         virus = filename.split(".")[0]
         matrix = np.load(filename)
 
+        if virus not in info.index:
+            continue
+
         cov_vir_h5.create_dataset(virus,data=matrix)
 
         for ctg,start,end in zip(info.loc[virus,"V_id"],info.loc[virus,"start"],info.loc[virus,"end"]):

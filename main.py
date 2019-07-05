@@ -6,6 +6,7 @@ import torch
 
 from config import io_path
 from config import frag_len,step,kmer,model_type
+from config import n_examples
 from config import nn_arch, train_args
 from config import cluster_args
 
@@ -37,8 +38,6 @@ def run():
 
         assembly_idx = { 'test': np.random.choice(len(assembly),int(0.1*len(assembly))) }
         assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'] )
-
-        n_examples = { 'train': int(1e6), 'test': int(2e4) }
 
         for mode,pair in pairs.items():
             print("Making {} pairs".format(mode))

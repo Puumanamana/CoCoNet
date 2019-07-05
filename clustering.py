@@ -81,7 +81,7 @@ def get_neighbors(file_h5):
 
 def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,hits_threshold=0.95):
 
-    adj_mat_file = "{}/adjacency_matrix.npy".format(outputdir)
+    adj_mat_file = "{}/adjacency_matrix_nf{}.npy".format(outputdir,n_frags)
 
     if not os.path.exists(adj_mat_file):
         neighbors = get_neighbors(repr_h5['coverage'])
@@ -92,19 +92,26 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
         handles = {key: h5py.File(filename) for key,filename in repr_h5.items() }
 
         contigs = np.array(list(handles['coverage'].keys()))
-        adjacency_matrix = np.identity(len(contigs),dtype=np.uint16)
-
+        
         combination_idx = [
             np.repeat(np.arange(n_frags),n_frags),
             np.tile(np.arange(n_frags),n_frags)
         ]
+        
+        adjacency_matrix = np.identity(len(contigs)) * n_frags**2
+        adjacency_matrix[adjacency_matrix==0] = -1
+        adjacency_matrix = adjacency_matrix.astype(int)
 
         for k, ctg in progressbar(enumerate(contigs),max_value=len(contigs)):
             
             x_ref = { key: torch.from_numpy(np.array(handle.get(ctg)[:])[combination_idx[0]])
                       for key,handle in handles.items() }
-            
-            for ni in neighbors[k][:max_neighbor]:
+            # Discard neighbors that we already calculated
+            neighbors_k = neighbors[k][:max_neighbor]
+            scores = adjacency_matrix[k,neighbors_k]
+            new_neighbors_k = neighbors_k[scores < 0]
+
+            for ni in new_neighbors_k:
                 x_other = { key: torch.from_numpy(np.array(
                     handle.get(contigs[ni])[:]
                 )[combination_idx[1]])
@@ -115,18 +122,33 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
                 adjacency_matrix[k,ni] = sum(probs>prob_thresh)
                 adjacency_matrix[ni,k] = adjacency_matrix[k,i]
 
+            # matches_k = neighbors_k[adjacency_matrix[k,neighbors_k] > hits_threshold * n_frags**2]
+            # if len(matches_k) > 1:
+            #     print("Matches for contig {}: {}"
+            #           .format(contigs[k],"-".join(contigs[matches_k]))
+            #     )
+                    
         np.save(adj_mat_file,adjacency_matrix)
 
     else:
         adjacency_matrix = np.load(adj_mat_file)
 
+    # Remove -1 (NAs) from the matrix
+    adjacency_matrix[adjacency_matrix < 0] = 0
+    
     threshold = hits_threshold * n_frags**2
     G = nx.from_numpy_matrix((adjacency_matrix>threshold).astype(int))
-    assignments = pd.Series(community.best_partition(G))
+    assignments = pd.DataFrame({'clusters': list(community.best_partition(G).values()),
+                                'contigs': contigs,
+                                'truth': [x.split("_")[0] for x in contigs]})
+    
+    assignments['truth'] = assignments.index.str.split("_").str.get(0)
 
-    clusters = assignments.reset_index().groupby(0).agg([list,len])
-    import ipdb;ipdb.set_trace()
+    clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len])
+    clusters_grouped.columns = ["purity","csize"]
+    
+    clusters_grouped[ (clusters_grouped.purity == 1) & (clusters_grouped.csize>1) ]
 
-    return clusters
+    assignments.to_csv("{}/assignments_nf{}.csv".format(outputdir,n_frags))
 
     
