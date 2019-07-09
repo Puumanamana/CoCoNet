@@ -1,4 +1,4 @@
-dataset = "sim2"
+dataset = "sim"
 
 io_path = {
     'in': "input_data/{}".format(dataset),
@@ -26,7 +26,7 @@ nn_arch = {
     'composition': { 'neurons': [128,64,32] },
     'coverage': { 'neurons': [128,64,32],
                   'n_filters': 64, 'kernel_size': 7,'conv_stride': 2,
-                  'pool_size': 4, 'pool_stride': 2},
+                  'pool_size': 3, 'pool_stride': 2},
     'combination': { 'neurons': [64] }
 }
 

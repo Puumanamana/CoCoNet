@@ -37,17 +37,10 @@ class CompositionGenerator(object):
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
             
             for j,(spA,startA,endA,spB,startB,endB) in enumerate(pairs_batch):
-                freqA = get_kmer_frequency(self.genomes[spA][startA:endA])
-                freqB = get_kmer_frequency(self.genomes[spB][startB:endB])
+                freqA = get_kmer_frequency(self.genomes[spA][startA:endA],rc=self.rc)
+                freqB = get_kmer_frequency(self.genomes[spB][startB:endB],rc=self.rc)
                 X1[j,:] = freqA
                 X2[j,:] = freqB
-
-            if self.rc:
-                X1 += X1[:,::-1]
-                X1 = X1[:int(len(X1)/2)]
-                
-                X2 += X2[:,::-1]
-                X2 = X2[:int(len(X2)/2)]                
 
             self.i += 1
 

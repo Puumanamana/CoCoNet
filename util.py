@@ -44,10 +44,15 @@ def get_kmer_number(sequence,k=4):
 
     return kmer_indices
 
-def get_kmer_frequency(sequence,k=4):
-    kmer_indices = get_kmer_number(sequence,k=4)
+def get_kmer_frequency(sequence,k=4,rc=False,index=False):
+    if not index:
+        kmer_indices = get_kmer_number(sequence,k=4)
 
     frequencies = np.bincount(kmer_indices,minlength=4**k)
+
+    if rc:
+        frequencies += frequencies[::-1]
+        frequencies = frequencies[:int(4**k/2)]
 
     return frequencies
 

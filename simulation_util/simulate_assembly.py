@@ -8,7 +8,7 @@ from Bio.Seq import Seq
 
 from progressbar import progressbar
 
-data_dir = os.path.expanduser('~/database')
+data_dir = os.path.expanduser('~/databases')
 
 def format_database(min_virus_len, db_name="viral.genomic.fna"):
     mapping = { 'R': ['A','G'],
@@ -102,5 +102,5 @@ def split_db(min_ctg_len, db_name="viral.genomic.ACGT.fasta",n_genomes=3000):
 if __name__ == '__main__':
     min_virus_len = 3000
     min_ctg_len = 2000
-    # format_database(min_virus_len)
+    format_database(min_virus_len)
     split_db(min_ctg_len)

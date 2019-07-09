@@ -17,7 +17,6 @@ from clustering import save_repr_all, cluster
 def run():
 
     # format_assembly()
-
     input_files = { "fasta": "{}/assembly.fasta".format(io_path["in"]),
                     "coverage_h5": "{}/coverage_contigs.h5".format(io_path["in"])}
 
@@ -80,7 +79,8 @@ def run():
     }
 
     if not os.path.exists(repr_outputs['coverage']):
-        save_repr_all(model,n_frags,frag_len,kmer,train_args['window_size'],
+        save_repr_all(model,n_frags,frag_len,kmer,
+                      train_args['rc'],train_args['window_size'],
                       outputs=repr_outputs,**input_files)
 
     cluster(model,repr_outputs,io_path["out"],**cluster_args)

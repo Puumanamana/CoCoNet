@@ -1,13 +1,13 @@
 #!/usr/bin/env nextflow
 
-inputdir = 'camisim/sim/*_sample_*/bam/*.bam'
+inputdir = '../../simulation/sim/*_sample_*/bam/*.bam'
 
 alignments = Channel.fromPath(inputdir)
     .ifEmpty { error "Cannot find any bam matching: ${inputdir}" }
     .map{ path -> tuple( (path =~ "sample_[0-9]+")[0], path )  }
 
 genome_lengths = Channel
-    .fromPath('/home/cedric/database/viral.genomic.ACGT.fasta')
+    .fromPath('/home/cedric/databases/viral.genomic.ACGT.fasta')
     .splitFasta( record: [id: true, seqString: true ])
     .map{ it -> tuple( it.id, it.seqString.length() ) }
 
@@ -28,7 +28,6 @@ process Samtools {
 
     printf \$ctg_name
     """
-
 }
 
 process TxtToNpy {
