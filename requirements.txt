@@ -1,0 +1,9 @@
+samtools
+Biopython
+pandas
+numpy
+sklearn
+torch
+progressbar2
+networkx
+(community)

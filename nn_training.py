@@ -69,7 +69,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
     labels = {
         "train": get_labels(pairs_file["train"]),
         "test": get_labels(pairs_file["test"]),
-        "truth": get_labels(pairs_file["test"], sim=True)
+        "truth": get_labels(pairs_file["test"], sim=False)
     }
 
     # optimizer = optim.Adam(list(model.composition_model.parameters())

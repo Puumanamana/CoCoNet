@@ -30,8 +30,9 @@ class CompositionGenerator(object):
         return self.n_batches
 
     def __next__(self):
-        X1 = np.zeros([self.batch_size,4**self.k], dtype=np.float32)
-        X2 = np.zeros([self.batch_size,4**self.k], dtype=np.float32)
+        feature_size = int(4**self.k / (1+self.rc))
+        X1 = np.zeros([self.batch_size,feature_size], dtype=np.float32)
+        X2 = np.zeros([self.batch_size,feature_size], dtype=np.float32)
         
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]

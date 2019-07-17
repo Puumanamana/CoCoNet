@@ -195,6 +195,6 @@ class CoCoNet(nn.Module):
         
         losses = [ self.loss_op(pred["composition"],truth),
                    self.loss_op(pred["coverage"],truth),
-                   self.loss_op(pred["combined"],truth) ]
+                   2*self.loss_op(pred["combined"],truth) ]
         
         return sum(losses)

@@ -1,26 +1,48 @@
 import os
+from glob import glob
+
 from Bio import SeqIO
 import numpy as np
 import h5py
 import torch
 
+from config import min_contig_length
 from config import io_path
 from config import frag_len,step,kmer,model_type
 from config import n_examples
 from config import nn_arch, train_args
 from config import cluster_args
 
+from preprocessing import length_filter, bam_to_h5
 from fragmentation import make_pairs
 from nn_training import initialize_model,train
 from clustering import save_repr_all, cluster
 
 def run():
 
-    # format_assembly()
-    input_files = { "fasta": "{}/assembly.fasta".format(io_path["in"]),
-                    "coverage_h5": "{}/coverage_contigs.h5".format(io_path["in"])}
+    assembly_file = [ f for f in glob("{}/*.f*a".format(io_path["in"]))
+                      if 'gt' not in f ][0]
+    _, ext = os.path.splitext(assembly_file)
+    
+    
+    raw_inputs = { "fasta": assembly_file,
+                   "coverage_bam": glob("{}/*.bam".format(io_path["in"])) }
+    
+    filtered_inputs = { "fasta": assembly_file.replace(ext,"_gt{}{}".format(min_contig_length,ext)),
+                        "coverage_h5": "{}/coverage_contigs.h5".format(io_path["in"]) }
+    
+    #######################
+    #### Preprocessing ####
+    #######################
 
-    h5_cov = h5py.File(input_files['coverage_h5'],'r')
+    if not os.path.exists(filtered_inputs["coverage_h5"]):
+        length_filter(raw_inputs['fasta'],filtered_inputs['fasta'],min_length=min_contig_length)
+        bam_to_h5(filtered_inputs['fasta'],raw_inputs['coverage_bam'],
+                  output=filtered_inputs["coverage_h5"])  
+        
+    # format_assembly()
+
+    h5_cov = h5py.File(filtered_inputs['coverage_h5'],'r')
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
 
     #######################
@@ -33,7 +55,7 @@ def run():
     }
 
     if not os.path.exists(pairs["train"]):
-        assembly = [ contig for contig in SeqIO.parse(input_files["fasta"],"fasta") ]
+        assembly = [ contig for contig in SeqIO.parse(filtered_inputs["fasta"],"fasta") ]
 
         assembly_idx = { 'test': np.random.choice(len(assembly),int(0.1*len(assembly))) }
         assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'] )
@@ -61,7 +83,7 @@ def run():
     )
     
     if not os.path.exists(model_output):
-        train(model, pairs, model_output, model_type=model_type, **train_args, **input_files)
+        train(model, pairs, model_output, model_type=model_type, **train_args, **filtered_inputs)
     else:
         checkpoint = torch.load(model_output)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -81,7 +103,7 @@ def run():
     if not os.path.exists(repr_outputs['coverage']):
         save_repr_all(model,n_frags,frag_len,kmer,
                       train_args['rc'],train_args['window_size'],
-                      outputs=repr_outputs,**input_files)
+                      outputs=repr_outputs,**filtered_inputs)
 
     cluster(model,repr_outputs,io_path["out"],**cluster_args)
 
