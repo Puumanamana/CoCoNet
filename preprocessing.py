@@ -42,6 +42,11 @@ def bam_to_h5(fasta,coverage_bam,output):
                 if ctg != cur_ctg:
                     if i > 0:
                         coverage_h5_tmp.create_dataset("{}/{}".format(group,cur_ctg),data=depth_buffer)
+                        
+                    ctg_len = ctg_info.get(ctg,None)
+                    if ctg_len is None:
+                        continue
+                    
                     cur_ctg = ctg
                     depth_buffer = np.zeros(ctg_info[ctg],dtype=np.uint32)
 
