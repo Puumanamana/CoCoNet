@@ -44,15 +44,16 @@ def bam_to_h5(fasta,coverage_bam,output):
                         coverage_h5_tmp.create_dataset("{}/{}".format(group,cur_ctg),data=depth_buffer)
                         
                     ctg_len = ctg_info.get(ctg,None)
+                    cur_ctg = ctg
+
                     if ctg_len is None:
                         continue
                     
-                    cur_ctg = ctg
                     depth_buffer = np.zeros(ctg_info[ctg],dtype=np.uint32)
 
                 depth_buffer[int(pos)-1] = int(d)
 
-            coverage_h5_tmp.create_dataset("{}/{}".format(group,ctg),data=depth_buffer)
+        coverage_h5_tmp.create_dataset("{}/{}".format(group,ctg),data=depth_buffer)
 
     # Save everything in a [N_samples,Genome_size] matrix
     coverage_h5 = h5py.File(output,'w')
