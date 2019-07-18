@@ -13,7 +13,7 @@ def length_filter(fasta,output,min_length=2048):
 
 def bam_to_depth(bam):
     output = "/tmp/{}".format(os.path.basename(bam).replace(".bam",".txt"))
-    cmd = "samtools depth -d 20000 {}".format(bam)
+    cmd = ["samtools", "depth", "-d", "20000",bam]
 
     with open(output, "w") as outfile:
         subprocess.call(cmd, stdout=outfile)
@@ -25,7 +25,7 @@ def bam_to_h5(fasta,coverage_bam,output):
                  for seq in SeqIO.parse(fasta,"fasta") }
     n_samples = len(coverage_bam)
     
-    coverage_h5_tmp = h5py.File("/tmp/coverage.h5")
+    coverage_h5_tmp = h5py.File("/tmp/coverage.h5",'w')
 
     for i,bam in enumerate(coverage_bam):
         group = "sample_{}".format(i)
@@ -50,7 +50,7 @@ def bam_to_h5(fasta,coverage_bam,output):
             coverage_h5_tmp.create_dataset("{}/{}".format(group,ctg),depth_buffer)
 
         # Save eerything in a [N_samples,Genome_size] matrix
-        coverage_h5 = h5py.File(output)
+        coverage_h5 = h5py.File(output,'w')
 
         for ctg in ctg_info:
             try:
