@@ -11,9 +11,9 @@ import community
 from Bio import SeqIO
 from progressbar import progressbar
 
-from util import get_kmer_number, get_kmer_frequency, avg_window
+from util import get_kmer_frequency, avg_window
 
-def save_repr_all(model,n_frags,frag_len,kmer,rc,window_size,
+def save_repr_all(model,n_frags,frag_len,kmer_list,rc,window_size,
                   fasta=None,coverage_h5=None,outputs=None):
 
     cov_h5 = h5py.File(coverage_h5,'r')
@@ -24,19 +24,21 @@ def save_repr_all(model,n_frags,frag_len,kmer,rc,window_size,
 
         step = int((len(contig)-frag_len) / n_frags)
 
-        fragment_slices = np.array(
-            [ np.arange(step*i, step*i+frag_len)
-              for i in range(n_frags) ]
-        )
+        fragment_boundaries = [ (step*i, step*i+frag_len)
+                            for i in range(n_frags) ]
 
-        contig_kmers = np.array(get_kmer_number(str(contig.seq),k=kmer))[fragment_slices]
+        # contig_kmers = np.array(get_kmer_number(str(contig.seq),k=kmer))[fragment_slices]
         
-        x_composition = torch.from_numpy(np.array(
-            [ get_kmer_frequency(indices,k=kmer,rc=rc,index=True)
-            for indices in contig_kmers ]
+        x_composition = torch.from_numpy(np.stack(
+            [ get_kmer_frequency(str(contig.seq)[start:stop],
+                                 kmer_list=kmer_list,rc=rc)
+              for (start,stop) in fragment_boundaries]
         ).astype(np.float32)) # Shape = (n_frags, 4**k)
-        
+
+        fragment_slices = np.array([np.arange(start,stop)
+                                    for (start,stop) in fragment_boundaries ])
         coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:,fragment_slices]
+        
         coverage_genome = np.swapaxes(coverage_genome,1,0)
         
         x_coverage = torch.from_numpy(
@@ -90,8 +92,8 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
     if not os.path.exists(adj_mat_file):
         neighbors = get_neighbors(repr_h5['coverage'])
         
-        for i,ni in enumerate(get_neighbors(repr_h5['composition'])):
-            neighbors[i] = np.intersect1d(neighbors[i],ni)
+        # for i,ni in enumerate(get_neighbors(repr_h5['composition'])):
+        #     neighbors[i] = np.intersect1d(neighbors[i],ni)
         
         combination_idx = [
             np.repeat(np.arange(n_frags),n_frags),

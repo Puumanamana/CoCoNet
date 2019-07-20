@@ -10,23 +10,23 @@ n_examples = { 'train': int(1e6), 'test': int(5e4) }
 frag_len = 1024
 min_contig_length = 2*frag_len
 step = int(frag_len/8)
-kmer = 4
+kmer_list = [2,3,4]
 model_type = 'CoCoNet'
 
 train_args = {
     'batch_size': 64,
-    'learning_rate': 1e-4,
+    'learning_rate': 5e-5,
     'window_size': 15,
-    'load_batch': 2000,
-    'kmer': kmer,
+    'load_batch': 400,
+    'kmer_list': kmer_list,
     'rc': False
 }
 
 nn_arch = {
-    'composition': { 'neurons': [124,64,32] },
-    'coverage': { 'neurons': [124,64,32],
-                  'n_filters': 64, 'kernel_size': 7,'conv_stride': 2,
-                  'pool_size': 3, 'pool_stride': 2},
+    'composition': { 'neurons': [128,64,32] },
+    'coverage': { 'neurons': [128,64,32],
+                  'n_filters': 64, 'kernel_size': 7,'conv_stride': 3,
+                  'pool_size': 2, 'pool_stride': 1},
     'combination': { 'neurons': [32] }
 }
 

@@ -5,8 +5,17 @@ import torch.nn.functional as F
 import numpy as np
 
 class CompositionModel(nn.Module):
-    def __init__(self, input_size, neurons=[128,64]):
+    def __init__(self, input_size, neurons=[128,64], n_filters=[8,16,32]):
         super(CompositionModel, self).__init__()
+        # self.embedding = nn.Embedding(4, 2)  # (words in vocab, embedding size)
+        
+        # self.embed_conv_2 = nn.Conv1d(2,n_filters[0],2)
+        # self.embed_conv_3 = nn.Conv1d(2,n_filters[1],3)
+        # self.embed_conv_4 = nn.Conv1d(2,n_filters[2],4)
+
+        # conv_shapes = [ nf * (input_size-i+1) for i,nf in zip([2,3,4],n_filters) ]
+
+        # self.compo_shared = nn.Linear(sum(conv_shapes),neurons[0])
         self.compo_shared = nn.Linear(input_size,neurons[0])
         self.compo_siam = nn.Linear(2*neurons[0],neurons[1])
         self.compo_dense = nn.Linear(neurons[1],neurons[2])        
@@ -14,14 +23,29 @@ class CompositionModel(nn.Module):
 
         self.loss_op = nn.BCELoss()
 
+        print(self.compo_shared)
+        print(self.compo_siam)
+        print(self.compo_dense)
+        print(self.compo_prob)
+
     def compute_repr(self,x):
         '''
         Representation of a composition input
         (Before merging the 2 inputs)
         '''
-        
-        return F.relu(self.compo_shared(x))
+        # embedding = self.embedding(x.long()).transpose(1,2)
 
+        # x_conv = [
+        #     self.embed_conv_2(embedding),
+        #     self.embed_conv_3(embedding),
+        #     self.embed_conv_4(embedding),            
+        # ]
+
+        # x_pool = torch.cat([ self.pool(xi) for xi in x_conv ], dim=1)
+        
+        # return F.relu(self.compo_shared(x_pool.view(x_pool.shape[0],-1)))
+        return F.relu(self.compo_shared(x))
+    
     def combine_repr(self,*x):
         '''
         Combine representation given 2 composition vectors

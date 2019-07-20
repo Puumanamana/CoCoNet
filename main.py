@@ -8,7 +8,7 @@ import torch
 
 from config import min_contig_length
 from config import io_path
-from config import frag_len,step,kmer,model_type
+from config import frag_len,step,kmer_list,model_type
 from config import n_examples
 from config import nn_arch, train_args
 from config import cluster_args
@@ -72,7 +72,8 @@ def run():
     model_output = "{}/{}.pth".format(io_path["out"],model_type)
     
     input_shapes = {
-        'composition': int(4**kmer / (1+train_args['rc'])),
+        'composition': [ sum([int(4**k / (1+train_args['rc'])) for k in kmer_list ]) ],
+        # 'composition': (frag_len-kmer+1, int(4**kmer / (1+train_args['rc']))),
         'coverage': (int(frag_len/train_args['window_size']), n_samples)
     }
 
@@ -81,6 +82,7 @@ def run():
                              coverage_args=nn_arch["coverage"],
                              combination_args=nn_arch["combination"]
     )
+    print("Model initialized")
     
     if not os.path.exists(model_output):
         train(model, pairs, model_output, model_type=model_type, **train_args, **filtered_inputs)
@@ -101,7 +103,7 @@ def run():
     }
 
     if not os.path.exists(repr_outputs['coverage']):
-        save_repr_all(model,n_frags,frag_len,kmer,
+        save_repr_all(model,n_frags,frag_len,kmer_list,
                       train_args['rc'],train_args['window_size'],
                       outputs=repr_outputs,**filtered_inputs)
 

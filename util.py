@@ -44,17 +44,24 @@ def get_kmer_number(sequence,k=4):
 
     return kmer_indices
 
-def get_kmer_frequency(sequence,k=4,rc=False,index=False):
-    if not index:
-        kmer_indices = get_kmer_number(sequence,k=4)
-    else:
-        kmer_indices = sequence
+def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False):
+    
+    output_sizes = np.cumsum([0]+[ int(4**k/(1+rc)) for k in kmer_list ])
+    frequencies = np.zeros(output_sizes[-1])
 
-    frequencies = np.bincount(kmer_indices,minlength=4**k)
+    for i,k in enumerate(kmer_list):
+    
+        if not index:
+            kmer_indices = get_kmer_number(sequence,k)
+        else:
+            kmer_indices = sequence
 
-    if rc:
-        frequencies += frequencies[::-1]
-        frequencies = frequencies[:int(4**k/2)]
+        freq_k = np.bincount(kmer_indices,minlength=4**k)
+        if rc:
+            freq_k += freq_k[::-1]
+            freq_k = freq_k[:int(4**k/2)]
+            
+        frequencies[output_sizes[i]:output_sizes[i+1]] = freq_k
 
     return frequencies
 
