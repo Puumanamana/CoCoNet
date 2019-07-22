@@ -1,4 +1,4 @@
-dataset = "Delong"
+dataset = "Delong_velvet"
 
 io_path = {
     'in': "input_data/{}".format(dataset),
@@ -9,7 +9,7 @@ n_examples = { 'train': int(1e6), 'test': int(5e4) }
 
 frag_len = 1024
 min_contig_length = 2*frag_len
-step = int(frag_len/8)
+step = int(frag_len/16)
 kmer_list = [2,3,4]
 model_type = 'CoCoNet'
 

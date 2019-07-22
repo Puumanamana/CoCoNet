@@ -21,7 +21,7 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
 
     min_dist_in_step = calculate_optimal_dist(contig_frags,fppc)
     
-    pairs_A, pairs_B = (np.empty([fppc,3],dtype="<U16"), np.empty([fppc,3],dtype="<U16"))
+    pairs_A, pairs_B = (np.empty([fppc,3],dtype="<U128"), np.empty([fppc,3],dtype="<U128"))
     k = 0
     for i,j in combinations(range(contig_frags),2):
         if k==fppc:
@@ -33,7 +33,7 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
 
     if k < fppc:
         print("Error: cannot make {} unique pairs with genome of {} fragments"
-              .format(fppc,frag_steps))
+              .format(fppc,contig_frags))
         import ipdb;ipdb.set_trace()
         
     dfs = {'A': pd.DataFrame(pairs_A,columns=["sp","start","end"]),

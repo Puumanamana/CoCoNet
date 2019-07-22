@@ -1,11 +1,7 @@
-from os.path import splitext
 from time import time
 
 import h5py
 import numpy as np
-
-from Bio import SeqIO
-from Bio.Seq import Seq
 
 from progressbar import progressbar
 
@@ -19,22 +15,6 @@ def timer(func):
         return res
         
     return wrapper
-
-def format_assembly(db_path,min_len=2048,output=None):
-
-    if output is None:
-        base, ext = splitext(db_path)
-        output = "{}_formated{}".format(base,ext)
-
-    formated_assembly = []
-    for genome in SeqIO.parse(db_path,"fasta"):
-        new_genome = genome
-        new_genome.seq = Seq(str(genome.seq).replace('N',''))
-        if len(new_genome.seq) > min_len:
-            formated_assembly.append(new_genome)
-
-    SeqIO.write(formated_assembly,output,"fasta")
-
 
 kmer_codes = { ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
 

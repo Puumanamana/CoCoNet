@@ -13,7 +13,7 @@ from config import n_examples
 from config import nn_arch, train_args
 from config import cluster_args
 
-from preprocessing import length_filter, bam_to_h5
+from preprocessing import format_assembly, bam_list_to_h5
 from fragmentation import make_pairs
 from nn_training import initialize_model,train
 from clustering import save_repr_all, cluster
@@ -36,12 +36,10 @@ def run():
     #######################
 
     if not os.path.exists(filtered_inputs["coverage_h5"]):
-        length_filter(raw_inputs['fasta'],filtered_inputs['fasta'],min_length=min_contig_length)
-        bam_to_h5(filtered_inputs['fasta'],raw_inputs['coverage_bam'],
+        format_assembly(raw_inputs['fasta'],filtered_inputs['fasta'],min_length=min_contig_length)
+        bam_list_to_h5(filtered_inputs['fasta'],raw_inputs['coverage_bam'],
                   output=filtered_inputs["coverage_h5"])  
         
-    # format_assembly()
-
     h5_cov = h5py.File(filtered_inputs['coverage_h5'],'r')
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
 
