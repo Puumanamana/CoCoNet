@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,9 @@ METRICS = ['adjusted_rand_score',
            'homogeneity_score',
            'completeness_score']
 
+def nuniques(x):
+    return len(set(x))
+
 def plot_scores(truth,pred,metrics=METRICS,name="CoCoNet"):
     
     scores = pd.Series({
@@ -30,27 +34,35 @@ def plot_scores(truth,pred,metrics=METRICS,name="CoCoNet"):
     sns.barplot(x="metric",y="score",data=scores.reset_index(),ax=ax)
 
 def plot_purity(assignments):
-    clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len])
-    clusters_grouped.columns = ["purity","csize"]
+    # clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len])
+    # clusters_grouped.columns = ["purity","csize"]
 
-    clusters_purity = (clusters_grouped[clusters_grouped.csize>1].purity
-                       .value_counts()
-                       .sort_index())
+    clusters_grouped  = (assignments
+                        .groupby('clusters')['truth']
+                        .agg([lambda x: x.value_counts().max(),len,nuniques])
+    )
+    clusters_grouped.columns = ["purity","csize","nuniques"]
 
-    print(clusters_purity)
-    print("# clusters: {}".format(clusters_grouped.shape[0]))
+    clusters_grouped.purity = clusters_grouped.purity / clusters_grouped.csize
+
+    clusters_grouped = clusters_grouped[clusters_grouped.csize>1]
     
-    fig,ax = plt.subplots(1,2)
-    clusters_purity.plot(kind='bar',ax=ax[0])
-    ax[0].set_xlabel("Cluster purity")
-    ax[0].set_ylabel("Nb of bins")
+    # clusters_purity = (clusters_grouped[clusters_grouped.csize>1].purity
+    #                    .value_counts()
+    #                    .sort_index())
 
-    ax[1].scatter(clusters_grouped.purity
-                  +np.random.uniform(-.3,.3,clusters_grouped.shape[0]),
+    print(clusters_grouped)
+    print("# clusters: {}".format(assignments.clusters.unique().shape[0]))
+
+    fig,ax = plt.subplots(1,3)
+    clusters_grouped.nuniques.value_counts().sort_index().plot(kind='bar',ax=ax[0])
+    
+    ax[1].scatter(clusters_grouped.purity+np.random.uniform(-.01,.01,clusters_grouped.shape[0]),
                   clusters_grouped.csize,
                   s=5,alpha=0.1)
     ax[1].set_xlabel("Cluster purity")
     ax[1].set_ylabel("Cluster size")
+    sns.kdeplot(clusters_grouped.purity,ax=ax[2])
 
 def get_components(h5,methods=["UMAP","PCA"]):
 
@@ -102,7 +114,7 @@ if __name__ == '__main__':
     assignments = pd.read_csv("{}/assignments_nf30.csv".format(root_dir),
                               index_col=0)
     
-    if dataset == 'sim':
+    if 'sim' in dataset:
         truth = [ int(x[1:]) for x in assignments.truth ]
     else:
         truth = pd.read_csv("{}/truth.csv".format(root_dir),header=None,index_col=0)[1].to_dict()
@@ -113,7 +125,7 @@ if __name__ == '__main__':
         truth = assignments['truth']
         
     pred = assignments.clusters.tolist()
-    
+
     plot_purity(assignments)
     plot_scores(truth,pred)
     

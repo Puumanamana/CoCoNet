@@ -48,27 +48,23 @@ def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False):
 def get_coverage(pairs,coverage_h5,window_size,
                  columns=["sp","start","end"]):
     h5data = h5py.File(coverage_h5)
-    contigs = np.unique(np.concatenate((pairs.A.sp,
-                                        pairs.B.sp)))
+    contigs = np.unique(pairs['sp'].flatten())
 
     coverage_data = { ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs }
 
-    pairs_sorted = pairs.stack(level=0).swaplevel().sort_index()
-    pairs_sorted.index = np.arange(len(pairs_sorted))
-    pairs_sorted.sort_values(by=columns,inplace=True)
+    n_pairs = len(pairs)
+    n_samples, _ = np.array(list(coverage_data.values())[0]).shape
+    frag_len = pairs['end'][0,0] - pairs['start'][0,0]
     
-    order = np.argsort(pairs_sorted.index)
+    pairs = np.concatenate([pairs[:,0],pairs[:,1]])
+    sorted_idx = np.argsort(pairs['sp'])
     
-    # Calculate coverage for this order
-    n_samples = np.array(list(coverage_data.values())[0]).shape[0]
-    frag_len = pairs_sorted.end.iloc[0] - pairs_sorted.start.iloc[0]
-    
-    X = np.zeros([len(pairs_sorted),n_samples,int(frag_len/window_size)],
+    X = np.zeros([2*n_pairs,n_samples,int(frag_len/window_size)],
                  dtype=np.float32)
     seen = {}
 
-    for i,(sp,start,end) in progressbar(enumerate(pairs_sorted[columns].values),
-                                        max_value=pairs_sorted.shape[0]):
+    for i,(sp,start,end) in progressbar(enumerate(pairs[sorted_idx]),
+                                        max_value=pairs.shape[0]):
         cov_sp = seen.get((sp,start),None)
 
         if cov_sp is None:
@@ -77,10 +73,10 @@ def get_coverage(pairs,coverage_h5,window_size,
             )
             seen[(sp,start)] = cov_sp
 
-        X[i] = cov_sp
+        X[sorted_idx[i]] = cov_sp
 
-    return (X[order[:pairs.shape[0]],:,:],
-            X[order[pairs.shape[0]:],:,:])
+    return (X[:n_pairs,:,:],
+            X[n_pairs:,:,:])
     
 
 def avg_window(x,window_size=4):

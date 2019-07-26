@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -22,23 +23,30 @@ def initialize_model(model_type, input_shapes, composition_args=None, coverage_a
 
     return model
 
-def get_labels(pairs_file,sim=False):
-    pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
-    
-    if sim:
-        labels = (pairs.A.sp.str.split("_").str.get(0)
-                  == pairs.B.sp.str.split("_").str.get(0)).values.astype(np.float32)[:,None]
-    else:
-        labels = (pairs.A.sp == pairs.B.sp).values.astype(np.float32)[:,None]
+def get_labels(pairs_file):
+    ctg_names = np.load(pairs_file)['sp']
+    labels = (ctg_names[:,0] == ctg_names[:,1]).astype(np.float32)[:,None]
 
     return torch.from_numpy(labels)
+
+def get_npy_lines(filename):
+    with open(filename,'rb') as handle:
+        handle.read(10) # Skip the binary part in header
+        try:
+            header = handle.readline().decode()
+            n_lines = int(re.findall('\((\d+), \d+\)',header)[0])
+        except:
+            print("Failed to parse header")
+            n_lines = np.load(filename).shape[0]
+
+    return n_lines
 
 def train(model, pairs_file, output, fasta=None, coverage_h5=None,
           batch_size=64, kmer_list=[4], window_size=16, load_batch=1000,
           learning_rate=1e-4, model_type=None, rc=False):
 
-    n_test = sum(1 for _ in open(pairs_file["test"]))-2
-    n_train = sum(1 for _ in open(pairs_file["train"]))-2    
+    n_test = get_npy_lines(pairs_file["test"])
+    n_train = get_npy_lines(pairs_file["train"])
 
     if model_type == "composition":
         generator = CompositionGenerator(fasta,pairs_file["train"],
@@ -71,8 +79,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
     print("Setting labels")
     labels = {
         "train": get_labels(pairs_file["train"]),
-        "test": get_labels(pairs_file["test"]),
-        "truth": get_labels(pairs_file["test"], sim=False)
+        "test": get_labels(pairs_file["test"])
     }
 
     optimizer = optim.Adam(list(model.composition_model.parameters())
@@ -113,7 +120,7 @@ def train(model, pairs_file, output, fasta=None, coverage_h5=None,
             model.train()
             
             print("\nRunning Loss: {}".format(running_loss))
-            get_confusion_table(outputs_test,labels["truth"])
+            get_confusion_table(outputs_test,labels["test"])
             
             running_loss = 0
 

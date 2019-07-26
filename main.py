@@ -14,7 +14,7 @@ from config import nn_arch, train_args
 from config import cluster_args
 
 from preprocessing import format_assembly, bam_list_to_h5
-from fragmentation import make_pairs
+from npy_fragmentation import make_pairs
 from nn_training import initialize_model,train
 from clustering import save_repr_all, cluster
 
@@ -48,8 +48,8 @@ def run():
     #######################        
 
     pairs = {
-        "test": "{}/pairs_test.csv".format(io_path["out"]),        
-        "train": "{}/pairs_train.csv".format(io_path["out"])
+        "test": "{}/pairs_test.npy".format(io_path["out"]),        
+        "train": "{}/pairs_train.npy".format(io_path["out"])
     }
 
     if not os.path.exists(pairs["train"]):
@@ -71,7 +71,6 @@ def run():
     
     input_shapes = {
         'composition': [ sum([int(4**k / (1+train_args['rc'])) for k in kmer_list ]) ],
-        # 'composition': (frag_len-kmer+1, int(4**kmer / (1+train_args['rc']))),
         'coverage': (int(frag_len/train_args['window_size']), n_samples)
     }
 

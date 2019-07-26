@@ -1,11 +1,11 @@
-dataset = "Delong_velvet"
+dataset = "Delong_velvet_2"
 
 io_path = {
     'in': "input_data/{}".format(dataset),
     'out': "output_data/{}".format(dataset)
 }
 
-n_examples = { 'train': int(1e6), 'test': int(5e4) }
+n_examples = { 'train': int(2e6), 'test': int(5e4) }
 
 frag_len = 1024
 min_contig_length = 2*frag_len
@@ -15,9 +15,9 @@ model_type = 'CoCoNet'
 
 train_args = {
     'batch_size': 64,
-    'learning_rate': 5e-5,
+    'learning_rate': 1e-4,
     'window_size': 15,
-    'load_batch': 400,
+    'load_batch': 2000,
     'kmer_list': kmer_list,
     'rc': False
 }
@@ -32,7 +32,7 @@ nn_arch = {
 
 cluster_args = {
     'n_frags': 30,
-    'max_neighbor': 20,
+    'max_neighbor': 50,
     'prob_thresh': 0.8,
     'hits_threshold': 0.95
 }

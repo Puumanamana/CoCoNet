@@ -96,7 +96,7 @@ class CoverageModel(nn.Module):
         # pool_out_dim = (n_filters,
         #                 int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
         # self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
-        self.cover_shared = nn.Linear(np.prod(np.prod(conv_out_dim)), neurons[0])
+        self.cover_shared = nn.Linear(np.prod(conv_out_dim), neurons[0])
         self.cover_siam = nn.Linear(2*neurons[0], neurons[1])        
         self.cover_dense = nn.Linear(neurons[1], neurons[2])
         self.cover_prob = nn.Linear(neurons[2],1)
@@ -219,6 +219,6 @@ class CoCoNet(nn.Module):
         
         losses = [ self.loss_op(pred["composition"],truth),
                    self.loss_op(pred["coverage"],truth),
-                   2*self.loss_op(pred["combined"],truth) ]
+                   self.loss_op(pred["combined"],truth) ]
         
         return sum(losses)

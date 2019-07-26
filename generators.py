@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 from Bio import SeqIO
 import torch
@@ -9,7 +8,7 @@ class CompositionGenerator(object):
     def __init__(self, fasta, pairs_file, batch_size=64, kmer_list=4, rc=False):
         self.i = 0
         self.kmer_list = kmer_list
-        self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
+        self.pairs = np.load(pairs_file)
         self.batch_size = batch_size
         self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
         self.rc = rc
@@ -17,11 +16,11 @@ class CompositionGenerator(object):
         self.set_genomes(fasta)
 
     def set_genomes(self,fasta):
-        contigs = set(self.pairs.stack(level=0).sp)
+        contigs = np.unique(self.pairs['sp'].flatten())
+        
         self.genomes = { contig.id: str(contig.seq)
                          for contig in SeqIO.parse(fasta,"fasta")
                          if contig.id in contigs }
-        self.pairs = self.pairs.values
 
     def __iter__(self):
         return self
@@ -40,7 +39,7 @@ class CompositionGenerator(object):
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
             
-            for j,(spA,startA,endA,spB,startB,endB) in enumerate(pairs_batch):
+            for j,((spA,startA,endA),(spB,startB,endB)) in enumerate(pairs_batch):
                 freqA = get_kmer_frequency(self.genomes[spA][startA:endA],
                                            kmer_list=self.kmer_list,rc=self.rc)
                 freqB = get_kmer_frequency(self.genomes[spB][startB:endB],
@@ -72,7 +71,7 @@ class CoverageGenerator(object):
     def __init__(self, h5_coverage, pairs_file,
                  batch_size=64, load_batch=1000,window_size=16):
         self.i = 0
-        self.pairs = pd.read_csv(pairs_file,index_col=0,header=[0,1])
+        self.pairs = np.load(pairs_file)
         self.h5_coverage = h5_coverage
         self.batch_size = batch_size
         self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
@@ -88,7 +87,7 @@ class CoverageGenerator(object):
     def load(self):
         print("\nLoading next coverage batch")
         
-        pairs = self.pairs.iloc[ self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size ]
+        pairs = self.pairs[ self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size ]
         self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
 
     def __next__(self):

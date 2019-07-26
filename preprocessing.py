@@ -91,7 +91,7 @@ def bam_list_to_h5(fasta,coverage_bam,output,min_samples=2):
     assembly_noN = []
 
     h5_handles = [ h5py.File(f,'r') for f in depth_h5_files ]
-    
+
     for ctg in ctg_info:
         ctg_coverage = [ h.get(ctg) for h in h5_handles ]
         ctg_coverage = np.vstack([ x[:] if x is not None

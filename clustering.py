@@ -92,8 +92,8 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
     if not os.path.exists(adj_mat_file):
         neighbors = get_neighbors(repr_h5['coverage'])
         
-        # for i,ni in enumerate(get_neighbors(repr_h5['composition'])):
-        #     neighbors[i] = np.intersect1d(neighbors[i],ni)
+        for i,ni in enumerate(get_neighbors(repr_h5['composition'])):
+            neighbors[i] = np.intersect1d(neighbors[i],ni)
         
         combination_idx = [
             np.repeat(np.arange(n_frags),n_frags),
