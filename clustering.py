@@ -13,6 +13,8 @@ from progressbar import progressbar
 
 from util import get_kmer_frequency, avg_window
 
+from time import time
+
 def save_repr_all(model,n_frags,frag_len,kmer_list,rc,window_size,
                   fasta=None,coverage_h5=None,outputs=None):
 
@@ -120,7 +122,10 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
                 )[combination_idx[1]])
                             for key,handle in handles.items() }
 
+                t0 = time()
                 probs = model.combine_repr(x_ref,x_other).detach().numpy()
+                print(time()-t0)
+                import ipdb;ipdb.set_trace()
                 
                 adjacency_matrix[k,ni] = sum(probs>prob_thresh)
                 adjacency_matrix[ni,k] = adjacency_matrix[k,ni]

@@ -1,4 +1,4 @@
-dataset = "Delong_velvet_2"
+dataset = "giant_viruses"
 
 io_path = {
     'in': "input_data/{}".format(dataset),

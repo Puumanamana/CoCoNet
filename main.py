@@ -38,7 +38,7 @@ def run():
     if not os.path.exists(filtered_inputs["coverage_h5"]):
         format_assembly(raw_inputs['fasta'],filtered_inputs['fasta'],min_length=min_contig_length)
         bam_list_to_h5(filtered_inputs['fasta'],raw_inputs['coverage_bam'],
-                  output=filtered_inputs["coverage_h5"])  
+                       output=filtered_inputs["coverage_h5"])  
         
     h5_cov = h5py.File(filtered_inputs['coverage_h5'],'r')
     n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
