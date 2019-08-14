@@ -1,3 +1,6 @@
+from multiprocessing.pool import Pool
+from functools import partial
+
 import numpy as np
 from Bio import SeqIO
 import torch
@@ -5,15 +8,17 @@ import torch
 from util import get_kmer_frequency, get_coverage
 
 class CompositionGenerator(object):
-    def __init__(self, fasta, pairs_file, batch_size=64, kmer_list=4, rc=False):
+    def __init__(self, fasta, pairs_file, batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
         self.i = 0
         self.kmer_list = kmer_list
         self.pairs = np.load(pairs_file)
         self.batch_size = batch_size
         self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
         self.rc = rc
+        self.norm = norm
 
         self.set_genomes(fasta)
+        self.pool = Pool(ncores)
 
     def set_genomes(self,fasta):
         contigs = np.unique(self.pairs['sp'].flatten())
@@ -29,39 +34,24 @@ class CompositionGenerator(object):
         return self.n_batches
 
     def __next__(self):
-        feature_sizes = [0]+[int(4**k / (1+self.rc)) for k in self.kmer_list]
-        # limits = np.cumsum(feature_sizes)
-        # feature_size = self.pairs[0,2] - self.pairs[0,1] - self.k + 1
-        
-        X1 = np.zeros([self.batch_size,sum(feature_sizes)], dtype=np.float32)
-        X2 = np.zeros([self.batch_size,sum(feature_sizes)], dtype=np.float32)
         
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
-            
-            for j,((spA,startA,endA),(spB,startB,endB)) in enumerate(pairs_batch):
-                freqA = get_kmer_frequency(self.genomes[spA][startA:endA],
-                                           kmer_list=self.kmer_list,rc=self.rc)
-                freqB = get_kmer_frequency(self.genomes[spB][startB:endB],
-                                           kmer_list=self.kmer_list,rc=self.rc)
-                
-                # for k in range(2,self.k+1):
-                #     # freqA = get_kmer_number(self.genomes[spA][startA:endA],k=k)
-                #     # freqB = get_kmer_number(self.genomes[spB][startB:endB],k=k)
-                #     freqA = get_kmer_frequency(self.genomes[spA][startA:endA],k=k,rc=self.rc)
-                #     freqB = get_kmer_frequency(self.genomes[spB][startB:endB],k=k,rc=self.rc)
 
-                X1[j,:] = freqA
-                X2[j,:] = freqB
-                # X1[j,limits[k-2]:limits[k-1]] = freqA
-                # X2[j,limits[k-2]:limits[k-1]] = freqB
+            get_kmer_frequency_with_args = partial(get_kmer_frequency,kmer_list=self.kmer_list,rc=self.rc,norm=self.norm)
+
+            fragments_A = [ self.genomes[spA][startA:endA] for (spA,startA,endA),_ in pairs_batch ]
+            fragments_B = [ self.genomes[spB][startB:endB] for _,(spB,startB,endB) in pairs_batch ]
+            
+            X1 = self.pool.map(get_kmer_frequency_with_args,fragments_A)
+            X2 = self.pool.map(get_kmer_frequency_with_args,fragments_B)
 
             self.i += 1
 
-            return torch.from_numpy(X1),torch.from_numpy(X2)
+            return torch.FloatTensor(X1), torch.FloatTensor(X2)
         else:
+            self.pool.close()
             raise StopIteration()
-
 
 class CoverageGenerator(object):
     """

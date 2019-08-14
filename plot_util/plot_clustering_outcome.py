@@ -1,5 +1,4 @@
 import os
-from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -116,6 +115,9 @@ if __name__ == '__main__':
     
     if 'sim' in dataset:
         truth = [ int(x[1:]) for x in assignments.truth ]
+    elif 'split' in dataset:
+        mapping = pd.Series({ctg: i for i,ctg in enumerate(assignments.truth.unique())})
+        truth = mapping.loc[assignments.truth]
     else:
         truth = pd.read_csv("{}/truth.csv".format(root_dir),header=None,index_col=0)[1].to_dict()
         assignments['truth'] = [ truth.get(ctg,None) for ctg in assignments.contigs ]

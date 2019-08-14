@@ -32,9 +32,14 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
             k += 1
 
     if k < fppc:
-        print("Error: cannot make {} unique pairs with genome of {} fragments"
+        print("WARNING: cannot make {} unique pairs with genome of {} fragments"
               .format(fppc,contig_frags))
-        import ipdb;ipdb.set_trace()
+        print("Selection random pairs with replacement")
+
+        start_A = np.random.choice(frag_steps,fppc)
+        pairs_A = np.hstack([np.repeat(label,fppc), start_A, start_A+frag_steps]).astype('<U128')
+        start_B = np.random.choice(frag_steps,fppc)
+        pairs_B = np.hstack([np.repeat(label,fppc), start_B, start_B+frag_steps]).astype('<U128')
         
     dfs = {'A': pd.DataFrame(pairs_A,columns=["sp","start","end"]),
            'B': pd.DataFrame(pairs_B,columns=["sp","start","end"])}

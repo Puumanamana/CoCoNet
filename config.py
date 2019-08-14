@@ -1,4 +1,4 @@
-dataset = "giant_viruses"
+dataset = "Delong_megahit_split"
 
 io_path = {
     'in': "input_data/{}".format(dataset),
@@ -12,6 +12,7 @@ min_contig_length = 2*frag_len
 step = int(frag_len/16)
 kmer_list = [2,3,4]
 model_type = 'CoCoNet'
+norm = False
 
 train_args = {
     'batch_size': 64,
@@ -33,7 +34,7 @@ nn_arch = {
 cluster_args = {
     'n_frags': 30,
     'max_neighbor': 50,
-    'prob_thresh': 0.8,
+    'prob_thresh': 0.95,
     'hits_threshold': 0.95
 }
 

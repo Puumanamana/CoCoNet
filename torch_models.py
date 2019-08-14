@@ -5,45 +5,21 @@ import torch.nn.functional as F
 import numpy as np
 
 class CompositionModel(nn.Module):
-    def __init__(self, input_size, neurons=[128,64], n_filters=[8,16,32]):
+    def __init__(self, input_size, neurons=[128,64]):
         super(CompositionModel, self).__init__()
-        # self.embedding = nn.Embedding(4, 2)  # (words in vocab, embedding size)
         
-        # self.embed_conv_2 = nn.Conv1d(2,n_filters[0],2)
-        # self.embed_conv_3 = nn.Conv1d(2,n_filters[1],3)
-        # self.embed_conv_4 = nn.Conv1d(2,n_filters[2],4)
-
-        # conv_shapes = [ nf * (input_size-i+1) for i,nf in zip([2,3,4],n_filters) ]
-
-        # self.compo_shared = nn.Linear(sum(conv_shapes),neurons[0])
         self.compo_shared = nn.Linear(input_size,neurons[0])
         self.compo_siam = nn.Linear(2*neurons[0],neurons[1])
         self.compo_dense = nn.Linear(neurons[1],neurons[2])        
         self.compo_prob = nn.Linear(neurons[2],1)
 
-        self.loss_op = nn.BCELoss()
-
-        print(self.compo_shared)
-        print(self.compo_siam)
-        print(self.compo_dense)
-        print(self.compo_prob)
+        self.loss_op = nn.BCELoss(reduction='none')
 
     def compute_repr(self,x):
         '''
         Representation of a composition input
         (Before merging the 2 inputs)
         '''
-        # embedding = self.embedding(x.long()).transpose(1,2)
-
-        # x_conv = [
-        #     self.embed_conv_2(embedding),
-        #     self.embed_conv_3(embedding),
-        #     self.embed_conv_4(embedding),            
-        # ]
-
-        # x_pool = torch.cat([ self.pool(xi) for xi in x_conv ], dim=1)
-        
-        # return F.relu(self.compo_shared(x_pool.view(x_pool.shape[0],-1)))
         return F.relu(self.compo_shared(x))
     
     def combine_repr(self,*x):
@@ -81,7 +57,7 @@ class CompositionModel(nn.Module):
         return {'composition': x}
 
     def compute_loss(self,pred,truth):
-        return self.loss_op(pred["composition"],truth)
+        return self.loss_op(pred["composition"],truth).mean()
 
 class CoverageModel(nn.Module):
     def __init__(self, input_size, n_samples, neurons=[128,64],
@@ -101,7 +77,7 @@ class CoverageModel(nn.Module):
         self.cover_dense = nn.Linear(neurons[1], neurons[2])
         self.cover_prob = nn.Linear(neurons[2],1)
 
-        self.loss_op = nn.BCELoss()        
+        self.loss_op = nn.BCELoss(reduction='none')
 
     def compute_repr(self,x):
         '''
@@ -149,7 +125,7 @@ class CoverageModel(nn.Module):
         return {'coverage': x}
 
     def compute_loss(self,pred,truth):
-        return self.loss_op(pred["coverage"],truth)        
+        return self.loss_op(pred["coverage"],truth).mean()
  
 class CoCoNet(nn.Module):
     def __init__(self, composition_model, coverage_model, neurons=[32]):
@@ -162,7 +138,9 @@ class CoCoNet(nn.Module):
                                neurons[0])
         self.prob = nn.Linear(neurons[0],1)
 
-        self.loss_op = nn.BCELoss()
+        self.loss_op = nn.BCELoss(reduction='none')
+
+        print(self)
 
     def compute_repr(self,x1,x2):
         '''
@@ -216,9 +194,17 @@ class CoCoNet(nn.Module):
         '''
         Get all 3 losses
         '''
+
+        # alpha = 0.75
+        # weights = [ torch.round(pred_i)*(1-alpha) + (1-torch.round(pred_i))*alpha
+        #             for pred_i in pred.values() ]
+        # weights = [ w_i / w_i.sum() for w_i in weights ]
+        # weights = truth * 0.25 + (1-truth) * 0.75
+        # losses = [ self.loss_op(pred_i,truth) * wi for wi,pred_i in zip(weights,pred.values()) ]
+        # losses = sum(losses).mean()
         
-        losses = [ self.loss_op(pred["composition"],truth),
-                   self.loss_op(pred["coverage"],truth),
-                   self.loss_op(pred["combined"],truth) ]
+        losses = {model_type: self.loss_op(pred_i,truth) for model_type,pred_i in pred.items() }
+        losses['combined'] *= 2
+        losses = sum(losses.values()).mean()
         
-        return sum(losses)
+        return losses

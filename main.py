@@ -8,7 +8,7 @@ import torch
 
 from config import min_contig_length
 from config import io_path
-from config import frag_len,step,kmer_list,model_type
+from config import frag_len,step,kmer_list,model_type,norm
 from config import n_examples
 from config import nn_arch, train_args
 from config import cluster_args
@@ -79,10 +79,11 @@ def run():
                              coverage_args=nn_arch["coverage"],
                              combination_args=nn_arch["combination"]
     )
+
     print("Model initialized")
     
     if not os.path.exists(model_output):
-        train(model, pairs, model_output, model_type=model_type, **train_args, **filtered_inputs)
+        train(model, pairs, model_output, model_type=model_type, norm=norm, **train_args, **filtered_inputs)
     else:
         checkpoint = torch.load(model_output)
         model.load_state_dict(checkpoint['model_state_dict'])

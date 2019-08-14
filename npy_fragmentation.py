@@ -31,9 +31,13 @@ def make_positive_pairs(label,frag_steps,contig_frags,fppc):
             k += 1
 
     if k < fppc:
-        print("Error: cannot make {} unique pairs with genome of {} fragments"
+        print("\nWARNING: cannot make {} unique pairs with genome of {} fragments"
               .format(fppc,contig_frags))
-        import ipdb;ipdb.set_trace()
+        print("Selection random pairs with replacement")
+
+        pairs.sp = np.tile(label, [fppc,2])
+        pairs.start = np.random.choice(frag_steps,[fppc,2])
+        pairs.end = pairs.start + frag_steps
 
     return pairs
 

@@ -24,7 +24,7 @@ def get_kmer_number(sequence,k=4):
 
     return kmer_indices
 
-def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False):
+def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False,norm=False):
     
     output_sizes = np.cumsum([0]+[ int(4**k/(1+rc)) for k in kmer_list ])
     frequencies = np.zeros(output_sizes[-1])
@@ -41,6 +41,9 @@ def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False):
             freq_k += freq_k[::-1]
             freq_k = freq_k[:int(4**k/2)]
             
+        if norm:
+            freq_k = freq_k / np.sum(freq_k)
+
         frequencies[output_sizes[i]:output_sizes[i+1]] = freq_k
 
     return frequencies

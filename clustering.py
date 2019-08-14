@@ -13,8 +13,6 @@ from progressbar import progressbar
 
 from util import get_kmer_frequency, avg_window
 
-from time import time
-
 def save_repr_all(model,n_frags,frag_len,kmer_list,rc,window_size,
                   fasta=None,coverage_h5=None,outputs=None):
 
@@ -121,11 +119,7 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
                     handle.get(contigs[ni])[:]
                 )[combination_idx[1]])
                             for key,handle in handles.items() }
-
-                t0 = time()
                 probs = model.combine_repr(x_ref,x_other).detach().numpy()
-                print(time()-t0)
-                import ipdb;ipdb.set_trace()
                 
                 adjacency_matrix[k,ni] = sum(probs>prob_thresh)
                 adjacency_matrix[ni,k] = adjacency_matrix[k,ni]
@@ -149,11 +143,11 @@ def cluster(model,repr_h5,outputdir,max_neighbor=50,prob_thresh=0.75,n_frags=50,
 
     assignments = pd.DataFrame({'clusters': list(community.best_partition(G).values()),
                                 'contigs': contigs,
-                                'truth': [x.split("_")[0] for x in contigs]})
+                                'truth': [x.split('|')[0] for x in contigs]})
 
     assignments.to_csv("{}/assignments_nf{}.csv".format(outputdir,n_frags))
 
-    clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len])
+    clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len]).sort_values(by='len')
     clusters_grouped.columns = ["purity","csize"]
 
     print(clusters_grouped)
