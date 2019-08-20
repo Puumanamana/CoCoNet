@@ -199,12 +199,12 @@ class CoCoNet(nn.Module):
         # weights = [ torch.round(pred_i)*(1-alpha) + (1-torch.round(pred_i))*alpha
         #             for pred_i in pred.values() ]
         # weights = [ w_i / w_i.sum() for w_i in weights ]
-        # weights = truth * 0.25 + (1-truth) * 0.75
-        # losses = [ self.loss_op(pred_i,truth) * wi for wi,pred_i in zip(weights,pred.values()) ]
-        # losses = sum(losses).mean()
-        
-        losses = {model_type: self.loss_op(pred_i,truth) for model_type,pred_i in pred.items() }
-        losses['combined'] *= 2
-        losses = sum(losses.values()).mean()
-        
-        return losses
+
+        loss_compo = self.loss_op(pred['composition'],truth)
+        loss_cover = self.loss_op(pred['coverage'],truth)
+        loss_combined = self.loss_op(pred['combined'],truth)
+
+        loss_combined = 0.25*truth*loss_combined + 0.75*(1-truth)*loss_combined
+
+        losses = loss_compo+loss_cover+2*loss_combined
+        return losses.mean()

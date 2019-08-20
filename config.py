@@ -34,7 +34,6 @@ nn_arch = {
 cluster_args = {
     'n_frags': 30,
     'max_neighbor': 50,
-    'prob_thresh': 0.95,
+    'prob_thresh': 0.75,
     'hits_threshold': 0.95
 }
-

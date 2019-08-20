@@ -78,7 +78,10 @@ def main(dataset='sim_5'):
         dataset = sys.argv[1]
     model_output = "../output_data/{}/{}.pth".format(dataset,model_type)
 
-    n_samples = int(re.findall("[A-z_]+(\d+)",dataset)[0])
+    try:
+        n_samples = int(re.findall("[A-z_]+(\d+)",dataset)[0])
+    except:
+        n_samples = 3
     print(dataset,n_samples)
     
     input_shapes = {
