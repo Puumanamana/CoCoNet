@@ -74,10 +74,10 @@ def make_pairs(contigs,step,frag_len,output=None,n_examples=1e6):
     
     """
 
-    contig_frags = np.array([ 1+int((len(ctg.seq)-frag_len)/step)
+    contig_frags = np.array([ (1+len(ctg.seq)-frag_len)//step
                               for ctg in contigs ])
-    frag_pairs_per_ctg = int(n_examples / len(contig_frags) / 2)
-    frag_steps = int(frag_len/step)
+    frag_pairs_per_ctg = n_examples // (2*len(contig_frags))
+    frag_steps = frag_len // step
     
     positive_pairs = np.vstack([ make_positive_pairs(idx,frag_steps,genome_frags,frag_pairs_per_ctg)
                                  for idx,genome_frags in progressbar(enumerate(contig_frags),

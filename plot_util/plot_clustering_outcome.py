@@ -20,7 +20,11 @@ METRICS = ['adjusted_rand_score',
 def nuniques(x):
     return len(set(x))
 
-def plot_scores(truth,pred,metrics=METRICS,name="CoCoNet"):
+def nb_errors(x):
+    representative = x.value_counts().idxmax()
+    return sum(x!=representative)
+
+def plot_scores(truth,pred,metrics=METRICS,name="CoCoNet",plot=True):
     
     scores = pd.Series({
         metric: getattr(sklearn.metrics,metric)(truth,pred)
@@ -29,8 +33,12 @@ def plot_scores(truth,pred,metrics=METRICS,name="CoCoNet"):
 
     scores.index.name = "metric"
 
-    fig,ax = plt.subplots()
-    sns.barplot(x="metric",y="score",data=scores.reset_index(),ax=ax)
+    if plot:
+        fig,ax = plt.subplots()
+        sns.barplot(x="metric",y="score",data=scores.reset_index(),ax=ax)
+
+    return scores.reset_index()
+    
 
 def plot_purity(assignments):
     # clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len])
@@ -38,17 +46,13 @@ def plot_purity(assignments):
 
     clusters_grouped  = (assignments
                         .groupby('clusters')['truth']
-                        .agg([lambda x: x.value_counts().max(),len,nuniques])
+                        .agg([lambda x: x.value_counts().max(),len,nuniques,nb_errors])
     )
-    clusters_grouped.columns = ["purity","csize","nuniques"]
+    clusters_grouped.columns = ["purity","csize","nuniques","nb_errors"]
 
     clusters_grouped.purity = clusters_grouped.purity / clusters_grouped.csize
 
     clusters_grouped = clusters_grouped[clusters_grouped.csize>1]
-    
-    # clusters_purity = (clusters_grouped[clusters_grouped.csize>1].purity
-    #                    .value_counts()
-    #                    .sort_index())
 
     print(clusters_grouped)
     print("# clusters: {}".format(assignments.clusters.unique().shape[0]))

@@ -67,7 +67,7 @@ class CoverageModel(nn.Module):
 
         self.conv_layer = nn.Conv1d(n_samples,n_filters,kernel_size,conv_stride)
         conv_out_dim = (n_filters,
-                        int((input_size-kernel_size)/conv_stride)+1)
+                        (input_size-kernel_size)//conv_stride + 1)
         # self.pool = nn.MaxPool1d(pool_size,pool_stride)
         # pool_out_dim = (n_filters,
         #                 int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
@@ -195,16 +195,9 @@ class CoCoNet(nn.Module):
         Get all 3 losses
         '''
 
-        # alpha = 0.75
-        # weights = [ torch.round(pred_i)*(1-alpha) + (1-torch.round(pred_i))*alpha
-        #             for pred_i in pred.values() ]
-        # weights = [ w_i / w_i.sum() for w_i in weights ]
-
         loss_compo = self.loss_op(pred['composition'],truth)
         loss_cover = self.loss_op(pred['coverage'],truth)
         loss_combined = self.loss_op(pred['combined'],truth)
-
-        loss_combined = 0.25*truth*loss_combined + 0.75*(1-truth)*loss_combined
 
         losses = loss_compo+loss_cover+2*loss_combined
         return losses.mean()

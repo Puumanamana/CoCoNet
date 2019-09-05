@@ -1,3 +1,4 @@
+from math import ceil
 from time import time
 
 import h5py
@@ -48,7 +49,7 @@ def get_kmer_frequency(sequence,kmer_list=[4],rc=False,index=False,norm=False):
 
     return frequencies
 
-def get_coverage(pairs,coverage_h5,window_size,
+def get_coverage(pairs,coverage_h5,window_size,window_step,
                  columns=["sp","start","end"]):
     h5data = h5py.File(coverage_h5)
     contigs = np.unique(pairs['sp'].flatten())
@@ -61,8 +62,10 @@ def get_coverage(pairs,coverage_h5,window_size,
     
     pairs = np.concatenate([pairs[:,0],pairs[:,1]])
     sorted_idx = np.argsort(pairs['sp'])
+
+    conv_shape = ceil((frag_len-window_size+1)/window_step)
     
-    X = np.zeros([2*n_pairs,n_samples,int(frag_len/window_size)],
+    X = np.zeros([2*n_pairs,n_samples,conv_shape],
                  dtype=np.float32)
     seen = {}
 
@@ -72,7 +75,7 @@ def get_coverage(pairs,coverage_h5,window_size,
 
         if cov_sp is None:
             cov_sp = np.apply_along_axis(
-                lambda x: avg_window(x,window_size), 1, coverage_data[sp][:,start:end]
+                lambda x: avg_window(x,window_size,window_step), 1, coverage_data[sp][:,start:end]
             )
             seen[(sp,start)] = cov_sp
 
@@ -82,6 +85,6 @@ def get_coverage(pairs,coverage_h5,window_size,
             X[n_pairs:,:,:])
     
 
-def avg_window(x,window_size=4):
-    return np.convolve(x,np.ones(window_size)/window_size,
-                       mode="valid")[::window_size]
+def avg_window(x,window_size,window_step):
+    x_conv = np.convolve(x,np.ones(window_size)/window_size,mode="valid")
+    return x_conv[::window_step]

@@ -33,7 +33,7 @@ def bam_to_h5(bam,temp_dir,ctg_info):
     txt_output = "{}/{}.txt".format(temp_dir,file_rad)
     h5_output = "{}/{}.h5".format(temp_dir,file_rad)
     
-    cmd = ["samtools", "depth", "-d", "20000",bam]
+    cmd = ["samtools", "depth", "-d", "20000", bam]
 
     with open(txt_output, "w") as outfile:
         subprocess.call(cmd, stdout=outfile)
@@ -120,3 +120,15 @@ def bam_list_to_h5(fasta,coverage_bam,output,min_samples=2):
 
     # Remove temp directory
     shutil.rmtree(temp_dir)
+
+def filter_h5(raw_coverage,output,min_length=2048):
+    reader = h5py.File(raw_coverage,'r')
+    writer = h5py.File(output,'w')
+
+    for ctg in reader:
+        data = reader.get(ctg)
+        if data.shape[1] >= min_length:
+            writer.create_dataset(ctg,data=data[:])
+
+    reader.close()
+    writer.close()

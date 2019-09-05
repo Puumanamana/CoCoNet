@@ -1,4 +1,5 @@
 import re
+from glob import glob
 import pandas as pd
 import torch
 
@@ -47,7 +48,7 @@ def load_data(dataset):
     print("{} test examples to process".format(n_test))
 
     fasta = "../input_data/{}/assembly_gt2048.fasta".format(dataset)
-    coverage_h5 = "../input_data/{}/coverage_contigs.h5".format(dataset)
+    coverage_h5 = glob("../input_data/{}/coverage_*.h5".format(dataset))[0]
 
     X_test = [
         next(CompositionGenerator(fasta,pairs_test,batch_size=n_test,
@@ -79,7 +80,10 @@ def main(dataset='sim_5'):
     model_output = "../output_data/{}/{}.pth".format(dataset,model_type)
 
     try:
-        n_samples = int(re.findall("[A-z_]+(\d+)",dataset)[0])
+        if 'viral' in dataset:
+            n_samples = 17
+        else:
+            n_samples = int(re.findall("[A-z_]+(\d+)",dataset)[0])
     except:
         n_samples = 3
     print(dataset,n_samples)

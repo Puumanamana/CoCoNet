@@ -8,7 +8,7 @@ import torch
 from util import get_kmer_frequency, get_coverage
 
 class CompositionGenerator(object):
-    def __init__(self, fasta, pairs_file, batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
+    def __init__(self, pairs_file, fasta=None, batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
         self.i = 0
         self.kmer_list = kmer_list
         self.pairs = np.load(pairs_file)
@@ -58,15 +58,16 @@ class CoverageGenerator(object):
     Genearator for coverage data. 
     It loads the coverage every [load_batch] batches.
     """
-    def __init__(self, h5_coverage, pairs_file,
-                 batch_size=64, load_batch=1000,window_size=16):
+    def __init__(self, pairs_file, coverage_h5=None,
+                 batch_size=64, load_batch=1000,window_size=16,window_step=8):
         self.i = 0
         self.pairs = np.load(pairs_file)
-        self.h5_coverage = h5_coverage
+        self.coverage_h5 = coverage_h5
         self.batch_size = batch_size
         self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
         self.load_batch = load_batch
         self.window_size = window_size
+        self.window_step = window_step
 
     def __iter__(self):
         return self
@@ -78,7 +79,7 @@ class CoverageGenerator(object):
         print("\nLoading next coverage batch")
         
         pairs = self.pairs[ self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size ]
-        self.X1, self.X2 = get_coverage(pairs,self.h5_coverage,self.window_size)
+        self.X1, self.X2 = get_coverage(pairs,self.coverage_h5,self.window_size,self.window_step)
 
     def __next__(self):
         
