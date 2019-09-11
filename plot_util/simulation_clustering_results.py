@@ -33,10 +33,11 @@ for f in sim_folders:
 data = pd.concat(data)
 
 print(data.head())
-print(data.total_coverage.value_counts())
-print(data.n_samples.value_counts())
+print(data.coverage_per_sample.value_counts())
+print(data.nb_samples.value_counts())
 
 g = sns.catplot(x='nb_samples',y='score',hue='coverage_per_sample',col='metric',kind='point',
+                sharey=False,
                 linestyles=["--"]*len(data.coverage_per_sample.unique()),
                 markers=['^']*len(data.coverage_per_sample.unique()),
                 data=data)
