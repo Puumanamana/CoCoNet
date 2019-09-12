@@ -1,41 +1,42 @@
+import os
+from shutil import copyfile
 from configparser import ConfigParser, ExtendedInterpolation
+
 from glob import glob
+from math import ceil
 import h5py
 import numpy as np
-from math import ceil
 
 class Experiment:
+    '''
+    Class to store experiment's parameters
+    '''
 
     def __init__(self,name,root_dir='.'):
         self.name = name
         self.indir = "{}/input_data/{}".format(root_dir,name)
         self.outdir = "{}/output_data/{}".format(root_dir,name)
-        self.cfg = '{}/config.ini'.format(root_dir)
-        self.load()
-        self.set_io_files()
-        # self.cfg = 'input_data/{}/config.ini'.format(name)
-
-    def set_io_files(self):
-        self.inputs = {
-            'raw': { 'fasta': '{}/assembly.fasta'.format(self.indir),
-                     'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
-                     'bam': glob('{}/*.bam'.format(self.indir)) },
-            'filtered': { 'fasta': '{}/assembly_gt{}.fasta'.format(self.indir,self.min_ctg_len),
-                          'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir,self.min_ctg_len) }
-        }
-
-        self.outputs = {
-            'fragments': { 'test': '{}/pairs_test.npy'.format(self.outdir),
-                           'train': '{}/pairs_train.npy'.format(self.outdir) },
-            'model': '{}/{}.pth'.format(self.outdir,self.model_type),
-            'repr': { 'composition': '{}/representation_compo_nf{}.h5'.format(self.outdir,self.clustering['n_frags']),
-                      'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir,self.clustering['n_frags'])}
-        }
+        self.cfg = '{}/config.ini'.format(self.outdir,name)
         
-    def load(self):
+        self.load(root_dir)
+        self.set_io_files()
+
+    def load(self,root_dir):
+        '''
+        Load configuration file
+        '''
+        
+        if not os.path.exists(self.cfg):
+            if not os.path.exists(self.outdir):
+                os.mkdir(self.outdir)
+            copyfile("{}/config.ini".format(root_dir),self.cfg)
+
+        print('Loading {}'.format(self.cfg))
+            
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser.read(self.cfg)
 
+        self.threads = parser.getint('main','threads')
         self.model_type = parser.get('main','model_type')
         self.fl = parser.getint('main','fragment_length')
         self.min_ctg_len = self.fl * parser.getint('main','min_ctg_len_factor')
@@ -45,6 +46,10 @@ class Experiment:
         self.kmer_list = np.fromstring(parser.get('main','kmer_list'),sep=',',dtype=int)
         self.rc = parser.getboolean('main','rc')
         self.norm = parser.getboolean('main','norm')
+
+        self.bam_processing = { 'flag': parser.get('bam_processing','flag'),
+                                'min_qual': parser.get('bam_processing','min_mapping_quality'),
+                                'min_prevalence': parser.get('bam_processing','min_prevalence_for_binning')}
 
         self.n_examples = { 'train': parser.getint('training','n_examples_train'),
                             'test': parser.getint('training','n_examples_test')}
@@ -62,9 +67,37 @@ class Experiment:
         }
         self.clustering = { 'n_frags': parser.getint('clustering','n_frags'),
                             'max_neighbors': parser.getint('clustering','max_neighbors'),
-                            'hits_threshold': parser.getfloat('clustering','hits_threshold') }
+                            'hits_threshold': parser.getfloat('clustering','hits_threshold'),
+                            'algo': parser.get('clustering','clustering_algorithm') }
 
+    def set_io_files(self):
+        '''
+        Set file names for input and outputs
+        '''
+        
+        self.inputs = {
+            'raw': { 'fasta': '{}/assembly.fasta'.format(self.indir),
+                     'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
+                     'bam': glob('{}/*.bam'.format(self.indir)) },
+            'filtered': { 'fasta': '{}/assembly_gt{}.fasta'.format(self.indir,self.min_ctg_len),
+                          'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir,self.min_ctg_len) }
+        }
+
+        self.outputs = {
+            'fragments': { 'test': '{}/pairs_test.npy'.format(self.outdir),
+                           'train': '{}/pairs_train.npy'.format(self.outdir) },
+            'model': '{}/{}.pth'.format(self.outdir,self.model_type),
+            'repr': { 'composition': '{}/representation_compo_nf{}.h5'.format(self.outdir,self.clustering['n_frags']),
+                      'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir,self.clustering['n_frags']) },
+            'clustering': { 'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(self.outdir,self.clustering['n_frags']),
+                            'assignments': '{}/{}_nf{}.csv'.format(self.outdir,self.clustering['algo'],self.clustering['n_frags']) }
+        }
+        
     def set_input_shapes(self):
+        '''
+        Calculate input shapes from loaded parameters
+        '''
+        
         h5_cov = h5py.File(self.inputs['filtered']['coverage_h5'],'r')
         n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
         h5_cov.close()

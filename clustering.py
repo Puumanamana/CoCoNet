@@ -6,8 +6,11 @@ import h5py
 
 import torch
 from sklearn.metrics.pairwise import euclidean_distances
+
 import networkx as nx
 import community
+import igraph
+import leidenalg
 
 from Bio import SeqIO
 from progressbar import progressbar
@@ -56,9 +59,7 @@ def get_neighbors(file_h5):
     handle = h5py.File(file_h5,'r')
 
     # data.shape = ( n_contigs, n_frags, latent_dim )
-    data = np.stack([np.array(handle.get(ctg)[:])
-                     for ctg in handle.keys()])
-
+    data = np.stack([np.array(handle.get(ctg)[:]) for ctg in handle.keys()])
     # center of each contigs (n_contigs, latent_dim)
     contig_centers = np.mean(data,axis=1)
     # pairwise distances between contig centers
@@ -80,83 +81,78 @@ def get_neighbors(file_h5):
 
     return sorted_indices
 
-def cluster(model,repr_h5,outputdir,max_neighbors=50,prob_thresh=0.75,n_frags=50,hits_threshold=0.95):
+def cluster(model,config):
 
-    adj_mat_file = "{}/adjacency_matrix_nf{}.npy".format(outputdir,n_frags)
-    handles = {key: h5py.File(filename) for key,filename in repr_h5.items() }
+    handles = {key: h5py.File(filename) for key,filename in config.outputs['repr'].items() }    
 
     contigs = np.array(list(handles['coverage'].keys()))
-
-    if not os.path.exists(adj_mat_file):
-        neighbors = get_neighbors(repr_h5['coverage'])
+    n_frags = config.clustering['n_frags']
+    
+    if not os.path.exists(config.outputs['clustering']['adjacency_matrix']):
+        neighbors = get_neighbors(config.outputs['repr']['coverage'])
         
-        for i,ni in enumerate(get_neighbors(repr_h5['composition'])):
+        for i,ni in enumerate(get_neighbors(config.outputs['repr']['composition'])):
             neighbors[i] = np.intersect1d(neighbors[i],ni)
         
-        combination_idx = [
-            np.repeat(np.arange(n_frags),n_frags),
-            np.tile(np.arange(n_frags),n_frags)
-        ]
-        
-        adjacency_matrix = np.identity(len(contigs)) * n_frags**2
-        adjacency_matrix[adjacency_matrix==0] = -1
+        ref_idx, other_idx = ( np.repeat(np.arange(n_frags),n_frags),
+                               np.tile(np.arange(n_frags),n_frags) )
+
+        adjacency_matrix = (1 + np.identity(len(contigs))*n_frags**2) - 1
 
         for k, ctg in progressbar(enumerate(contigs),max_value=len(contigs)):
 
-            x_ref = { key: torch.from_numpy(np.array(handle.get(ctg)[:])[combination_idx[0]])
+            x_ref = { key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                       for key,handle in handles.items() }
 
             # Discard neighbors that we already calculated
-            neighbors_k = neighbors[k]
-            scores = adjacency_matrix[k,neighbors_k]
-            new_neighbors_k = neighbors_k[scores < 0][:max_neighbors]
+            scores = adjacency_matrix[k,neighbors[k]]
+            new_neighbors_k = neighbors[k][scores < 0][:config.clustering['max_neighbors']]
 
             for ni in new_neighbors_k:
-                x_other = { key: torch.from_numpy(np.array(
-                    handle.get(contigs[ni])[:]
-                )[combination_idx[1]])
+                x_other = { key: torch.from_numpy(np.array( handle.get(contigs[ni])[:] )[other_idx])
                             for key,handle in handles.items() }
                 probs = model.combine_repr(x_ref,x_other).detach().numpy()
                 # Get number of expected matches
                 adjacency_matrix[k,ni] = sum(probs) # sum(probs>prob_thresh)
                 adjacency_matrix[ni,k] = adjacency_matrix[k,ni]
-                
-            # matches_k = neighbors_k[adjacency_matrix[k,neighbors_k] > hits_threshold * n_frags**2]
-            # if len(matches_k) > 1:
-            #     print("Matches for contig {}: {}"
-            #           .format(contigs[k],"-".join(contigs[matches_k]))
-            #     )
-                    
-        np.save(adj_mat_file,adjacency_matrix)
+                                    
+        np.save(config.outputs['clustering']['adjacency_matrix'],adjacency_matrix)
 
     else:
-        adjacency_matrix = np.load(adj_mat_file)
+        adjacency_matrix = np.load(config.outputs['clustering']['adjacency_matrix'])
 
-    # Remove -1 (NAs) from the matrix
+    # Remove -1 (=NAs) from the matrix
     adjacency_matrix[adjacency_matrix < 0] = 0
     
-    threshold = hits_threshold * n_frags**2
-    G = nx.from_numpy_matrix((adjacency_matrix>threshold).astype(int))
+    threshold = config.clustering['hits_threshold'] * n_frags**2
 
-    sep = "_"
-    if "|" in "".join(contigs):
-        sep = "|"
+    for algo in config.clustering['algo'].split(','):
+        if algo == 'louvain':
+            G = nx.from_numpy_matrix((adjacency_matrix>threshold).astype(int))
+            communities = list(community.best_partition(G).values())
+        elif algo == 'leiden':
+            G = igraph.Graph.Adjacency((adjacency_matrix>threshold).tolist())
+            leiden_generator = enumerate(leidenalg.find_partition(G, leidenalg.ModularityVertexPartition))
+            communities = (pd.Series(dict(leiden_generator))
+                           .explode()
+                           .sort_values()
+                           .index)
 
-    assignments = pd.DataFrame({'clusters': list(community.best_partition(G).values()),
-                                'contigs': contigs,
-                                'truth': [x.split(sep)[0] for x in contigs]})
+        sep = "_"
+        if "|" in "".join(contigs):
+            sep = "|"
 
-    assignments.to_csv("{}/assignments_nf{}.csv".format(outputdir,n_frags))
+        assignments = pd.DataFrame({'clusters': communities,
+                                    'contigs': contigs,
+                                    'truth': [x.split(sep)[0] for x in contigs]})
+        assignments.clusters = pd.factorize(assignments.clusters)[0]
+        assignments.truth = pd.factorize(assignments.truth)[0]
 
-    clusters_grouped = assignments.groupby('clusters')['truth'].agg([lambda x: len(set(x)),len]).sort_values(by='len')
-    clusters_grouped.columns = ["purity","csize"]
+        outputname = config.outputs['clustering']['assignments'].replace('leiden',algo),replace('louvain',algo)
+        assignments.to_csv(outputname)
 
-    print(clusters_grouped)
-    
-    # print(clusters_grouped[ (clusters_grouped.purity == 1) & (clusters_grouped.csize>1) ].shape)
-
-def refine_clusters(model,repr_h5,outputdir,assignments,adj):
-    handles = {key: h5py.File(filename) for key,filename in repr_h5.items() }
+def refine_clusters(assignments,model,config):
+    handles = {key: h5py.File(filename) for key,filename in config.outputs['repr'].items() }
 
     contigs = np.array(list(handles['coverage'].keys()))
     

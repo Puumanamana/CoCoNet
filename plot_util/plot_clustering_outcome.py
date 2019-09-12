@@ -110,30 +110,22 @@ def plot_components(methods, labels):
 
 if __name__ == '__main__':
 
-    import sys
-    dataset = sys.argv[1]
+    import argparse
 
-    root_dir = "/home/cedric/projects/viral_binning/CoCoNet/output_data/{}".format(dataset)
-    assignments = pd.read_csv("{}/assignments_nf30.csv".format(root_dir),
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--method', type=str, default='leiden')
+    args = parser.parse_args()
+
+    root_dir = "/home/cedric/projects/viral_binning/CoCoNet/output_data/{}".format(args.dataset)
+    assignments = pd.read_csv("{}/{}_nf30.csv".format(root_dir,args.method),
                               index_col=0)
-    
-    if 'sim' in dataset:
-        truth = [ int(x[1:]) for x in assignments.truth ]
-    elif 'split' in dataset:
-        mapping = pd.Series({ctg: i for i,ctg in enumerate(assignments.truth.unique())})
-        truth = mapping.loc[assignments.truth]
-    else:
-        truth = pd.read_csv("{}/truth.csv".format(root_dir),header=None,index_col=0)[1].to_dict()
-        assignments['truth'] = [ truth.get(ctg,None) for ctg in assignments.contigs ]
-        assignments = assignments.dropna()
-        assignments['truth'] = assignments['truth'].astype(int)
 
-        truth = assignments['truth']
+    if 'split' in args.dataset:
+        assignments = assignments.loc[assignments.contigs.str.contains('\|')]
         
-    pred = assignments.clusters.tolist()
-
     plot_purity(assignments)
-    plot_scores(truth,pred)
+    plot_scores(assignments.truth,assignments.clusters)
     
     plt.show()
 

@@ -19,9 +19,6 @@ def run(name):
     #### Preprocessing ####
     #######################
 
-    if not os.path.exists(config.outdir):
-        os.mkdir(config.outdir)
-
     if not os.path.exists(config.inputs['filtered']['fasta']):
         format_assembly(config.inputs['raw']['fasta'],
                         config.inputs['filtered']['fasta'],
@@ -33,9 +30,12 @@ def run(name):
                       config.inputs['filtered']['coverage_h5'],
                       min_length=config.min_ctg_len)
         else:
-            bam_list_to_h5(config.inputs['filtered']['fasta'],
-                           config.inputs['raw']['bam'],
-                           output=config.inputs['filtered']['coverage_h5'])
+            bam_list_to_h5(fasta=config.inputs['filtered']['fasta'],
+                           coverage_bam=config.inputs['raw']['bam'],
+                           output=config.inputs['filtered']['coverage_h5'],
+                           threads=config.threads,
+                           **config.bam_processing
+            )
         
 
     config.set_input_shapes()
@@ -59,12 +59,6 @@ def run(name):
     ##### NN training #####
     #######################    
 
-    # model = initialize_model(config.model_type, config.input_shapes,
-    #                          composition_args=config.arch["composition"],
-    #                          coverage_args=config.arch["coverage"],
-    #                          combination_args=config.arch["combination"],
-    #                          # pretrained_path="pretrained_model/composition_2-3-4.pth"
-    # )
     model = initialize_model(config.model_type, config)
 
     print("Model initialized")
@@ -83,13 +77,13 @@ def run(name):
     if not os.path.exists(config.outputs['repr']['coverage']):
          save_repr_all(model,config)
 
-    cluster(model,config.outputs['repr'],config.outdir,**config.clustering)    
+    cluster(model,config)    
 
 if __name__ == '__main__':
     import sys
 
     if len(sys.argv) == 1:
-        name = 'camisim_5'
+        name = input('Choose a dataset from output_data/: ')
     else:
         name = sys.argv[1]
     run(name)

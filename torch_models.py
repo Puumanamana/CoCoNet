@@ -5,13 +5,14 @@ import torch.nn.functional as F
 import numpy as np
 
 class CompositionModel(nn.Module):
-    def __init__(self, input_size, neurons=[128,64]):
+    def __init__(self, input_size, neurons=[64,32]):
         super(CompositionModel, self).__init__()
         
         self.compo_shared = nn.Linear(input_size,neurons[0])
         self.compo_siam = nn.Linear(2*neurons[0],neurons[1])
-        self.compo_dense = nn.Linear(neurons[1],neurons[2])        
-        self.compo_prob = nn.Linear(neurons[2],1)
+        self.compo_prob = nn.Linear(neurons[1],1)
+        # self.compo_dense = nn.Linear(neurons[1],neurons[2])        
+        # self.compo_prob = nn.Linear(neurons[2],1)
 
         self.loss_op = nn.BCELoss(reduction='none')
 
@@ -30,8 +31,9 @@ class CompositionModel(nn.Module):
         
         x_siam1 = F.relu( self.compo_siam(torch.cat(x,axis=1)) )
         x_siam2 = F.relu( self.compo_siam(torch.cat(x[::-1],axis=1)) )
+        x = torch.max(x_siam1,x_siam2)
 
-        x = F.relu(self.compo_dense(torch.max(x_siam1,x_siam2)))
+        # x = F.relu(self.compo_dense(torch.max(x_siam1,x_siam2)))
 
         return x
         
@@ -73,9 +75,10 @@ class CoverageModel(nn.Module):
         #                 int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
         # self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
         self.cover_shared = nn.Linear(np.prod(conv_out_dim), neurons[0])
-        self.cover_siam = nn.Linear(2*neurons[0], neurons[1])        
-        self.cover_dense = nn.Linear(neurons[1], neurons[2])
-        self.cover_prob = nn.Linear(neurons[2],1)
+        self.cover_siam = nn.Linear(2*neurons[0], neurons[1])
+        self.cover_prob = nn.Linear(neurons[1],1)
+        # self.cover_dense = nn.Linear(neurons[1], neurons[2])
+        # self.cover_prob = nn.Linear(neurons[2],1)
 
         self.loss_op = nn.BCELoss(reduction='none')
 
@@ -99,7 +102,8 @@ class CoverageModel(nn.Module):
         x_siam1 = F.relu( self.cover_siam(torch.cat(x,axis=1)) )
         x_siam2 = F.relu( self.cover_siam(torch.cat(x[::-1],axis=1)) )
 
-        x = F.relu(self.cover_dense(torch.max(x_siam1,x_siam2)))
+        x = torch.max(x_siam1,x_siam2)
+        # x = F.relu(self.cover_dense(torch.max(x_siam1,x_siam2)))        
         
         return x
         

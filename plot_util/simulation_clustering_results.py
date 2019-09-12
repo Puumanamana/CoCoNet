@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 
 from plot_clustering_outcome import plot_scores
 
-sim_folders = glob('../output_data/vir_sim*')
+import os,sys
+PARENT_DIR = os.path.join(sys.path[0], '..')
+
+sim_folders = glob('{}/output_data/vir_sim*'.format(PARENT_DIR))
 data = []
 
 for f in sim_folders:

@@ -7,6 +7,7 @@ data
 *.fast[aq]
 *.zip
 *.gz
+*.bak
 !*.py
 !*.nf
 input_data

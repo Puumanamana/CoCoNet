@@ -23,6 +23,24 @@ def format_assembly(fasta,output=None,min_length=2048):
 
     SeqIO.write(formated_assembly,output,"fasta")    
 
+def filter_bam_alignments(bam,min_qual,flag,threads,temp_dir):
+    """
+    Run samtools view to filter quality
+    """
+    base,ext = os.path.splitext(bam)
+    sorted_output = "{}/{}_q{}-F{}_sorted{}".format(temp_dir,base,q,F,ext)    
+
+    cmds = [ ['samtools','view','-bh',bam,'-@',str(threads),'-q',str(min_qual),'-F',str(flag)],
+             ['samtools','sort','-@',str(threads),'-o',sorted_output],
+             ['samtools','index','-@',str(threads),sorted_output]
+    ]
+    ps = subprocess.Popen(cmds[0], stdout=subprocess.PIPE)
+    subprocess.call(cmds[1], stdin=ps.stdout)
+    subprocess.call(cmds[2])    
+    ps.wait()
+
+    return sorted_output
+    
 def bam_to_h5(bam,temp_dir,ctg_info):
     """
     - Run samtools depth on bam file and save it in temp_dir
@@ -32,7 +50,7 @@ def bam_to_h5(bam,temp_dir,ctg_info):
     file_rad = os.path.splitext(os.path.basename(bam))[0]
     txt_output = "{}/{}.txt".format(temp_dir,file_rad)
     h5_output = "{}/{}.h5".format(temp_dir,file_rad)
-    
+
     cmd = ["samtools", "depth", "-d", "20000", bam]
 
     with open(txt_output, "w") as outfile:
@@ -70,18 +88,19 @@ def bam_to_h5(bam,temp_dir,ctg_info):
         
     return h5_output
 
-def bam_list_to_h5(fasta,coverage_bam,output,min_samples=2):
+def bam_list_to_h5(fasta,coverage_bam,output,min_prevalence=2,min_qual='50',flag='3332',threads=1):
     """
     - Extract the coverage of the sequences in fasta from the bam files
     - Remove N nucleotides from the FASTA and remove the corresponding entries from coverage
-    - Filter out the contigs with less than [min_samples] samples with a mean coverage less than 1
+    - Filter out the contigs with less than [min_prevalence] samples with a mean coverage less than 1
     """
     
     temp_dir = mkdtemp()
     ctg_info = { seq.id: len(seq.seq)
                  for seq in SeqIO.parse(fasta,"fasta") }
 
-    depth_h5_files = [ bam_to_h5(bam,temp_dir,ctg_info) for bam in sorted(coverage_bam) ]
+    filtered_bam_files = [ filter_bam_alignments(bam,min_qual,flag,threads,temp_dir) for bam in sorted(coverage_bam) ]
+    depth_h5_files = [ bam_to_h5(bam,temp_dir,ctg_info) for bam in filtered_bam_files ]
 
     # Collect everything in a [N_samples,genome_size] matrix
     coverage_h5 = h5py.File(output,'w')
@@ -105,7 +124,7 @@ def bam_list_to_h5(fasta,coverage_bam,output,min_samples=2):
 
         # Filter out contig with coverage on only 1 sample
         mean_coverage = ctg_coverage.sum(axis=1)
-        if sum(mean_coverage >= ctg_info[ctg]) < min_samples:
+        if sum(mean_coverage >= ctg_info[ctg]) <= min_prevalence:
             continue
 
         coverage_h5.create_dataset(ctg,data=ctg_coverage)

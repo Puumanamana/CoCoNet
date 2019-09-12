@@ -6,8 +6,10 @@ import torch
 
 import sklearn.metrics
 
-import sys
-sys.path.append('..')
+import os,sys
+PARENT_DIR = os.path.join(sys.path[0], '..')
+sys.path.insert(1, PARENT_DIR)
+
 from experiment import Experiment
 from nn_training import initialize_model,load_data,get_labels
 
@@ -35,11 +37,11 @@ def get_test(config):
 
     return X_test, y_test
 
-sim_folders = glob('../output_data/vir_sim*')
+sim_folders = glob('{}/output_data/vir_sim*'.format(PARENT_DIR))
 data = []
 
 for f in sim_folders:
-    config = Experiment(basename(f), root_dir='..')
+    config = Experiment(basename(f), root_dir=PARENT_DIR)
     
     coverage = float(re.findall('cov-([\d\.]+)',basename(f))[0])
     n_samples = int(re.findall('(\d+)-samples',basename(f))[0])
