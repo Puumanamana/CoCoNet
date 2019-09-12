@@ -148,7 +148,7 @@ def cluster(model,config):
         assignments.clusters = pd.factorize(assignments.clusters)[0]
         assignments.truth = pd.factorize(assignments.truth)[0]
 
-        outputname = config.outputs['clustering']['assignments'].replace('leiden',algo),replace('louvain',algo)
+        outputname = config.outputs['clustering']['assignments'].replace('leiden',algo).replace('louvain',algo)
         assignments.to_csv(outputname)
 
 def refine_clusters(assignments,model,config):
