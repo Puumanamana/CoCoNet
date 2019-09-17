@@ -58,18 +58,21 @@ class Experiment:
                       'learning_rate': parser.getfloat('training', 'learning_rate'),
                       'load_batch': parser.getint('training', 'load_batch')}
 
-        self.arch = {'composition': {'neurons': np.fromstring(parser.get('architecture', 'neurons_compo'), sep=',', dtype=int)},
+        self.arch = {'composition': {'neurons': np.fromstring(
+            parser.get('architecture', 'neurons_compo'), sep=',', dtype=int
+        )},
                      'coverage': {'neurons': np.fromstring(
-                          parser.get('architecture', 'neurons_cover'), sep=',', dtype=int),
-                                   'n_filters': parser.getint('architecture', 'cover_filters'),
-                                   'kernel_size': parser.getint('architecture', 'cover_kernel_size'),
-                                   'conv_stride': parser.getint('architecture', 'cover_stride')},
-                      'combination': {'neurons': np.fromstring(
-                          parser.get('architecture', 'neurons_mixed'), sep=',', dtype=int)}}
+                         parser.get('architecture', 'neurons_cover'), sep=',', dtype=int),
+                                  'n_filters': parser.getint('architecture', 'cover_filters'),
+                                  'kernel_size': parser.getint('architecture', 'cover_kernel_size'),
+                                  'conv_stride': parser.getint('architecture', 'cover_stride')},
+                     'combination': {'neurons': np.fromstring(
+                         parser.get('architecture', 'neurons_mixed'), sep=',', dtype=int
+                     )}}
         self.clustering = {'n_frags': parser.getint('clustering', 'n_frags'),
-                            'max_neighbors': parser.getint('clustering', 'max_neighbors'),
-                            'hits_threshold': parser.getfloat('clustering', 'hits_threshold'),
-                            'algo': parser.get('clustering', 'clustering_algorithm')}
+                           'max_neighbors': parser.getint('clustering', 'max_neighbors'),
+                           'hits_threshold': parser.getfloat('clustering', 'hits_threshold'),
+                           'algo': parser.get('clustering', 'clustering_algorithm')}
 
     def set_io_files(self):
         '''
@@ -77,35 +80,43 @@ class Experiment:
         '''
 
         self.inputs = {
-            'raw': {'fasta': '{}/assembly.fasta'.format(self.indir),
-                     'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
-                     'bam': glob('{}/*.bam'.format(self.indir))},
-            'filtered': {'fasta': '{}/assembly_gt{}.fasta'.format(self.indir, self.min_ctg_len),
-                          'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir, self.min_ctg_len)}
-       }
+            'raw': {
+                'fasta': '{}/assembly.fasta'.format(self.indir),
+                'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
+                'bam': glob('{}/*.bam'.format(self.indir))
+            },
+            'filtered': {
+                'fasta': '{}/assembly_gt{}.fasta'.format(self.indir, self.min_ctg_len),
+                'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir, self.min_ctg_len)
+            }
+        }
 
         self.outputs = {
             'fragments': {'test': '{}/pairs_test.npy'.format(self.outdir),
-                           'train': '{}/pairs_train.npy'.format(self.outdir)},
-            'model': '{}/{}.pth'.format(self.outdir, self.model_type),
-            'repr': {'composition': '{}/representation_compo_nf{}.h5'.format(self.outdir, self.clustering['n_frags']),
-                      'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir, self.clustering['n_frags'])},
-            'clustering': {'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(self.outdir, self.clustering['n_frags']),
-                            'assignments': '{}/{}_nf{}.csv'.format(self.outdir, self.clustering['algo'], self.clustering['n_frags'])}
+                          'train': '{}/pairs_train.npy'.format(self.outdir)},
+            'net': {'model': '{}/{}.pth'.format(self.outdir, self.model_type),
+                    'test': '{}/{}_pred_test.csv'.format(self.outdir, self.model_type)},
+            'repr': {
+                'composition': '{}/representation_compo_nf{}.h5'.format(self.outdir, self.clustering['n_frags']),
+                'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir, self.clustering['n_frags'])
+            },
+            'clustering': {
+                'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(self.outdir, self.clustering['n_frags']),
+                'assignments': '{}/{}_nf{}.csv'.format(self.outdir, self.clustering['algo'], self.clustering['n_frags'])}
         }
-        
+
     def set_input_shapes(self):
         '''
         Calculate input shapes from loaded parameters
         '''
-        
+
         h5_cov = h5py.File(self.inputs['filtered']['coverage_h5'], 'r')
         n_samples = h5_cov.get(list(h5_cov.keys())[0]).shape[0]
         h5_cov.close()
-        
+
         self.input_shapes = {
-            'composition': [ sum([ 4**k // (1+self.rc) for k in self.kmer_list ]) ],
+            'composition': [sum([4**k // (1+self.rc) for k in self.kmer_list])],
             'coverage': (
                 ceil((self.fl-self.wsize+1) / self.wstep),
                 n_samples)
-        }                    
+        }

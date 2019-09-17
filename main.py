@@ -65,10 +65,10 @@ def run(name):
 
     print("Model initialized")
     
-    if not os.path.exists(config.outputs['model']):
+    if not os.path.exists(config.outputs['net']['model']):
         train(model, config)
 
-    checkpoint = torch.load(config.outputs['model'])
+    checkpoint = torch.load(config.outputs['net']['model'])
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 N = 20
 col = ['r','g','b']
-centers = np.array([ [0.4,0],[-3,3],[1,0.8] ])
+centers = np.array([ [0.4,0],[0.5,0.2],[1,0.8] ])
 points = [ np.array([np.random.normal(x,1,N), np.random.normal(y,1,N)]) for x,y in centers ]
 
 fig,ax = plt.subplots()
