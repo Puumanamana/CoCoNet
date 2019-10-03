@@ -1,4 +1,5 @@
 simulation_util/*
+figures
 data
 *.npy
 *.pkl
@@ -8,7 +9,9 @@ data
 *.zip
 *.gz
 *.bak
+*.png
 !*.py
 !*.nf
 input_data
-output_data
+output_data*
+old*

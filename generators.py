@@ -5,27 +5,27 @@ import numpy as np
 from Bio import SeqIO
 import torch
 
-from util import get_kmer_frequency, get_coverage
+from tools import get_kmer_frequency, get_coverage
 
-class CompositionGenerator(object):
-    def __init__(self, pairs_file, fasta=None, batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
+class CompositionGenerator:
+    def __init__(self, pairs_file, fasta=None,
+                 batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
         self.i = 0
         self.kmer_list = kmer_list
         self.pairs = np.load(pairs_file)
         self.batch_size = batch_size
-        self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
+        self.n_batches = max(1, int(len(self.pairs) / self.batch_size))
         self.rc = rc
         self.norm = norm
 
         self.set_genomes(fasta)
         self.pool = Pool(ncores)
 
-    def set_genomes(self,fasta):
+    def set_genomes(self, fasta):
         contigs = np.unique(self.pairs['sp'].flatten())
-        
-        self.genomes = { contig.id: str(contig.seq)
-                         for contig in SeqIO.parse(fasta,"fasta")
-                         if contig.id in contigs }
+        self.genomes = {contig.id: str(contig.seq)
+                        for contig in SeqIO.parse(fasta, "fasta")
+                        if contig.id in contigs}
 
     def __iter__(self):
         return self
@@ -34,37 +34,38 @@ class CompositionGenerator(object):
         return self.n_batches
 
     def __next__(self):
-        
+
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
 
-            get_kmer_frequency_with_args = partial(get_kmer_frequency,kmer_list=self.kmer_list,rc=self.rc,norm=self.norm)
+            get_kmer_frequency_with_args = partial(
+                get_kmer_frequency, kmer_list=self.kmer_list, rc=self.rc, norm=self.norm
+            )
+            fragments_a = [self.genomes[spA][startA:endA] for (spA, startA, endA), _ in pairs_batch]
+            fragments_b = [self.genomes[spB][startB:endB] for _, (spB, startB, endB) in pairs_batch]
 
-            fragments_A = [ self.genomes[spA][startA:endA] for (spA,startA,endA),_ in pairs_batch ]
-            fragments_B = [ self.genomes[spB][startB:endB] for _,(spB,startB,endB) in pairs_batch ]
-            
-            X1 = self.pool.map(get_kmer_frequency_with_args,fragments_A)
-            X2 = self.pool.map(get_kmer_frequency_with_args,fragments_B)
+            x1 = self.pool.map(get_kmer_frequency_with_args, fragments_a)
+            x2 = self.pool.map(get_kmer_frequency_with_args, fragments_b)
 
             self.i += 1
 
-            return torch.FloatTensor(X1), torch.FloatTensor(X2)
-        else:
-            self.pool.close()
-            raise StopIteration()
+            return torch.FloatTensor(x1), torch.FloatTensor(x2)
 
-class CoverageGenerator(object):
+        self.pool.close()
+        raise StopIteration()
+
+class CoverageGenerator:
     """
     Genearator for coverage data. 
     It loads the coverage every [load_batch] batches.
     """
     def __init__(self, pairs_file, coverage_h5=None,
-                 batch_size=64, load_batch=1000,window_size=16,window_step=8):
+                 batch_size=64, load_batch=1000, window_size=16, window_step=8):
         self.i = 0
         self.pairs = np.load(pairs_file)
         self.coverage_h5 = coverage_h5
         self.batch_size = batch_size
-        self.n_batches = max(1,int(len(self.pairs) / self.batch_size))
+        self.n_batches = max(1, int(len(self.pairs) / self.batch_size))
         self.load_batch = load_batch
         self.window_size = window_size
         self.window_step = window_step
@@ -76,25 +77,27 @@ class CoverageGenerator(object):
         return self.n_batches
 
     def load(self):
-        print("\nLoading next coverage batch")
-        
-        pairs = self.pairs[ self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size ]
-        self.X1, self.X2 = get_coverage(pairs,self.coverage_h5,self.window_size,self.window_step)
+        '''
+        Extract coverage for next pair batch
+        '''
+        print("Loading batch", end='\r')
+
+        pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
+        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.window_size, self.window_step)
 
     def __next__(self):
-        
         if self.i < self.n_batches:
             if self.i % self.load_batch == 0:
                 self.load()
 
             idx_inf = (self.i % self.load_batch) * self.batch_size
             idx_sup = idx_inf + self.batch_size
-            
+
             self.i += 1
-            
+
             return (
-                torch.from_numpy(self.X1[idx_inf:idx_sup,:,:]),
-                torch.from_numpy(self.X2[idx_inf:idx_sup,:,:])
+                torch.from_numpy(self.x1[idx_inf:idx_sup, :, :]),
+                torch.from_numpy(self.x2[idx_inf:idx_sup, :, :])
             )
-        else:
-            raise StopIteration()
+
+        raise StopIteration()

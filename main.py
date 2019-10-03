@@ -1,4 +1,12 @@
+'''
+Root script to run CoCoNet
+
+Inputs:
+Outputs:
+'''
+
 import os
+import argparse
 
 from Bio import SeqIO
 import numpy as np
@@ -7,13 +15,30 @@ import torch
 from experiment import Experiment
 
 from preprocessing import format_assembly, bam_list_to_h5, filter_h5
-from npy_fragmentation import make_pairs
-from nn_training import initialize_model, train
-from clustering import save_repr_all, cluster
+from fragmentation import make_pairs
+from nn_training import initialize_model, train, test_summary
+from clustering import save_repr_all, fill_adjacency_matrix, iterate_clustering
 
-def run(name):
+def parse_args():
+    '''
+    Parse arguments to run CoCoNet
+    '''
 
-    config = Experiment(name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--name', type=str, default='')
+
+    args = parser.parse_args()
+
+    return args
+
+def run():
+    '''
+    CoCoNet runner
+    '''
+
+    args = parse_args()
+
+    config = Experiment(args.name)
 
     torch.set_num_threads(config.threads)
 
@@ -36,57 +61,59 @@ def run(name):
                            coverage_bam=config.inputs['raw']['bam'],
                            output=config.inputs['filtered']['coverage_h5'],
                            threads=config.threads,
-                           **config.bam_processing
-            )
-        
+                           **config.bam_processing)
 
     config.set_input_shapes()
 
     #######################
     #### Fragmentation ####
-    #######################        
+    #######################
 
     if not os.path.exists(config.outputs['fragments']['train']):
-        assembly = [ contig for contig in SeqIO.parse(config.inputs['filtered']['fasta'], "fasta") ]
+        assembly = [contig for contig in SeqIO.parse(config.inputs['filtered']['fasta'], "fasta")]
 
-        assembly_idx = { 'test': np.random.choice(len(assembly), int(0.1*len(assembly))) }
-        assembly_idx['train'] = np.setdiff1d(range(len(assembly)),  assembly_idx['test'] )
+        assembly_idx = {'test': np.random.choice(len(assembly), int(0.1*len(assembly)))}
+        assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'])
 
         for mode, pair in config.outputs['fragments'].items():
             print("Making {} pairs".format(mode))
-            make_pairs([ assembly[idx] for idx in assembly_idx[mode] ],
+            make_pairs([assembly[idx] for idx in assembly_idx[mode]],
                        config.step, config.fl, pair, n_examples=config.n_examples[mode])
 
     #######################
     ##### NN training #####
-    #######################    
+    #######################
 
-    model = initialize_model(config.model_type,  config)
+    model = initialize_model(config.model_type, config)
 
-    print("Model initialized")
-    
     if not os.path.exists(config.outputs['net']['model']):
         train(model, config)
 
     checkpoint = torch.load(config.outputs['net']['model'])
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
+    _ = test_summary(model, config=config)
+
+    # import matplotlib.pyplot as plt
+    # import seaborn as sns
+    # sns.kdeplot(output['combined'][:, 0].detach().numpy())
+    # plt.show()
+    # import ipdb
+    # ipdb.set_trace()
+
+    print('Network loaded')
 
     ########################
     ###### Clustering ######
     ########################
 
     if not os.path.exists(config.outputs['repr']['coverage']):
-         save_repr_all(model, config)
+        save_repr_all(model, config)
 
-    cluster(model, config)    
+    fill_adjacency_matrix(model, config)
+
+    if not os.path.exists(config.outputs['clustering']['refined_assignments']):
+        iterate_clustering(model, config)
 
 if __name__ == '__main__':
-    import sys
-
-    if len(sys.argv) == 1:
-        NAME = input('Choose a dataset from output_data/: ')
-    else:
-        NAME = sys.argv[1]
-    run(NAME)
-
+    run()

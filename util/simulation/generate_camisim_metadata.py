@@ -4,7 +4,7 @@ from Bio import SeqIO
 
 import configparser
 
-sim_dir = "../../simulation"
+sim_dir = "../../../simulation"
 fasta_dirname = "contigs_fasta"
 sim_fasta_dir = "{}/{}".format(sim_dir,fasta_dirname)
 

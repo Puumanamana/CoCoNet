@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-inputdir = '../../simulation/sim/*_sample_*/bam/*.bam'
+inputdir = '../../../simulation/sim/*_sample_*/bam/*.bam'
 
 alignments = Channel.fromPath(inputdir)
     .ifEmpty { error "Cannot find any bam matching: ${inputdir}" }

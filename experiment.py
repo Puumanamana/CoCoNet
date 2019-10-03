@@ -1,6 +1,6 @@
 import os
 from shutil import copyfile
-from configparser import ConfigParser, ExtendedInterpolation
+from configparser import ConfigParser, ExtendedInterpolation, NoOptionError
 
 from glob import glob
 from math import ceil
@@ -12,10 +12,11 @@ class Experiment:
     Class to store experiment's parameters
     '''
 
-    def __init__(self, name, root_dir='.'):
+    def __init__(self, name, root_dir='.',
+                 in_dir='input_data', out_dir='output_data'):
         self.name = name
-        self.indir = "{}/input_data/{}".format(root_dir, name)
-        self.outdir = "{}/output_data/{}".format(root_dir, name)
+        self.indir = "{}/{}/{}".format(root_dir, in_dir, name)
+        self.outdir = "{}/{}/{}".format(root_dir, out_dir, name)
         self.cfg = '{}/config.ini'.format(self.outdir)
 
         self.load(root_dir)
@@ -72,7 +73,17 @@ class Experiment:
         self.clustering = {'n_frags': parser.getint('clustering', 'n_frags'),
                            'max_neighbors': parser.getint('clustering', 'max_neighbors'),
                            'hits_threshold': parser.getfloat('clustering', 'hits_threshold'),
-                           'algo': parser.get('clustering', 'clustering_algorithm')}
+                           'algo': parser.get('clustering', 'clustering_algorithm'),
+                           }
+        # For backward compatibility
+        try:
+            gamma_1 = parser.getfloat('clustering', 'clustering_gamma_1')
+            gamma_2 = parser.getfloat('clustering', 'clustering_gamma_2')
+        except NoOptionError:
+            gamma_1 = 0.5
+            gamma_2 = 0.05
+        self.clustering['gamma_1'] = gamma_1
+        self.clustering['gamma_2'] = gamma_2
 
     def set_io_files(self):
         '''
@@ -83,7 +94,7 @@ class Experiment:
             'raw': {
                 'fasta': '{}/assembly.fasta'.format(self.indir),
                 'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
-                'bam': glob('{}/*.bam'.format(self.indir))
+                'bam': sorted(glob('{}/*.bam'.format(self.indir)))
             },
             'filtered': {
                 'fasta': '{}/assembly_gt{}.fasta'.format(self.indir, self.min_ctg_len),
@@ -101,8 +112,16 @@ class Experiment:
                 'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir, self.clustering['n_frags'])
             },
             'clustering': {
-                'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(self.outdir, self.clustering['n_frags']),
-                'assignments': '{}/{}_nf{}.csv'.format(self.outdir, self.clustering['algo'], self.clustering['n_frags'])}
+                'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(
+                    self.outdir, self.clustering['n_frags']),
+                'refined_adjacency_matrix': '{}/adjacency_matrix_nf{}_refined.npy'.format(
+                    self.outdir, self.clustering['n_frags']),
+                'assignments': '{}/{}-{}_nf{}.csv'.format(
+                    self.outdir, self.clustering['algo'], self.clustering['gamma_1'], self.clustering['n_frags']),
+                'refined_assignments': '{}/{}-{}-{}_nf{}_refined.csv'.format(
+                    self.outdir, self.clustering['algo'],
+                    self.clustering['gamma_1'], self.clustering['gamma_2'],
+                    self.clustering['n_frags'])}
         }
 
     def set_input_shapes(self):
