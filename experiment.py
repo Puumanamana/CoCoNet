@@ -27,10 +27,10 @@ class Experiment:
         Load configuration file
         '''
 
-        if not os.path.exists(self.cfg):
-            if not os.path.exists(self.outdir):
-                os.mkdir(self.outdir)
-            copyfile("{}/config.ini".format(root_dir), self.cfg)
+        # if not os.path.exists(self.cfg):
+        #     if not os.path.exists(self.outdir):
+        #         os.mkdir(self.outdir)
+        copyfile("{}/config.ini".format(root_dir), self.cfg)
 
         parser = ConfigParser(interpolation=ExtendedInterpolation())
         parser.read(self.cfg)
@@ -42,7 +42,7 @@ class Experiment:
         self.step = self.fl // parser.getint('main', 'step_ratio')
         self.wsize = parser.getint('main', 'window_size')
         self.wstep = parser.getint('main', 'window_step')
-        self.kmer_list = np.fromstring(parser.get('main', 'kmer_list'), sep=',', dtype=int)
+        self.kmer = parser.getint('main', 'kmer')
         self.rc = parser.getboolean('main', 'rc')
         self.norm = parser.getboolean('main', 'norm')
 
@@ -134,7 +134,7 @@ class Experiment:
         h5_cov.close()
 
         self.input_shapes = {
-            'composition': [sum([4**k // (1+self.rc) for k in self.kmer_list])],
+            'composition': 4**self.kmer // (1+self.rc), # [sum([4**k // (1+self.rc) for k in self.kmer_list])],
             'coverage': (
                 ceil((self.fl-self.wsize+1) / self.wstep),
                 n_samples)

@@ -39,6 +39,7 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
             k += 1
 
     if k < fppc:
+        # pairs = make_positive_pairs(label, frag_steps, contig_frags, fppc//2, encoding_len)
         print("WARNING: cannot make {} unique pairs with genome of {} fragments"
               .format(fppc, contig_frags), end='\r')
 
@@ -65,7 +66,8 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     pair_idx = np.random.choice(len(n_frags_all),
                                 [5*n_examples, 2])
 
-    pair_idx = pair_idx[pair_idx[:, 0] != pair_idx[:, 1]][:n_examples, :]
+    cond = pair_idx[:, 0] != pair_idx[:, 1]
+    pair_idx = pair_idx[cond][:n_examples, :]
 
     rd_frags = np.array([[np.random.choice(n_frags_all[ctg])
                           for ctg in pair_idx[:, i]]
@@ -93,7 +95,7 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
         make_positive_pairs(idx, frag_steps, genome_frags, pairs_per_ctg, encoding_len=max_encoding)
         for idx, genome_frags in enumerate(contig_frags)
     ])
-    negative_pairs = make_negative_pairs(contig_frags, int(n_examples/2), frag_steps,
+    negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs), frag_steps,
                                          encoding_len=max_encoding)
 
     all_pairs = np.vstack([positive_pairs, negative_pairs])

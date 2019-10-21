@@ -23,29 +23,21 @@ def get_kmer_number(sequence, k=4):
 
     return kmer_indices
 
-def get_kmer_frequency(sequence, kmer_list=[4], rc=False, index=False, norm=False):
+def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
-    output_sizes = np.cumsum([0]+[int(4**k/(1+rc)) for k in kmer_list])
-    frequencies = np.zeros(output_sizes[-1])
+    if not index:
+        kmer_indices = get_kmer_number(sequence, kmer)
+    else:
+        kmer_indices = sequence
 
-    for i, k in enumerate(kmer_list):
+    occurrences = np.bincount(kmer_indices, minlength=4**kmer)
+    if rc:
+        occurrences += occurrences[::-1]
+        occurrences = occurrences[:4**kmer//2]
+    if norm:
+        occurrences /= np.sum(occurrences)
 
-        if not index:
-            kmer_indices = get_kmer_number(sequence, k)
-        else:
-            kmer_indices = sequence
-
-        freq_k = np.bincount(kmer_indices, minlength=4**k)
-        if rc:
-            freq_k += freq_k[::-1]
-            freq_k = freq_k[:int(4**k/2)]
-
-        if norm:
-            freq_k = freq_k / np.sum(freq_k)
-
-        frequencies[output_sizes[i]:output_sizes[i+1]] = freq_k
-
-    return frequencies
+    return occurrences
 
 def get_coverage(pairs, coverage_h5, window_size, window_step):
     h5data = h5py.File(coverage_h5)

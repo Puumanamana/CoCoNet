@@ -17,12 +17,13 @@ def parse_args():
     parser.add_argument('--n_genomes', type=int, default=-1)
     parser.add_argument('--coverage', type=int, default=-1)
     parser.add_argument('--nsamples', type=int, default=-1)
+    parser.add_argument('--iter', type=int, default=-1)
     parser.add_argument('--name', type=str, default='')
 
     args = parser.parse_args()
 
-    if args.name.replace('_', '').isdigit() and args.name.count('_') == 2:
-        args.n_genomes, args.coverage, args.nsamples = args.name.split('_')   
+    if args.name.replace('_', '').isdigit() and args.name.count('_') == 3:
+        args.n_genomes, args.coverage, args.nsamples, args.iter = args.name.split('_')
 
     return args
 

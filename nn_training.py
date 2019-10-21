@@ -16,7 +16,7 @@ def initialize_model(model_type, config, pretrained_path=None):
     '''
 
     if model_type == 'composition':
-        model = CompositionModel(*config.input_shapes["composition"], **config.arch['composition'])
+        model = CompositionModel(config.input_shapes["composition"], **config.arch['composition'])
 
         if pretrained_path is not None:
             checkpoint = torch.load(pretrained_path)
@@ -49,7 +49,7 @@ def get_npy_lines(filename):
     Count #lines in a .npy file
     by parsing the header
     '''
-    
+
     with open(filename, 'rb') as handle:
         handle.read(10) # Skip the binary part in header
         try:
@@ -80,7 +80,7 @@ def load_data(config, mode='test'):
         generators.append(CompositionGenerator(pairs[mode],
                                                fasta=config.inputs['filtered']['fasta'],
                                                batch_size=batch_size,
-                                               kmer_list=config.kmer_list,
+                                               kmer=config.kmer,
                                                rc=config.rc,
                                                norm=config.norm))
     if config.model_type != 'composition':

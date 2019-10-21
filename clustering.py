@@ -44,7 +44,7 @@ def save_repr_all(model, config):
 
         x_composition = torch.from_numpy(np.stack(
             [get_kmer_frequency(str(contig.seq)[start:stop],
-                                kmer_list=config.kmer_list, rc=config.rc)
+                                kmer=config.kmer, rc=config.rc)
              for (start, stop) in fragment_boundaries]
         ).astype(np.float32)) # Shape = (n_frags, 4**k)
 

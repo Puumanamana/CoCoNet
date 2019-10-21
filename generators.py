@@ -9,9 +9,9 @@ from tools import get_kmer_frequency, get_coverage
 
 class CompositionGenerator:
     def __init__(self, pairs_file, fasta=None,
-                 batch_size=64, kmer_list=4, rc=False, norm=False, ncores=10):
+                 batch_size=64, kmer=4, rc=False, norm=False, ncores=10):
         self.i = 0
-        self.kmer_list = kmer_list
+        self.kmer = kmer
         self.pairs = np.load(pairs_file)
         self.batch_size = batch_size
         self.n_batches = max(1, int(len(self.pairs) / self.batch_size))
@@ -39,7 +39,7 @@ class CompositionGenerator:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
 
             get_kmer_frequency_with_args = partial(
-                get_kmer_frequency, kmer_list=self.kmer_list, rc=self.rc, norm=self.norm
+                get_kmer_frequency, kmer=self.kmer, rc=self.rc, norm=self.norm
             )
             fragments_a = [self.genomes[spA][startA:endA] for (spA, startA, endA), _ in pairs_batch]
             fragments_b = [self.genomes[spB][startB:endB] for _, (spB, startB, endB) in pairs_batch]
