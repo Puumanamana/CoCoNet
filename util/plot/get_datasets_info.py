@@ -23,7 +23,7 @@ def parse_args():
     args = parser.parse_args()
 
     if args.name.replace('_', '').isdigit() and args.name.count('_') == 3:
-        args.n_genomes, args.coverage, args.nsamples, args.iter = args.name.split('_')
+        (args.n_genomes, args.coverage, args.nsamples, args.iter) = args.name.split('_')
 
     return args
 
@@ -37,14 +37,16 @@ def get_coverage(h5_path):
     contigs = list(h5file.keys())
 
     total_coverage = np.zeros((len(h5file), h5file.get(contigs[0]).shape[0], 2))
+    prevalence = np.zeros(len(h5file))
 
     for i, ctg in progressbar(enumerate(h5file),
                               max_value=len(h5file)):
         cov = h5file.get(ctg)[:]
         total_coverage[i, :, 0] = np.mean(cov, axis=1)
         total_coverage[i, :, 1] = np.std(cov, axis=1)
+        prevalence[i] = (cov.sum(axis=1) > 0).sum()
 
-    return total_coverage
+    return total_coverage, prevalence
 
 def fformat(x):
     return "{:.2f}".format(x)
@@ -63,24 +65,26 @@ def process_sim(n_genomes, coverage, n_samples, name):
 
     bin_info = ctg_info.groupby('virus').length.agg(len)
 
-    real_coverage = get_coverage(cfg.inputs['filtered']['coverage_h5'])
+    (real_coverage, prevalence) = get_coverage(cfg.inputs['filtered']['coverage_h5'])
 
     summary = {
-        'n_samples': n_genomes,
+        'n_samples': n_samples,
         'simulated_coverage': coverage,
         'real_coverage_mean': np.array2string(real_coverage[:, :, 0].mean(axis=0),
                                               formatter={'float_kind': fformat}),
         'real_coverage_std': np.array2string(real_coverage[:, :, 1].mean(axis=0),
                                              formatter={'float_kind': fformat}),
-        'n_genomes': n_genomes,
         'contig_length': "{:}, {:}, {:}".format(ctg_info.length.min(),
                                                 ctg_info.length.median(),
                                                 ctg_info.length.max()),
+        'n_contigs': len(ctg_info),
+        'n_bins': n_genomes,
         'bin_size': (bin_info
                      .describe()
                      .drop(['count', '25%', '75%', 'min'])
                      .apply(fformat)
                      .to_dict()),
+        'mean prevalence': prevalence.mean()
     }
 
     return summary
@@ -92,9 +96,20 @@ def main():
 
     args = parse_args()
 
-    summary = process_sim(args.n_genomes, args.coverage, args.nsamples, args.name)
+    if args.iter > 0:
+        summary = process_sim(args.n_genomes, args.coverage, args.nsamples, args.name)
+        print("\n".join(['{}: {}'.format(k, str(v)) for k, v in summary.items()]))
+        return summary
 
-    print("\n".join(['{}: {}'.format(k, str(v)) for k, v in summary.items()]))
+    summaries = pd.Series([process_sim(args.n_genomes, args.coverage, args.nsamples,
+                           '{}_{}_{}_{}'.format(args.n_genomes, args.coverage, args.nsamples, iter_nb))
+                           for iter_nb in range(10)])
+    
+    (summaries
+     .drop(['real_coverage_mean', 'real_coverage_std', 'contig_length'], axis=1)
+     .groupby(['n_bins', 'simulated_coverage', 'n_samples'])
+     .agg(lambda x: '{} (+/- {})'.format(x.mean(), x.std()))
+     .to_csv("simulation_summary.csv"))
 
 if __name__ == '__main__':
     main()
