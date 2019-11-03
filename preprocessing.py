@@ -14,7 +14,7 @@ prevalence filter and remove sequences that are too short
 """
 
 import shutil
-from os.path import basename, splitext
+from os.path import basename, splitext, exists
 from tempfile import mkdtemp
 import csv
 import subprocess
@@ -49,6 +49,9 @@ def filter_bam_aln(bam, threads, min_qual, flag, fl_range):
 
     sorted_output = "{}_q{}-F{}_fl{}-{}_sorted.bam"\
         .format(splitext(bam)[0], min_qual, flag, *fl_range)
+
+    if exists(sorted_output):
+        return sorted_output
 
     cmds = [
         ['samtools', 'view', '-h', bam, '-@', str(threads)],
@@ -160,8 +163,8 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
         ctg_coverage = ctg_coverage[:, loc_acgt]
 
         # Filter out contig with coverage on only 1 sample
-        mean_coverage = ctg_coverage.sum(axis=1)
-        if sum(mean_coverage >= ctg_info[ctg]) <= min_prevalence:
+        sample_coverage = ctg_coverage.sum(axis=1)
+        if sum(sample_coverage >= 0.1*ctg_info[ctg]) <= min_prevalence:
             continue
 
         coverage_h5.create_dataset(ctg, data=ctg_coverage)
@@ -177,19 +180,28 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
     # Remove temp directory
     shutil.rmtree(temp_dir)
 
-def filter_h5(raw_coverage, output, min_length=2048):
+def filter_h5(inputs, min_length=2048, min_prevalence=2):
     '''
     Filter coverage h5 and only keep sequences
     longer than [min_length]
     '''
 
-    reader = h5py.File(raw_coverage, 'r')
-    writer = h5py.File(output, 'w')
+    h5_reader = h5py.File(inputs['raw']['coverage_h5'], 'r')
+    h5_writer = h5py.File(inputs['filtered']['coverage_h5'], 'w')
+    assembly = {seq.id: seq for seq in SeqIO.parse(inputs['raw']['fasta'], 'fasta')}
 
-    for ctg in reader:
-        data = reader.get(ctg)
-        if data.shape[1] >= min_length:
-            writer.create_dataset(ctg, data=data[:])
+    for ctg in h5_reader:
+        data = h5_reader.get(ctg)[:]
+        prevalence = sum(data.sum(axis=1) > 0.1*data.shape[1])
+        if (data.shape[1] >= min_length) and (prevalence >= min_prevalence):
+            h5_writer.create_dataset(ctg, data=data[:])
+        else:
+            del assembly[ctg]
 
-    reader.close()
-    writer.close()
+    h5_reader.close()
+    h5_writer.close()
+
+    SeqIO.write(list(assembly.values()), inputs['filtered']['fasta'], 'fasta')
+
+    # Zip the raw coverage to save space
+    subprocess.call(['gzip', inputs['raw']['coverage_h5']])

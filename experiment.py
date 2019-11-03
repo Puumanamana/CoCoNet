@@ -27,9 +27,9 @@ class Experiment:
         Load configuration file
         '''
 
-        # if not os.path.exists(self.cfg):
-        #     if not os.path.exists(self.outdir):
-        #         os.mkdir(self.outdir)
+        if not os.path.exists(self.cfg):
+            if not os.path.exists(self.outdir):
+                os.mkdir(self.outdir)
         copyfile("{}/config.ini".format(root_dir), self.cfg)
 
         parser = ConfigParser(interpolation=ExtendedInterpolation())

@@ -43,7 +43,11 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
     h5data = h5py.File(coverage_h5)
     contigs = np.unique(pairs['sp'].flatten())
 
-    coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
+    try:
+        coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
+    except TypeError:
+        print('Something went wrong')
+        import ipdb;ipdb.set_trace()
 
     n_pairs = len(pairs)
     n_samples, _ = np.array(list(coverage_data.values())[0]).shape

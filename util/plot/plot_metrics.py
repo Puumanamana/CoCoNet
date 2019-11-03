@@ -53,8 +53,8 @@ CATPLOT_PARAMS = {
         'x': 'samples', 'y': 'score', 'hue': 'coverage', 'units': 'iter',
         'col': 'number of genomes', 'row': 'metric', 'sharey': 'row',
         'height': 3, 'aspect': 2,
-        # 'kind': 'box', 'showfliers': False,
-        'kind': 'strip', 's': 7, 'linewidth': 1, 'alpha': 0.7
+        'kind': 'box', 'showfliers': False,
+        # 'kind': 'strip', 's': 7, 'linewidth': 1, 'alpha': 0.7
     }
 }
 
@@ -260,13 +260,15 @@ def plot_metrics(data, nvir, mode, fs=12, nw=False, output=None):
         data = data[data['number of genomes'] == nvir]
         data.metric = data.metric.str.replace('_', '\n')
     if not is_sim:
+        CATPLOT_PARAMS[mode]['kind'] = 'bar'
         if mode == 'clustering':
             CATPLOT_PARAMS[mode]['row'] = 'dataset'
             del CATPLOT_PARAMS[mode]['col']
+            del CATPLOT_PARAMS[mode]['units']
+            del CATPLOT_PARAMS[mode]['showfliers']
         else:
             CATPLOT_PARAMS[mode]['x'] = 'metric'
             CATPLOT_PARAMS[mode]['hue'] = 'dataset'
-            CATPLOT_PARAMS[mode]['kind'] = 'bar'
             del CATPLOT_PARAMS[mode]['col']
             del CATPLOT_PARAMS[mode]['row']
             del CATPLOT_PARAMS[mode]['linestyle']
@@ -294,6 +296,8 @@ def plot_metrics(data, nvir, mode, fs=12, nw=False, output=None):
 
             for i, ax_i in enumerate(handle.axes.flat):
                 row, col = i // len(colnames), i % len(colnames)
+
+                ax_i.set_ylim([ax_i.get_ylim()[0], 1])
 
                 if col == 0:
                     ax_i.set_ylabel("{:}".format(rownames[row]), fontsize=fs, fontweight='bold')

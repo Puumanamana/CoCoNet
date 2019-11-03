@@ -25,7 +25,7 @@ def parse_args():
     '''
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, default='')
+    parser.add_argument('--name', type=str, default='Delong_velvet')
 
     args = parser.parse_args()
 
@@ -46,17 +46,19 @@ def run():
     #### Preprocessing ####
     #######################
 
-    if not os.path.exists(config.inputs['filtered']['fasta']):
-        format_assembly(config.inputs['raw']['fasta'],
-                        config.inputs['filtered']['fasta'],
-                        min_length=config.min_ctg_len)
+    # It's a simulation
+    if config.name.replace('_', '').isdigit():
+        filter_h5(config.inputs,
+                  min_length=config.min_ctg_len,
+                  min_prevalence=config.bam_processing['min_prevalence'])
+    # Real dataset
+    else:
+        if not os.path.exists(config.inputs['filtered']['fasta']):
+            format_assembly(config.inputs['raw']['fasta'],
+                            config.inputs['filtered']['fasta'],
+                            min_length=config.min_ctg_len)
 
-    if not os.path.exists(config.inputs['filtered']['coverage_h5']):
-        if 'sim' in config.name or config.name.replace('_', '').isdecimal():
-            filter_h5(config.inputs['raw']['coverage_h5'],
-                      config.inputs['filtered']['coverage_h5'],
-                      min_length=config.min_ctg_len)
-        else:
+        if not os.path.exists(config.inputs['filtered']['coverage_h5']):
             bam_list_to_h5(fasta=config.inputs['filtered']['fasta'],
                            coverage_bam=config.inputs['raw']['bam'],
                            output=config.inputs['filtered']['coverage_h5'],
