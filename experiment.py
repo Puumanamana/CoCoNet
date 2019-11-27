@@ -1,5 +1,6 @@
 import os
 from shutil import copyfile
+import re
 from configparser import ConfigParser, ExtendedInterpolation, NoOptionError
 
 from glob import glob
@@ -18,7 +19,8 @@ class Experiment:
         self.indir = "{}/{}/{}".format(root_dir, in_dir, name)
         self.outdir = "{}/{}/{}".format(root_dir, out_dir, name)
         self.cfg = '{}/config.ini'.format(self.outdir)
-
+        self.input_shapes = {}
+        
         self.load(root_dir)
         self.set_io_files()
 
@@ -45,12 +47,14 @@ class Experiment:
         self.kmer = parser.getint('main', 'kmer')
         self.rc = parser.getboolean('main', 'rc')
         self.norm = parser.getboolean('main', 'norm')
+        self.singleton_ctg_file = "{}/singletons.txt".format(self.outdir)
 
         self.bam_processing = {
             'flag': parser.get('bam_processing', 'flag'),
             'min_qual': parser.get('bam_processing', 'min_mapping_quality'),
             'min_prevalence': parser.getint('bam_processing', 'min_prevalence_for_binning'),
-            'fl_range': parser.get('bam_processing', 'fragment_length_range').split('-')}
+            'fl_range': parser.get('bam_processing', 'fragment_length_range').split('-'),
+            'temp_dir': parser.get('bam_processing', 'temp_dir')}
 
         self.n_examples = {'train': parser.getint('training', 'n_examples_train'),
                            'test': parser.getint('training', 'n_examples_test')}
@@ -94,10 +98,11 @@ class Experiment:
             'raw': {
                 'fasta': '{}/assembly.fasta'.format(self.indir),
                 'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
-                'bam': sorted(glob('{}/*.bam'.format(self.indir)))
+                'bam': sorted([bam for bam in glob('{}/*.bam'.format(self.indir))
+                               if not re.match('.*fl.*_sorted.bam', bam)])
             },
             'filtered': {
-                'fasta': '{}/assembly_gt{}.fasta'.format(self.indir, self.min_ctg_len),
+                'fasta': '{}/assembly_gt{}_prev{}.fasta'.format(self.indir, self.min_ctg_len, self.bam_processing['min_prevalence']),
                 'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir, self.min_ctg_len)
             }
         }
@@ -116,10 +121,11 @@ class Experiment:
                     self.outdir, self.clustering['n_frags']),
                 'refined_adjacency_matrix': '{}/adjacency_matrix_nf{}_refined.npy'.format(
                     self.outdir, self.clustering['n_frags']),
-                'assignments': '{}/{}-{}_nf{}.csv'.format(
-                    self.outdir, self.clustering['algo'], self.clustering['gamma_1'], self.clustering['n_frags']),
-                'refined_assignments': '{}/{}-{}-{}_nf{}_refined.csv'.format(
-                    self.outdir, self.clustering['algo'],
+                'assignments': '{}/{}-{}-{}_nf{}.csv'.format(
+                    self.outdir, self.clustering['algo'], self.clustering['hits_threshold'],
+                    self.clustering['gamma_1'], self.clustering['n_frags']),
+                'refined_assignments': '{}/{}-{}-{}-{}_nf{}_refined.csv'.format(
+                    self.outdir, self.clustering['algo'], self.clustering['hits_threshold'],
                     self.clustering['gamma_1'], self.clustering['gamma_2'],
                     self.clustering['n_frags'])}
         }
@@ -134,7 +140,7 @@ class Experiment:
         h5_cov.close()
 
         self.input_shapes = {
-            'composition': 4**self.kmer // (1+self.rc), # [sum([4**k // (1+self.rc) for k in self.kmer_list])],
+            'composition': 4**self.kmer // (1+self.rc),
             'coverage': (
                 ceil((self.fl-self.wsize+1) / self.wstep),
                 n_samples)

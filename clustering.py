@@ -15,7 +15,6 @@ import torch
 from sklearn.metrics.pairwise import euclidean_distances
 
 import networkx as nx
-import community
 import igraph
 import leidenalg
 
@@ -232,8 +231,15 @@ def iterate_clustering(model, config):
         (adjacency_matrix > edge_threshold).astype(int),
         contigs,
         gamma=config.clustering['gamma_1'],
-        debug=True
+        debug=True,
     )
+
+    ignored = pd.read_csv(config.singleton_ctg_file, sep='\t', usecols=['contigs'], index_col='contigs')
+    ignored['clusters'] = np.arange(len(ignored)) + communities.clusters.max() + 1
+    ignored['truth'] = -1
+
+    communities = pd.concat([communities, ignored])
+    communities.truth = pd.factorize(communities.index.str.split('|').str[0])[0]
 
     communities.to_csv(config.outputs['clustering']['assignments'])
 

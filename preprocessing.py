@@ -14,6 +14,7 @@ prevalence filter and remove sequences that are too short
 """
 
 import shutil
+from os import mkdir
 from os.path import basename, splitext, exists
 from tempfile import mkdtemp
 import csv
@@ -38,7 +39,7 @@ def format_assembly(fasta, output=None, min_length=2048):
         output = "{}_gt{}{}".format(base, min_length, ext)
 
     formated_assembly = [genome for genome in SeqIO.parse(fasta, "fasta")
-                         if len(str(genome.seq).replace('N','')) >= min_length]
+                         if len(str(genome.seq).replace('N', '')) >= min_length]
 
     SeqIO.write(formated_assembly, output, "fasta")
 
@@ -85,7 +86,7 @@ def bam_to_h5(bam, temp_dir, ctg_info):
     - Read the output and save the result in a h5 file with keys as contigs
     '''
 
-    outputs = {fmt: "{}/{}.{}".format(temp_dir, splitext(basename(bam))[0],fmt)
+    outputs = {fmt: "{}/{}.{}".format(temp_dir, splitext(basename(bam))[0], fmt)
                for fmt in ['txt', 'h5']}
 
     with open(outputs['txt'], "w") as outfile:
@@ -124,7 +125,9 @@ def bam_to_h5(bam, temp_dir, ctg_info):
 
     return outputs['h5']
 
-def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **bam_filter_params):
+def bam_list_to_h5(fasta, coverage_bam, output,
+                   threads=1, min_prevalence=2, singleton_file='./singletons.txt',
+                   temp_dir='auto', **bam_filter_params):
     '''
     - Extract the coverage of the sequences in fasta from the bam files
     - Remove N nucleotides from the FASTA and
@@ -133,7 +136,12 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
       with a mean coverage less than 1
     '''
 
-    temp_dir = mkdtemp()
+
+    if temp_dir == 'auto':
+        temp_dir = mkdtemp()
+    else:
+        mkdir(temp_dir)
+
     ctg_info = {seq.id: len(seq.seq)
                 for seq in SeqIO.parse(fasta, "fasta")}
 
@@ -142,6 +150,11 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
 
     depth_h5_files = [bam_to_h5(bam, temp_dir, ctg_info)
                       for bam in filtered_bam_files]
+
+    singletons_handle = open(singleton_file, 'w')
+    singletons_handle.write(
+        '\t'.join(["contigs", "length"]+["sample_{}".format(i) for i in range(len(depth_h5_files))])
+    )
 
     # Collect everything in a [N_samples,genome_size] matrix
     coverage_h5 = h5py.File(output, 'w')
@@ -161,13 +174,16 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
         loc_acgt = np.array([i for i, letter in enumerate(ctg_seq[ctg]) if letter != 'N'])
 
         ctg_coverage = ctg_coverage[:, loc_acgt]
+        coverage_h5.create_dataset(ctg, data=ctg_coverage)
 
         # Filter out contig with coverage on only 1 sample
         sample_coverage = ctg_coverage.sum(axis=1)
-        if sum(sample_coverage >= 0.1*ctg_info[ctg]) <= min_prevalence:
-            continue
+        prevalence = sum(sample_coverage >= 0.1*len(loc_acgt))
 
-        coverage_h5.create_dataset(ctg, data=ctg_coverage)
+        if prevalence < min_prevalence:
+            info = map(str, [ctg, len(loc_acgt)] + sample_coverage.astype(str).tolist())
+            singletons_handle.write("\n{}".format('\t'.join(info)))
+            continue
 
         # Process the sequence
         seq_no_n = ctg_seq[ctg]
@@ -176,11 +192,12 @@ def bam_list_to_h5(fasta, coverage_bam, output, threads=1, min_prevalence=2, **b
         assembly_no_n.append(seq_no_n)
 
     SeqIO.write(assembly_no_n, fasta, "fasta")
+    singletons_handle.close()
 
     # Remove temp directory
     shutil.rmtree(temp_dir)
 
-def filter_h5(inputs, min_length=2048, min_prevalence=2):
+def filter_h5(inputs, min_length=2048, min_prevalence=2, singleton_file="./singletons.txt"):
     '''
     Filter coverage h5 and only keep sequences
     longer than [min_length]
@@ -188,16 +205,30 @@ def filter_h5(inputs, min_length=2048, min_prevalence=2):
 
     h5_reader = h5py.File(inputs['raw']['coverage_h5'], 'r')
     h5_writer = h5py.File(inputs['filtered']['coverage_h5'], 'w')
+    singletons_handle = open(singleton_file, 'w')
     assembly = {seq.id: seq for seq in SeqIO.parse(inputs['raw']['fasta'], 'fasta')}
+    n_samples = h5_reader.get(list(h5_reader.keys())[0]).shape[0]
+
+    singletons_handle.write(
+        '\t'.join(["contigs", "length"]+["sample_{}".format(i) for i in range(n_samples)])
+    )
 
     for ctg in h5_reader:
         data = h5_reader.get(ctg)[:]
-        prevalence = sum(data.sum(axis=1) > 0.1*data.shape[1])
-        if (data.shape[1] >= min_length) and (prevalence >= min_prevalence):
+        sample_coverage = data.sum(axis=1)
+        prevalence = sum(sample_coverage >= 0.1*data.shape[1])
+
+        if data.shape[1] >= min_length:
             h5_writer.create_dataset(ctg, data=data[:])
-        else:
+
+            if prevalence < min_prevalence:
+                info = map(str, [ctg, data.shape[1]] + sample_coverage.tolist())
+                singletons_handle.write("\n{}".format('\t'.join(info)))
+
+        if (data.shape[1] < min_length) or (prevalence < min_prevalence):
             del assembly[ctg]
 
+    singletons_handle.close()
     h5_reader.close()
     h5_writer.close()
 

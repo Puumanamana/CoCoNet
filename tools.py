@@ -1,10 +1,13 @@
 from math import ceil
 from time import time
+from textwrap import wrap
+from functools import lru_cache
 
 import h5py
 import numpy as np
 
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
+KMER_CODES_REV = {ord('A'): '11', ord('C'): '10', ord('G'): '01', ord('T'): '00'}
 
 def timer(func):
     def wrapper(*args, **kwargs):
@@ -17,6 +20,23 @@ def timer(func):
 
     return wrapper
 
+@lru_cache(maxsize=None)
+def kmer_rc_idx(k=4):
+    mapping = []
+    uniq_idx = set()
+
+    for i in range(4**k):
+        kmer_rev = ''.join(wrap('{:08b}'.format(4**k-1-i), 2)[::-1])
+        i_rev = int(kmer_rev, 2)
+
+        if i_rev not in uniq_idx:
+            uniq_idx.add(i)
+
+        if i != i_rev:
+            mapping.append([i, i_rev])
+
+    return (list(uniq_idx), np.array(mapping))
+
 def get_kmer_number(sequence, k=4):
     kmer_encoding = sequence.translate(KMER_CODES)
     kmer_indices = [int(kmer_encoding[i:i+2*k], 2) for i in range(0, 2*(len(sequence)-k+1), 2)]
@@ -25,17 +45,20 @@ def get_kmer_number(sequence, k=4):
 
 def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
+    if rc:
+        uniq_idx, rev_mapping = kmer_rc_idx(kmer)
     if not index:
         kmer_indices = get_kmer_number(sequence, kmer)
     else:
         kmer_indices = sequence
 
     occurrences = np.bincount(kmer_indices, minlength=4**kmer)
+
     if rc:
-        occurrences += occurrences[::-1]
-        occurrences = occurrences[:4**kmer//2]
+        occurrences[rev_mapping[:, 0]] += occurrences[rev_mapping[:, 1]]
+        occurrences = occurrences[uniq_idx]
     if norm:
-        occurrences /= np.sum(occurrences)
+        occurrences = occurrences / np.sum(occurrences)
 
     return occurrences
 

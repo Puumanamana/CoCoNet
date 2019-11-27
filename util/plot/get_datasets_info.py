@@ -32,24 +32,38 @@ def get_coverage(h5_path):
     Calculates the coverage per contig in the simulation
     '''
 
-    print('Fetching coverage for {}'.format(h5_path))
+    print('\033[1mFetching coverage for {}\033[0m'.format(h5_path))
     h5file = h5py.File(h5_path, 'r')
     contigs = list(h5file.keys())
 
     total_coverage = np.zeros((len(h5file), h5file.get(contigs[0]).shape[0], 2))
     prevalence = np.zeros(len(h5file))
+    cov_sum, len_sum = (0, 0)
 
     for i, ctg in progressbar(enumerate(h5file),
                               max_value=len(h5file)):
         cov = h5file.get(ctg)[:]
         total_coverage[i, :, 0] = np.mean(cov, axis=1)
         total_coverage[i, :, 1] = np.std(cov, axis=1)
-        prevalence[i] = (cov.sum(axis=1) > 0).sum()
+        prevalence[i] = (cov.sum(axis=1) > cov.shape[1]/10).sum()
 
-    return total_coverage, prevalence
+        cov_sum += cov.sum(axis=1)
+        len_sum += cov.shape[1]
+
+    return total_coverage, prevalence, cov_sum / len_sum
 
 def fformat(x):
-    return "{:.2f}".format(x)
+    if isinstance(x, str):
+        if x.isdigit():
+            return fformat(float(x))
+        return x
+
+    if pd.isnull(x):
+        return x
+
+    if float(x) == int(x):
+        return "{:g}".format(int(x))
+    return "{:.1f}".format(x)
 
 def process_sim(n_genomes, coverage, n_samples, name):
 
@@ -65,26 +79,30 @@ def process_sim(n_genomes, coverage, n_samples, name):
 
     bin_info = ctg_info.groupby('virus').length.agg(len)
 
-    (real_coverage, prevalence) = get_coverage(cfg.inputs['filtered']['coverage_h5'])
+    (real_coverage, prevalence, xcov) = get_coverage(cfg.inputs['filtered']['coverage_h5'])
+
+    if n_samples == -1:
+        n_samples = 3
+        coverage = '{} (+/- {})'.format(fformat(xcov.mean()), fformat(xcov.std()))
+        n_genomes = '>1500'
+
+    print(coverage, xcov)
 
     summary = {
-        'n_samples': n_samples,
-        'simulated_coverage': coverage,
-        'real_coverage_mean': np.array2string(real_coverage[:, :, 0].mean(axis=0),
+        'Number of bins': n_genomes,
+        'Coverage': coverage,
+        'Number of samples': n_samples,
+        'Number of contigs': len(ctg_info),
+        'Bin_sizes': bin_info.mean(),
+        'Prevalence_mean': prevalence.mean(),
+        'Prevalence_std': prevalence.std(),
+        'Real_coverage_mean': np.array2string(real_coverage[:, :, 0].mean(axis=0),
                                               formatter={'float_kind': fformat}),
-        'real_coverage_std': np.array2string(real_coverage[:, :, 1].mean(axis=0),
+        'Real_coverage_std': np.array2string(real_coverage[:, :, 1].mean(axis=0),
                                              formatter={'float_kind': fformat}),
-        'contig_length': "{:}, {:}, {:}".format(ctg_info.length.min(),
+        'Contig length': "{:}, {:}, {:}".format(ctg_info.length.min(),
                                                 ctg_info.length.median(),
                                                 ctg_info.length.max()),
-        'n_contigs': len(ctg_info),
-        'n_bins': n_genomes,
-        'bin_size': (bin_info
-                     .describe()
-                     .drop(['count', '25%', '75%', 'min'])
-                     .apply(fformat)
-                     .to_dict()),
-        'mean prevalence': prevalence.mean()
     }
 
     return summary
@@ -96,20 +114,43 @@ def main():
 
     args = parse_args()
 
-    if args.iter > 0:
+    if args.iter > 0 or args.name:
         summary = process_sim(args.n_genomes, args.coverage, args.nsamples, args.name)
         print("\n".join(['{}: {}'.format(k, str(v)) for k, v in summary.items()]))
         return summary
 
-    summaries = pd.Series([process_sim(args.n_genomes, args.coverage, args.nsamples,
-                           '{}_{}_{}_{}'.format(args.n_genomes, args.coverage, args.nsamples, iter_nb))
-                           for iter_nb in range(10)])
-    
-    (summaries
-     .drop(['real_coverage_mean', 'real_coverage_std', 'contig_length'], axis=1)
-     .groupby(['n_bins', 'simulated_coverage', 'n_samples'])
-     .agg(lambda x: '{} (+/- {})'.format(x.mean(), x.std()))
-     .to_csv("simulation_summary.csv"))
+    summaries = [process_sim(-1, -1, -1, "Station_Aloha")]
+
+    summaries += [process_sim(
+        n_genomes, coverage, n_samples, f"{n_genomes}_{coverage}_{n_samples}_{iter_nb}")
+                  for n_genomes in [500, 2000]
+                  for coverage in [3, 10]
+                  for n_samples in [4, 15]
+                  for iter_nb in range(10)]
+
+    result = (pd.DataFrame(summaries)
+              .drop(['Real_coverage_mean', 'Real_coverage_std', 'Contig length'], axis=1)
+              .groupby(['Number of bins', 'Coverage', 'Number of samples'])
+              .agg(lambda x: '{} (+/- {})'.format(fformat(x.mean()), fformat(x.std())))
+              .sort_index())
+
+    for col in result.columns:
+        result[col] = result[col].str.replace(' (+/- nan)', '', regex=False)
+
+    prevalence = []
+    for _, row in result.iterrows():
+        prev_mu = fformat(row.Prevalence_mean.split()[0])
+        prev_sig = fformat(row.Prevalence_std.split()[0])
+        prevalence.append("{} (+/- {})".format(prev_mu, prev_sig))
+
+    result['Prevalence'] = prevalence
+
+    result = result.reset_index().drop(['Prevalence_mean', 'Prevalence_std'], axis=1)
+    result.Coverage = result.Coverage.astype(str) + 'X'
+    result.index = ['Sim-{}'.format(i+1) for i in result.index[:-1]] + ['Station Aloha']
+    result.index.name = 'Dataset'
+
+    result.to_csv("simulation_summary.csv")
 
 if __name__ == '__main__':
     main()

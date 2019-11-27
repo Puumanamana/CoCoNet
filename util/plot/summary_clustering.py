@@ -18,7 +18,7 @@ def parse_args():
 
 def load_summaries(root_dir, exclude=[]):
     summaries = []
-    for filename in map(Path, iglob(f'{root_dir}/*sim_*.csv')):
+    for filename in map(Path, iglob(f'{root_dir}/*sim.csv')):
         if re.match(r'.*_\d+$', filename.stem):
             nvir = filename.stem.split('_')[-1]
             if nvir in exclude:

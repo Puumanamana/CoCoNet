@@ -24,11 +24,12 @@ from experiment import Experiment
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n_genomes', type=int, default=1000)
-    parser.add_argument('--coverage', type=int, default=1)
-    parser.add_argument('--n_samples', type=int, default=5)
+    parser.add_argument('--n_genomes', type=int, default=2000)
+    parser.add_argument('--coverage', type=int, default=10)
+    parser.add_argument('--n_samples', type=int, default=15)
+    parser.add_argument('--n_iter', type=int, default=0)
     parser.add_argument('--name', type=str, default='')
-    parser.add_argument('--minsize', type=int, default=4)
+    parser.add_argument('--minsize', type=int, default=2)
 
     args = parser.parse_args()
 
@@ -50,6 +51,7 @@ def set_truth(path, assignments):
 def load_and_process_assignments(cfg, minsize=0):
 
     assignments = pd.read_csv(cfg.outputs['clustering']['refined_assignments'])
+    assignments.columns = ['contigs', 'clusters', 'truth']
     assignments, mask = set_truth(cfg.outdir, assignments)
     assignments.index = np.arange(assignments.shape[0])
     assignments.index.name = 'ctg_id'
@@ -136,7 +138,7 @@ def main():
     if args.name != '':
         name = args.name
     else:
-        name = "{}_{}_{}".format(args.n_genomes, args.coverage, args.n_samples)
+        name = "{}_{}_{}_{}".format(args.n_genomes, args.coverage, args.n_samples, args.n_iter)
 
     config = Experiment(name, root_dir=PARENT_DIR)
 
