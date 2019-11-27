@@ -47,20 +47,20 @@ def slow_kmer_freq(seq, k=4, rc=False):
 
     return freqs
 
-def slow_coverage(pairs, h5file, window_size):
+def slow_coverage(pairs, h5file, window_size, window_step):
 
-    def smooth(x):
-        return avg_window(x, window_size)
+    def smooth(x, ws=window_step):
+        return avg_window(x, window_size)[::window_step]
 
     h5data = h5py.File(h5file)
 
     X1, X2 = [], []
-    for sp1, s1, e1, sp2, s2, e2 in pairs.values:
+    for (species, start, end) in pairs:
 
-        cov1 = h5data.get(sp1)[:, s1:e1]
+        cov1 = h5data.get(species[0])[:, start[0]:end[0]]
         X1.append(np.apply_along_axis(smooth, 1, cov1))
 
-        cov2 = h5data.get(sp2)[:, s2:e2]
+        cov2 = h5data.get(species[1])[:, start[1]:end[1]]
         X2.append(np.apply_along_axis(smooth, 1, cov2))
 
     return np.array(X1, dtype=np.float32), np.array(X2, dtype=np.float32)
@@ -85,12 +85,14 @@ class TestGenerators(unittest.TestCase):
 
     def test_get_coverage(self, window_size=3):
 
-        pairs = pd.DataFrame([["V0_0", 0, 50, "V0_0", 100, 150],
-                              ["V1_0", 0, 50, "V0_0", 50, 100]],
-                             columns=pd.MultiIndex.from_product([['A', 'B'], ['sp', 'start', 'end']]))
+        pairs = np.recarray([2, 2], dtype=[('sp', '<U10'), ('start', 'uint32'), ('end', 'uint32')])
 
-        X1, X2 = get_coverage(pairs, '/home/cedric/CoCoNet/tests/test.h5', window_size)
-        T1, T2 = slow_coverage(pairs, '/home/cedric/CoCoNet/tests/test.h5', window_size)
+        pairs['sp'] = [["V0_0", "V0_0"], ["V0_0", "V0_0"]]
+        pairs['start'] = [[0, 100], [0, 50]]
+        pairs['end'] = [[50, 150], [50, 100]]
+
+        (X1, X2) = get_coverage(pairs, '{}/test.h5'.format(sys.path[0]), window_size, window_size // 2)
+        (T1, T2) = slow_coverage(pairs, '{}/test.h5'.format(sys.path[0]), window_size, window_size // 2)
 
         assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0
 
