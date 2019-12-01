@@ -6,6 +6,8 @@ to train the neural network
 from itertools import combinations
 import numpy as np
 
+from tools import run_if_not_exists
+
 def calculate_optimal_dist(n_frags, fppc):
     """
     For a given contig, get the maximum distance between fragments, s.t.:
@@ -79,6 +81,7 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
 
     return pairs
 
+@run_if_not_exists
 def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     """
     Extract positive and negative pairs for [contigs]

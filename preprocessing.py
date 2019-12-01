@@ -14,7 +14,6 @@ prevalence filter and remove sequences that are too short
 """
 
 import shutil
-from os import mkdir
 from os.path import basename, splitext, exists
 from tempfile import mkdtemp
 import csv
@@ -80,13 +79,13 @@ def filter_bam_aln(bam, threads, min_qual, flag, fl_range):
 
     return sorted_output
 
-def bam_to_h5(bam, temp_dir, ctg_info):
+def bam_to_h5(bam, tmp_dir, ctg_info):
     '''
-    - Run samtools depth on bam file and save it in temp_dir
+    - Run samtools depth on bam file and save it in tmp_dir
     - Read the output and save the result in a h5 file with keys as contigs
     '''
 
-    outputs = {fmt: "{}/{}.{}".format(temp_dir, splitext(basename(bam))[0], fmt)
+    outputs = {fmt: "{}/{}.{}".format(tmp_dir, splitext(basename(bam))[0], fmt)
                for fmt in ['txt', 'h5']}
 
     with open(outputs['txt'], "w") as outfile:
@@ -127,7 +126,7 @@ def bam_to_h5(bam, temp_dir, ctg_info):
 
 def bam_list_to_h5(fasta, coverage_bam, output,
                    threads=1, min_prevalence=2, singleton_file='./singletons.txt',
-                   temp_dir='auto', **bam_filter_params):
+                   tmp_dir='auto', **bam_filter_params):
     '''
     - Extract the coverage of the sequences in fasta from the bam files
     - Remove N nucleotides from the FASTA and
@@ -137,10 +136,10 @@ def bam_list_to_h5(fasta, coverage_bam, output,
     '''
 
 
-    if temp_dir == 'auto':
-        temp_dir = mkdtemp()
+    if tmp_dir == 'auto':
+        tmp_dir = mkdtemp()
     else:
-        mkdir(temp_dir)
+        tmp_dir.mkdir(exist_ok=True)
 
     ctg_info = {seq.id: len(seq.seq)
                 for seq in SeqIO.parse(fasta, "fasta")}
@@ -148,7 +147,7 @@ def bam_list_to_h5(fasta, coverage_bam, output,
     filtered_bam_files = [filter_bam_aln(bam, threads, **bam_filter_params)
                           for bam in sorted(coverage_bam)]
 
-    depth_h5_files = [bam_to_h5(bam, temp_dir, ctg_info)
+    depth_h5_files = [bam_to_h5(bam, tmp_dir, ctg_info)
                       for bam in filtered_bam_files]
 
     singletons_handle = open(singleton_file, 'w')
@@ -194,19 +193,22 @@ def bam_list_to_h5(fasta, coverage_bam, output,
     SeqIO.write(assembly_no_n, fasta, "fasta")
     singletons_handle.close()
 
-    # Remove temp directory
-    shutil.rmtree(temp_dir)
+    # Remove tmp directory
+    shutil.rmtree(tmp_dir)
 
-def filter_h5(inputs, min_length=2048, min_prevalence=2, singleton_file="./singletons.txt"):
+def filter_h5(fasta, h5, filt_fasta, filt_h5,
+              min_length=2048, min_prevalence=2, singleton_file="./singletons.txt"):
     '''
     Filter coverage h5 and only keep sequences
     longer than [min_length]
     '''
 
-    h5_reader = h5py.File(inputs['raw']['coverage_h5'], 'r')
-    h5_writer = h5py.File(inputs['filtered']['coverage_h5'], 'w')
+    h5_reader = h5py.File(h5, 'r')
+    h5_writer = h5py.File(filt_h5, 'w')
+
     singletons_handle = open(singleton_file, 'w')
-    assembly = {seq.id: seq for seq in SeqIO.parse(inputs['raw']['fasta'], 'fasta')}
+    assembly = {seq.id: seq for seq in SeqIO.parse(fasta, 'fasta') if seq.id in h5_reader}
+
     n_samples = h5_reader.get(list(h5_reader.keys())[0]).shape[0]
 
     singletons_handle.write(
@@ -232,7 +234,4 @@ def filter_h5(inputs, min_length=2048, min_prevalence=2, singleton_file="./singl
     h5_reader.close()
     h5_writer.close()
 
-    SeqIO.write(list(assembly.values()), inputs['filtered']['fasta'], 'fasta')
-
-    # Zip the raw coverage to save space
-    subprocess.call(['gzip', inputs['raw']['coverage_h5']])
+    SeqIO.write(list(assembly.values()), filt_fasta, 'fasta')

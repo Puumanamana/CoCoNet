@@ -1,7 +1,7 @@
 import os
 from shutil import copyfile
 import re
-from configparser import ConfigParser, ExtendedInterpolation, NoOptionError
+# from configparser import ConfigParser, ExtendedInterpolation, NoOptionError
 
 from glob import glob
 from math import ceil
@@ -13,81 +13,30 @@ class Experiment:
     Class to store experiment's parameters
     '''
 
-    def __init__(self, name, root_dir='.',
-                 in_dir='input_data', out_dir='output_data'):
+    def __init__(self, name, threads, args):
         self.name = name
-        self.indir = "{}/{}/{}".format(root_dir, in_dir, name)
-        self.outdir = "{}/{}/{}".format(root_dir, out_dir, name)
-        self.cfg = '{}/config.ini'.format(self.outdir)
-        self.input_shapes = {}
-        
-        self.load(root_dir)
+        self.threads = threads
+        self.model_type = 'CoCoNet'
+
+        self.load(args)
         self.set_io_files()
+        self.input_shapes = {}
 
-    def load(self, root_dir):
-        '''
-        Load configuration file
-        '''
+    def load(self, args):
+        self.io = args['I/O']
+        self.frag = args['Fragmentation']
+        self.bam = args['Bam processing']
+        self.dl = args['Deep learning']
+        self.cluster = args['Clustering']
 
-        if not os.path.exists(self.cfg):
-            if not os.path.exists(self.outdir):
-                os.mkdir(self.outdir)
-        copyfile("{}/config.ini".format(root_dir), self.cfg)
-
-        parser = ConfigParser(interpolation=ExtendedInterpolation())
-        parser.read(self.cfg)
-
-        self.threads = parser.getint('main', 'threads')
-        self.model_type = parser.get('main', 'model_type')
-        self.fl = parser.getint('main', 'fragment_length')
-        self.min_ctg_len = self.fl * parser.getint('main', 'min_ctg_len_factor')
-        self.step = self.fl // parser.getint('main', 'step_ratio')
-        self.wsize = parser.getint('main', 'window_size')
-        self.wstep = parser.getint('main', 'window_step')
-        self.kmer = parser.getint('main', 'kmer')
-        self.rc = parser.getboolean('main', 'rc')
-        self.norm = parser.getboolean('main', 'norm')
-        self.singleton_ctg_file = "{}/singletons.txt".format(self.outdir)
-
-        self.bam_processing = {
-            'flag': parser.get('bam_processing', 'flag'),
-            'min_qual': parser.get('bam_processing', 'min_mapping_quality'),
-            'min_prevalence': parser.getint('bam_processing', 'min_prevalence_for_binning'),
-            'fl_range': parser.get('bam_processing', 'fragment_length_range').split('-'),
-            'temp_dir': parser.get('bam_processing', 'temp_dir')}
-
-        self.n_examples = {'train': parser.getint('training', 'n_examples_train'),
-                           'test': parser.getint('training', 'n_examples_test')}
-
-        self.train = {'batch_size': parser.getint('training', 'batch_size'),
-                      'learning_rate': parser.getfloat('training', 'learning_rate'),
-                      'load_batch': parser.getint('training', 'load_batch')}
-
-        self.arch = {'composition': {'neurons': np.fromstring(
-            parser.get('architecture', 'neurons_compo'), sep=',', dtype=int
-        )},
-                     'coverage': {'neurons': np.fromstring(
-                         parser.get('architecture', 'neurons_cover'), sep=',', dtype=int),
-                                  'n_filters': parser.getint('architecture', 'cover_filters'),
-                                  'kernel_size': parser.getint('architecture', 'cover_kernel_size'),
-                                  'conv_stride': parser.getint('architecture', 'cover_stride')},
-                     'combination': {'neurons': np.fromstring(
-                         parser.get('architecture', 'neurons_mixed'), sep=',', dtype=int
-                     )}}
-        self.clustering = {'n_frags': parser.getint('clustering', 'n_frags'),
-                           'max_neighbors': parser.getint('clustering', 'max_neighbors'),
-                           'hits_threshold': parser.getfloat('clustering', 'hits_threshold'),
-                           'algo': parser.get('clustering', 'clustering_algorithm'),
-                           }
-        # For backward compatibility
-        try:
-            gamma_1 = parser.getfloat('clustering', 'clustering_gamma_1')
-            gamma_2 = parser.getfloat('clustering', 'clustering_gamma_2')
-        except NoOptionError:
-            gamma_1 = 0.5
-            gamma_2 = 0.05
-        self.clustering['gamma_1'] = gamma_1
-        self.clustering['gamma_2'] = gamma_2
+        self.arch = {
+            'composition': {'neurons': self.dl['compo_neurons']},
+            'coverage': {'neurons': self.dl['cover_neurons'],
+                         'n_filters': self.dl['cover_filters'],
+                         'kernel_size': self.dl['cover_kernel_size'],
+                         'conv_stride': self.dl['cover_stride']},
+            'combination': {'neurons': self.dl['neurons_mixed']}
+        }
 
     def set_io_files(self):
         '''
@@ -96,38 +45,39 @@ class Experiment:
 
         self.inputs = {
             'raw': {
-                'fasta': '{}/assembly.fasta'.format(self.indir),
-                'coverage_h5': '{}/coverage_contigs.h5'.format(self.indir),
-                'bam': sorted([bam for bam in glob('{}/*.bam'.format(self.indir))
+                'fasta': '{}/assembly.fasta'.format(self.io['input']),
+                'coverage_h5': '{}/coverage_contigs.h5'.format(self.io['input']),
+                'bam': sorted([bam for bam in glob('{}/*.bam'.format(self.io['input']))
                                if not re.match('.*fl.*_sorted.bam', bam)])
             },
             'filtered': {
-                'fasta': '{}/assembly_gt{}_prev{}.fasta'.format(self.indir, self.min_ctg_len, self.bam_processing['min_prevalence']),
-                'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.indir, self.min_ctg_len)
+                'fasta': '{}/assembly_gt{}_prev{}.fasta'.format(self.io['input'], self.bam['min_ctg_len'], self.bam['min_prevalence']),
+                'coverage_h5': '{}/coverage_contigs_gt{}.h5'.format(self.io['input'], self.bam['min_ctg_len'])
             }
         }
 
         self.outputs = {
-            'fragments': {'test': '{}/pairs_test.npy'.format(self.outdir),
-                          'train': '{}/pairs_train.npy'.format(self.outdir)},
-            'net': {'model': '{}/{}.pth'.format(self.outdir, self.model_type),
-                    'test': '{}/{}_pred_test.csv'.format(self.outdir, self.model_type)},
+            'singletons': "{}/singletons.txt".format(self.io['output']),
+            'fragments': {'test': '{}/pairs_test.npy'.format(self.io['output']),
+                          'train': '{}/pairs_train.npy'.format(self.io['output'])},
+            'net': {'model': '{}/{}.pth'.format(self.io['output'], self.model_type),
+                    'test': '{}/{}_pred_test.csv'.format(self.io['output'], self.model_type)},
             'repr': {
-                'composition': '{}/representation_compo_nf{}.h5'.format(self.outdir, self.clustering['n_frags']),
-                'coverage': '{}/representation_cover_nf{}.h5'.format(self.outdir, self.clustering['n_frags'])
+                'composition': '{}/representation_compo_nf{}.h5'.format(self.io['output'], self.cluster['n_frags']),
+                'coverage': '{}/representation_cover_nf{}.h5'.format(self.io['output'], self.cluster['n_frags'])
             },
             'clustering': {
                 'adjacency_matrix': '{}/adjacency_matrix_nf{}.npy'.format(
-                    self.outdir, self.clustering['n_frags']),
+                    self.io['output'], self.cluster['n_frags']),
                 'refined_adjacency_matrix': '{}/adjacency_matrix_nf{}_refined.npy'.format(
-                    self.outdir, self.clustering['n_frags']),
-                'assignments': '{}/{}-{}-{}_nf{}.csv'.format(
-                    self.outdir, self.clustering['algo'], self.clustering['hits_threshold'],
-                    self.clustering['gamma_1'], self.clustering['n_frags']),
-                'refined_assignments': '{}/{}-{}-{}-{}_nf{}_refined.csv'.format(
-                    self.outdir, self.clustering['algo'], self.clustering['hits_threshold'],
-                    self.clustering['gamma_1'], self.clustering['gamma_2'],
-                    self.clustering['n_frags'])}
+                    self.io['output'], self.cluster['n_frags']),
+                'assignments': '{}/leiden-{}-{}_nf{}.csv'.format(
+                    self.io['output'], self.cluster['hits_threshold'],
+                    self.cluster['gamma1'], self.cluster['n_frags']),
+                'refined_assignments': '{}/leiden-{}-{}-{}_nf{}_refined.csv'.format(
+                    self.io['output'], self.cluster['hits_threshold'],
+                    self.cluster['gamma1'], self.cluster['gamma2'],
+                    self.cluster['n_frags'])}
         }
 
     def set_input_shapes(self):
@@ -140,8 +90,8 @@ class Experiment:
         h5_cov.close()
 
         self.input_shapes = {
-            'composition': 4**self.kmer // (1+self.rc),
+            'composition': 4**self.dl['kmer'] // (1+self.dl['rc']),
             'coverage': (
-                ceil((self.fl-self.wsize+1) / self.wstep),
+                ceil((self.frag['fl']-self.dl['wsize']+1) / self.dl['wstep']),
                 n_samples)
         }

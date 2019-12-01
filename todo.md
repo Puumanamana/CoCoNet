@@ -1,0 +1,2 @@
+- Change parser_info.py to only write `click.options` once
+- 

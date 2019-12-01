@@ -6,7 +6,6 @@ Clustering utils:
 - iterate_clustering()
 '''
 
-import os
 import numpy as np
 import pandas as pd
 import h5py
@@ -14,56 +13,53 @@ import h5py
 import torch
 from sklearn.metrics.pairwise import euclidean_distances
 
-import networkx as nx
 import igraph
 import leidenalg
 
 from Bio import SeqIO
 from progressbar import progressbar
 
-from tools import get_kmer_frequency, avg_window
+# from tools import get_kmer_frequency, avg_window
 
-def save_repr_all(model, config):
-    '''
-    - Calculate intermediate representation for all fragments of all contigs
-    - Save it in a .h5 file
-    '''
+# def save_repr_all(model, fasta, h5, output,
+#                   n_frags=30, fl=1024, rc=True, kmer=4,
+#                   wsize=64, wstep=32):
+#     '''
+#     - Calculate intermediate representation for all fragments of all contigs
+#     - Save it in a .h5 file
+#     '''
 
-    cov_h5 = h5py.File(config.inputs['filtered']['coverage_h5'], 'r')
+#     cov_h5 = h5py.File(h5, 'r')
 
-    repr_h5 = {key: h5py.File(filename, 'w') for key, filename in config.outputs['repr'].items()}
+#     repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
 
-    n_frags = config.clustering['n_frags']
+#     for contig in progressbar(SeqIO.parse(fasta, "fasta"), max_value=len(cov_h5)):
+#         step = int((len(contig)-fl) / n_frags)
 
-    for contig in progressbar(SeqIO.parse(config.inputs['filtered']['fasta'], "fasta"),
-                              max_value=len(cov_h5)):
-        step = int((len(contig)-config.fl) / n_frags)
+#         fragment_boundaries = [(step*i, step*i+fl) for i in range(n_frags)]
 
-        fragment_boundaries = [(step*i, step*i+config.fl) for i in range(n_frags)]
+#         x_composition = torch.from_numpy(np.stack([
+#             get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
+#             for (start, stop) in fragment_boundaries
+#         ]).astype(np.float32)) # Shape = (n_frags, 4**k)
 
-        x_composition = torch.from_numpy(np.stack(
-            [get_kmer_frequency(str(contig.seq)[start:stop],
-                                kmer=config.kmer, rc=config.rc)
-             for (start, stop) in fragment_boundaries]
-        ).astype(np.float32)) # Shape = (n_frags, 4**k)
+#         fragment_slices = np.array([np.arange(start, stop)
+#                                     for (start, stop) in fragment_boundaries])
+#         coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:, fragment_slices]
+#         coverage_genome = np.swapaxes(coverage_genome, 1, 0)
 
-        fragment_slices = np.array([np.arange(start, stop)
-                                    for (start, stop) in fragment_boundaries])
-        coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:, fragment_slices]
-        coverage_genome = np.swapaxes(coverage_genome, 1, 0)
+#         x_coverage = torch.from_numpy(
+#             np.apply_along_axis(
+#                 lambda x: avg_window(x, wsize, wstep), 2, coverage_genome
+#             ).astype(np.float32))
 
-        x_coverage = torch.from_numpy(
-            np.apply_along_axis(
-                lambda x: avg_window(x, config.wsize, config.wstep), 2, coverage_genome
-            ).astype(np.float32))
+#         x_repr = model.compute_repr(x_composition, x_coverage)
 
-        x_repr = model.compute_repr(x_composition, x_coverage)
+#         for key, handle in repr_h5.items():
+#             handle.create_dataset(contig.id, data=x_repr[key].detach().numpy(), dtype=np.float32)
 
-        for key, handle in repr_h5.items():
-            handle.create_dataset(contig.id, data=x_repr[key].detach().numpy(), dtype=np.float32)
-
-    for handle in repr_h5.values():
-        handle.close()
+#     for handle in repr_h5.values():
+#         handle.close()
 
 def get_neighbors(file_h5):
     '''
@@ -83,7 +79,7 @@ def get_neighbors(file_h5):
     # distance of each fragment to its center
     distance_to_resp_center = np.sqrt(np.sum(
         (data - contig_centers[:, None, :])**2, axis=2
-        ))
+    ))
     # radius of each contig (mean+2*std)(distance) from fragment to center
     radii = np.mean(distance_to_resp_center, axis=1) + 2*np.std(distance_to_resp_center, axis=1)
     # Condition: neighbors need to be within [radius] units from the center
@@ -96,14 +92,14 @@ def get_neighbors(file_h5):
 
     return neighbors_ordered
 
-def compute_pairwise_comparisons(config, model, contigs, handles,
-                                 init_matrix=None, neighbors=None):
+def compute_pairwise_comparisons(model, contigs, handles,
+                                 init_matrix=None, neighbors=None,
+                                 n_frags=30, max_neighbors=100):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
     between the contig pair
     '''
-    n_frags = config.clustering['n_frags']
 
     ref_idx, other_idx = (np.repeat(np.arange(n_frags), n_frags),
                           np.tile(np.arange(n_frags), n_frags))
@@ -126,7 +122,7 @@ def compute_pairwise_comparisons(config, model, contigs, handles,
             new_neighbors_k = np.arange(len(contigs))[scores < 0]
         else:
             scores = adjacency_matrix[k, neighbors[k]]
-            new_neighbors_k = neighbors[k][scores < 0][:config.clustering['max_neighbors']]
+            new_neighbors_k = neighbors[k][scores < 0][:max_neighbors]
 
         for n_i in new_neighbors_k:
             x_other = {key: torch.from_numpy(
@@ -141,7 +137,7 @@ def compute_pairwise_comparisons(config, model, contigs, handles,
 
     return adjacency_matrix
 
-def fill_adjacency_matrix(model, config):
+def fill_adjacency_matrix(model, latent_repr, output, **kw):
     '''
     Fill contig-contig adjacency matrix. For a given contig:
     - Extract neighbors
@@ -149,23 +145,23 @@ def fill_adjacency_matrix(model, config):
     - Fill the value with the expected number of hits
     '''
 
-    if os.path.exists(config.outputs['clustering']['adjacency_matrix']):
+    if output.is_file():
         return
 
-    handles = {key: h5py.File(filename) for key, filename in config.outputs['repr'].items()}
+    handles = {key: h5py.File(filename) for key, filename in latent_repr.items()}
     contigs = np.array(list(handles['coverage'].keys()))
 
     # Get neighbors for coverage feature
-    neighbors = get_neighbors(config.outputs['repr']['coverage'])
+    neighbors = get_neighbors(latent_repr['coverage'])
 
     # Intersect with neighbors for composition feature
-    for i, n_i in enumerate(get_neighbors(config.outputs['repr']['composition'])):
+    for i, n_i in enumerate(get_neighbors(latent_repr['composition'])):
         neighbors[i] = np.intersect1d(neighbors[i], n_i)
 
     adjacency_matrix = compute_pairwise_comparisons(
-        config, model, contigs, handles, neighbors=neighbors)
+        model, contigs, handles, neighbors=neighbors, **kw)
 
-    np.save(config.outputs['clustering']['adjacency_matrix'], adjacency_matrix)
+    np.save(output, adjacency_matrix)
 
 def check_partitions(communities, adjacency_matrix, gamma, debug=False):
     def count_mean_edges(s):
@@ -213,7 +209,7 @@ def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|', debug=F
 
     return assignments
 
-def iterate_clustering(model, config):
+def iterate_clustering(model, outputs, **kw):
     '''
     - Go through all clusters
     - Fill the pairwise comparisons within clusters
@@ -221,27 +217,27 @@ def iterate_clustering(model, config):
     '''
 
     # Pre-clustering
-    adjacency_matrix = np.load(config.outputs['clustering']['adjacency_matrix'])
-    edge_threshold = config.clustering['hits_threshold'] * config.clustering['n_frags']**2
+    adjacency_matrix = np.load(outputs['adjacency_matrix'])
+    edge_threshold = kw['hits_threshold'] * kw['n_frags']**2
 
-    handles = {key: h5py.File(filename) for key, filename in config.outputs['repr'].items()}
+    handles = {key: h5py.File(filename) for key, filename in outputs['repr'].items()}
     contigs = np.array(list(handles['coverage'].keys()))
 
     communities = get_communities(
         (adjacency_matrix > edge_threshold).astype(int),
         contigs,
-        gamma=config.clustering['gamma_1'],
+        gamma=kw['gamma1'],
         debug=True,
     )
 
-    ignored = pd.read_csv(config.singleton_ctg_file, sep='\t', usecols=['contigs'], index_col='contigs')
+    ignored = pd.read_csv(outputs['singleton'], sep='\t', usecols=['contigs'], index_col='contigs')
     ignored['clusters'] = np.arange(len(ignored)) + communities.clusters.max() + 1
     ignored['truth'] = -1
 
     communities = pd.concat([communities, ignored])
     communities.truth = pd.factorize(communities.index.str.split('|').str[0])[0]
 
-    communities.to_csv(config.outputs['clustering']['assignments'])
+    communities.to_csv(outputs['assignments'])
 
     # Refining the clusters
     communities['ctg_index'] = np.arange(communities.shape[0])
@@ -254,8 +250,9 @@ def iterate_clustering(model, config):
 
         # Compute remaining pairwise comparisons
         adjacency_submatrix = compute_pairwise_comparisons(
-            config, model, contigs[ctg_indices], handles,
-            init_matrix=adjacency_matrix[ctg_indices, :][:, ctg_indices]
+            model, contigs[ctg_indices], handles,
+            init_matrix=adjacency_matrix[ctg_indices, :][:, ctg_indices],
+            n_frags=kw['n_frags'], max_neighbors=kw['max_neighbors']
         )
         mask = np.isin(np.arange(adjacency_matrix.shape[0]), ctg_indices)
         mask = mask.reshape(-1, 1).dot(mask.reshape(1, -1))
@@ -266,38 +263,13 @@ def iterate_clustering(model, config):
             sub_communities = get_communities(
                 (adjacency_submatrix > edge_threshold).astype(int),
                 contigs[ctg_indices],
-                gamma=config.clustering['gamma_2'],
+                gamma=kw['gamma2'],
             )
             communities.loc[sub_communities.index, 'clusters'] = (1 + sub_communities.clusters
                                                                   + communities.clusters.max())
-    np.save(config.outputs['clustering']['refined_adjacency_matrix'], adjacency_matrix)
+    np.save(outputs['refined_adjacency_matrix'], adjacency_matrix)
 
     communities.clusters = pd.factorize(communities.clusters)[0]
     communities.drop('ctg_index', axis=1, inplace=True)
 
-    communities.to_csv(config.outputs['clustering']['refined_assignments'])
-
-
-def plot_communities(adj_sub, contig_names, sub_communities, louvain, thresh):
-    '''
-    Temporary metrics for analysis
-    '''
-    from sklearn.metrics import adjusted_rand_score
-    from HCS import labelled_HCS
-
-    adj_bin = (adj_sub > thresh).astype(float)
-
-    res = np.array(labelled_HCS(nx.from_numpy_matrix(adj_bin), ratio=0.5))
-    truth = pd.factorize([x.split('|')[0] for x in contig_names])[0]
-
-    info = pd.DataFrame({
-        'leiden': sub_communities.clusters.values,
-        'louvain': louvain.values,
-        'HCS': res,
-        'truth': truth
-    })
-    print(info)
-
-    print(adjusted_rand_score(truth, sub_communities.clusters),
-          adjusted_rand_score(truth, louvain),
-          adjusted_rand_score(truth, res))
+    communities.to_csv(outputs['refined_assignments'])

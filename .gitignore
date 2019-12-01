@@ -12,6 +12,6 @@ data
 *.png
 !*.py
 !*.nf
-input_data
+input_data*
 output_data*
 old*

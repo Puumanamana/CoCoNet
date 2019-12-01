@@ -130,8 +130,8 @@ class CoCoNet(nn.Module):
 
         self.dense = nn.Linear(composition_model.compo_prob.in_features
                                + coverage_model.cover_prob.in_features,
-                               neurons[0])
-        self.prob = nn.Linear(neurons[0], 1)
+                               neurons)
+        self.prob = nn.Linear(neurons, 1)
 
         self.loss_op = nn.BCELoss(reduction='none')
 
@@ -178,6 +178,7 @@ class CoCoNet(nn.Module):
 
         compo_repr = self.composition_model.get_coconet_input(*x1)
         cover_repr = self.coverage_model.get_coconet_input(*x2)
+
         combined = F.relu(self.dense(torch.cat([compo_repr, cover_repr], axis=1)))
 
         compo_prob = torch.sigmoid(self.composition_model.compo_prob(compo_repr))
