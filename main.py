@@ -18,22 +18,34 @@ from dl_util import initialize_model, train, save_repr_all
 from clustering import fill_adjacency_matrix, iterate_clustering
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-pass_context = click.make_pass_decorator(Configuration, ensure=True)
+PASS_CONTEXT = click.make_pass_decorator(Configuration, ensure=True)
 
-@click.group(context_settings=CONTEXT_SETTINGS)
+class NaturalOrderGroup(click.Group):
+    '''
+    Needed to make order the subcommands in order of appearance in the script
+    '''
+    def list_commands(self, ctx):
+        return self.commands.keys()
+
+@click.group(cls=NaturalOrderGroup, context_settings=CONTEXT_SETTINGS)
 def main():
     '''
-    - Greeter
+    Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
+    CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
     '''
 
-    print('#### Starting CoCoNet ####\n')
+    print('''
+    ############################################
+    #### Starting CoCoNet binning algorithm ####
+    ############################################
+    ''')
 
 @main.command(help='Preprocess the contig coverage')
 @make_decorator('io', 'general', 'preproc')
-@pass_context
-def preprocessing(cfg, **kwargs):
+@PASS_CONTEXT
+def preprocess(cfg, **kwargs):
     '''
-    Preprocessing steps
+    Preprocess assembly and coverage
     '''
 
     cfg.init_config(**kwargs)
@@ -56,12 +68,15 @@ def preprocessing(cfg, **kwargs):
               singleton_file=cfg.io['singletons'],
               min_length=cfg.min_ctg_len, min_prevalence=cfg.min_prevalence)
 
-@main.command(help='Fragmentation tool to split the contigs')
+@main.command(help='Make train and test examples training')
 @make_decorator('io', 'general', 'frag')
-@pass_context
-def fragmentation(cfg, **kwargs):
+@PASS_CONTEXT
+def make_train_test(cfg, **kwargs):
     '''
-    Fragmentation steps
+    - Split contigs into fragments
+    - Make pairs of fragments such that we have:
+       - n/2 positive examples (fragments from the same contig)
+       - n/2 negative examples (fragments from different contigs)
     '''
 
     cfg.init_config(**kwargs)
@@ -84,7 +99,7 @@ def fragmentation(cfg, **kwargs):
 
 @main.command(help='Train neural network')
 @make_decorator('io', 'general', 'dl')
-@pass_context
+@PASS_CONTEXT
 def learn(cfg, **kwargs):
     '''
     Deep learning model
@@ -131,7 +146,7 @@ def learn(cfg, **kwargs):
 
 @main.command(help='Cluster contigs')
 @make_decorator('io', 'general', 'dl', 'cluster')
-@pass_context
+@PASS_CONTEXT
 def cluster(cfg, **kwargs):
     '''
     Make adjacency matrix and cluster contigs
@@ -169,16 +184,16 @@ def cluster(cfg, **kwargs):
         max_neighbors=cfg.max_neighbors,
     )
 
-@main.command(help='Run complete pipeline')
+@main.command(help='Run complete algorithm')
 @make_decorator('io', 'general', 'preproc', 'frag', 'dl', 'cluster')
 @click.pass_context
-def run(context, **kwargs):
+def run(context, **_kwargs):
     '''
     Run complete pipeline
     '''
 
-    context.forward(preprocessing)
-    context.forward(fragmentation)
+    context.forward(preprocess)
+    context.forward(make_train_test)
     context.forward(learn)
     context.forward(cluster)
 
