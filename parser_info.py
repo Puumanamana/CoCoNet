@@ -5,7 +5,7 @@ CoCoNet parser information and documentation for click
 from pathlib import Path
 import click
 
-def callback(_ctx, _param, value):
+def to_path(_ctx, _param, value):
     '''
     Converts path from command line to Path objects
     '''
@@ -17,9 +17,9 @@ def callback(_ctx, _param, value):
 
 _OPTIONS = {
     'io': [
-        click.argument('fasta', required=False, callback=callback, type=click.Path(exists=True)),
-        click.argument('coverage', required=False, nargs=-1, callback=callback, type=click.Path(exists=True)),
-        click.option('-o', '--output', type=str, required=False, default='output', callback=callback, help='Path to output directory'),
+        click.argument('fasta', required=False, callback=to_path, type=click.Path(exists=True)),
+        click.argument('coverage', required=False, nargs=-1, callback=to_path, type=click.Path(exists=True)),
+        click.option('-o', '--output', type=str, required=False, default='output', callback=to_path, help='Path to output directory'),
     ],
 
     'general': [
@@ -28,13 +28,16 @@ _OPTIONS = {
         click.option('-@', '--threads', type=int, required=False, default=10, help='Number of threads'),
     ],
 
+    'core': [
+    ],
+
     'preproc': [
         click.option('--min-ctg-len', type=int, required=False, default=2048, help='Minimum contig length'),
         click.option('--min-prevalence', type=int, required=False, default=2, help='Minimum contig prevalence for binning. Contig with less that value are filtered out.'),
         click.option('--min-mapping-quality', type=click.IntRange(1, 60), required=False, default=50, help='Minimum mapping quality for bam filtering'),
         click.option('--flag', type=int, required=False, default=3596, help='Sam Flag for bam filtering'),
         click.option('--fl-range', type=int, required=False, default=(200, 500), nargs=2, help='Only allow for paired alignments with spacing within this range'),
-        click.option('--tmp-dir', type=str, required=False, default='./tmp42', callback=callback, help='Temporary directory for bam processing'),
+        click.option('--tmp-dir', type=str, required=False, default='./tmp42', callback=to_path, help='Temporary directory for bam processing'),
     ],
 
     'frag': [
@@ -47,18 +50,18 @@ _OPTIONS = {
         click.option('--batch-size', type=int, required=False, default=256, help='Batch size for training'),
         click.option('--learning-rate', type=float, required=False, default=1e-4, help='Learning rate for gradient descent'),
         click.option('--load-batch', type=int, required=False, default=500, help='Number of coverage batch to load in memory. Consider lowering this value if your RAM is limited.'),
-        click.option('--wsize', type=int, required=False, default=64, help='Smoothing window size for coverage vector'),
-        click.option('--wstep', type=int, required=False, default=32, help='Subsampling step for coverage vector'),
         click.option('--compo-neurons', type=int, required=False, default=(64, 32), nargs=2, help='Number of neurons for the composition network (2 layers)'),
         click.option('--cover-neurons', type=int, required=False, default=(64, 32), nargs=2, help='Number of neurons for the coverage network (2 layers)'),
         click.option('--cover-filters', type=int, required=False, default=32, help='Number of filters for convolution layer of coverage network.'),
         click.option('--cover-kernel', type=int, required=False, default=7, help='Kernel size for convolution layer of coverage network.'),
         click.option('--cover_stride', type=int, required=False, default=3, help='Convolution stride for convolution layer of coverage network.'),
         click.option('--combined-neurons', type=int, required=False, default=32, help='Number of neurons for the merging network (1 layer)'),
+        click.option('--norm', required=False, is_flag=True, help='Normalize the k-mer occurrences to frequencies'),
         click.option('-k', '--kmer', type=int, required=False, default=4, help='k-mer size for composition vector'),
         click.option('--no-rc', required=False, is_flag=True, help='Do not add the reverse complement k-mer occurrences to the composition vector'),
-        click.option('--norm', required=False, is_flag=True, help='Normalize the k-mer occurrences to frequencies'),
-        click.option('--n-frags', type=int, required=False, default=30, help='Number of fragments to split a contigs'),
+        click.option('--wsize', type=int, required=False, default=64, help='Smoothing window size for coverage vector'),
+        click.option('--wstep', type=int, required=False, default=32, help='Subsampling step for coverage vector'),
+        click.option('--n-frags', type=int, required=False, default=30, help='Number of fragments to split a contigs')
     ],
 
     'cluster': [

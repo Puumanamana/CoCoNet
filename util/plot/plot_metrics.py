@@ -3,13 +3,13 @@ Extract metrics for either one experiment or all the simulations
 Plot a line chart with the extracted results
 """
 from time import time
+import re
 from pathlib import Path
 import os
 import sys
 from itertools import chain
 from glob import iglob
 import argparse
-
 
 import pandas as pd
 import numpy as np
@@ -32,7 +32,7 @@ plt.rcParams.update(**rc)
 PARENT_DIR = os.path.join(sys.path[0], '../..')
 sys.path.insert(1, PARENT_DIR)
 
-from experiment import Experiment
+from config import Configuration
 
 DIRS = {
     'input': 'input_data',
@@ -71,7 +71,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, nargs='+', default=[], help="List of path (space separated)")
     parser.add_argument('--nvir', type=int, default=1000)
-    parser.add_argument('--mode', type=str, default='clustering', choices=['nn', 'clustering'])
+    parser.add_argument('--mode', type=str, default='nn', choices=['nn', 'clustering'])
     parser.add_argument('--feature', type=str, default='combined', choices=['composition', 'coverage', 'combined'])
     parser.add_argument('--nw', action='store_true', default=False)
 
@@ -177,27 +177,25 @@ def get_metrics_run(path, mode='nn', feature_name=None):
     Get metrics for given run.
     Choice between NN metrics or clustering metrics
     '''
-    
-    config = Experiment(path.stem, root_dir=PARENT_DIR,
-                        in_dir=DIRS['input'],
-                        out_dir=DIRS['CoCoNet'])
+
+    try:
+        config = Configuration.from_yaml('{}/config.yaml'.format(path))
+    except FileNotFoundError:
+        print('{}/config.yaml not found. Ignoring file.'.format(path))
+        return [[]]
 
     if mode == 'nn':
-        filename = config.outputs['net']['test']
+        filename = config.io['nn_test']
     else:
-        filename = config.outputs['clustering']['refined_assignments']
+        filename = config.io['refined_assignments']
         feature_name = 'clusters'
-
-    if not os.path.exists(filename):
-        print('{} not found. Ignoring file.'.format(filename))
-        return [[]]
 
     print('\033[1mProcessing {}.\033[0m'.format(path.stem))
 
     test_results = pd.read_csv(filename)
 
     if mode == 'clustering':
-        to_exclude = pd.read_csv(config.singleton_ctg_file, sep='\t')
+        to_exclude = pd.read_csv(config.io['singletons'], sep='\t')
 
         if len(to_exclude) > 0:
             test_results = test_results.set_index('contigs').drop(to_exclude.contigs).reset_index()
@@ -212,6 +210,9 @@ def get_metrics_run(path, mode='nn', feature_name=None):
 
     else:
         y_test = test_results['truth'].values
+        if isinstance(y_test[0], str):
+            y_test = [int(re.findall('[01]', x)[0]) for x in y_test]
+        
         y_pred = test_results[feature_name].values
         params = get_outputs(path, test_results, params_only=True)
 

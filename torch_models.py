@@ -135,8 +135,6 @@ class CoCoNet(nn.Module):
 
         self.loss_op = nn.BCELoss(reduction='none')
 
-        print(self)
-
     def compute_repr(self, x1, x2):
         '''
         Compute representation for both sub-models

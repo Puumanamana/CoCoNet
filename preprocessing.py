@@ -27,6 +27,9 @@ from Bio.Seq import Seq
 
 from progressbar import progressbar
 
+from tools import run_if_not_exists
+
+@run_if_not_exists()
 def format_assembly(fasta, output=None, min_length=2048):
     '''
     Remove N nucleotide from assembly and
@@ -124,7 +127,8 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
 
     return outputs['h5']
 
-def bam_list_to_h5(fasta, coverage_bam, output,
+@run_if_not_exists()
+def bam_list_to_h5(fasta, coverage_bam, output=None,
                    threads=1, min_prevalence=2, singleton_file='./singletons.txt',
                    tmp_dir='auto', **bam_filter_params):
     '''
@@ -196,7 +200,8 @@ def bam_list_to_h5(fasta, coverage_bam, output,
     # Remove tmp directory
     shutil.rmtree(tmp_dir)
 
-def filter_h5(fasta, h5, filt_fasta, filt_h5,
+@run_if_not_exists(keys=('filt_fasta', 'filt_h5'))
+def filter_h5(fasta, h5, filt_fasta=None, filt_h5=None,
               min_length=2048, min_prevalence=2, singleton_file="./singletons.txt"):
     '''
     Filter coverage h5 and only keep sequences

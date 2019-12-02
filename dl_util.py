@@ -77,7 +77,7 @@ def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=No
         generators.append(CompositionGenerator(pairs, fasta,
                                                batch_size=batch_size,
                                                kmer=args['kmer'],
-                                               rc=not args['no_rc'],
+                                               rc=args['rc'],
                                                norm=args['norm']))
     if model_type != 'composition':
         generators.append(CoverageGenerator(pairs, h5,
@@ -102,7 +102,7 @@ def train_batch(x, y, model, optimizer):
 
     return loss.item()
 
-@run_if_not_exists
+@run_if_not_exists()
 def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=None, **args):
     '''
     Train neural network:
@@ -139,7 +139,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
     }, output)
 
     # Save last test performance to file
-    scores.update({'truth': y_test.long()})
+    scores.update({'truth': y_test.long().numpy()[:, 0]})
     pd.DataFrame(scores).to_csv(nn_test_path, index=False)
 
     print('Finished Training')
@@ -181,12 +181,14 @@ def get_confusion_table(preds, truth, done=0):
         print("\033[1m {:.2%} done -- {}: Accuracy={:.2%} ({} FP, {} FN) - \033[0m"
               .format(done, key, acc, false_pos, false_neg))
 
-@run_if_not_exists
+@run_if_not_exists()
 def save_repr_all(model, fasta, coverage, n_frags=30, frag_len=1024, output=None, rc=True, kmer=4, wsize=64, wstep=32):
     '''
     - Calculate intermediate representation for all fragments of all contigs
     - Save it in a .h5 file
     '''
+
+    print('Computing intermediate representation of composition and coverage features')
 
     cov_h5 = h5py.File(coverage, 'r')
 
