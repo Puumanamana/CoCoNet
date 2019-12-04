@@ -5,6 +5,19 @@ CoCoNet parser information and documentation for click
 from pathlib import Path
 import click
 
+orig_init = click.core.Option.__init__
+
+
+def new_init(self, *args, **kwargs):
+    '''
+    Show default values in the help documentation
+    '''
+    orig_init(self, *args, **kwargs)
+    self.show_default = True
+
+
+click.core.Option.__init__ = new_init
+
 def to_path(_ctx, _param, value):
     '''
     Converts path from command line to Path objects
@@ -14,6 +27,19 @@ def to_path(_ctx, _param, value):
     if isinstance(value, str):
         return Path(value)
     return value
+
+_HELP_INPUTS = '''
+[FASTA] Path to your assembly file (fasta formatted)\n
+[COVERAGE] List of paths to your coverage files (bam formatted)
+'''
+
+_HELP_MSG = {
+    'preprocess': 'Preprocess the contig assembly and coverage.\n{}'.format(_HELP_INPUTS),
+    'make_train_test': 'Make train and test examples for neural network.\n{}'.format(_HELP_INPUTS),
+    'learn': 'Train neural network.\n{}'.format(_HELP_INPUTS),
+    'cluster': 'Cluster contigs.\n{}'.format(_HELP_INPUTS),
+    'run': 'Run complete algorithm.\n{}'.format(_HELP_INPUTS)
+}
 
 _OPTIONS = {
     'io': [
@@ -25,7 +51,7 @@ _OPTIONS = {
     'general': [
         click.option('-n', '--name', type=str, required=False, default='ds', help='Dataset name'),
         click.option('-fl', '--fragment-length', type=int, required=False, default=1024, help='Fragment length for contig splitting'),
-        click.option('-@', '--threads', type=int, required=False, default=10, help='Number of threads'),
+        click.option('-@', '--threads', type=int, required=False, default=30, help='Number of threads'),
     ],
 
     'core': [
@@ -54,7 +80,7 @@ _OPTIONS = {
         click.option('--cover-neurons', type=int, required=False, default=(64, 32), nargs=2, help='Number of neurons for the coverage network (2 layers)'),
         click.option('--cover-filters', type=int, required=False, default=32, help='Number of filters for convolution layer of coverage network.'),
         click.option('--cover-kernel', type=int, required=False, default=7, help='Kernel size for convolution layer of coverage network.'),
-        click.option('--cover_stride', type=int, required=False, default=3, help='Convolution stride for convolution layer of coverage network.'),
+        click.option('--cover-stride', type=int, required=False, default=3, help='Convolution stride for convolution layer of coverage network.'),
         click.option('--combined-neurons', type=int, required=False, default=32, help='Number of neurons for the merging network (1 layer)'),
         click.option('--norm', required=False, is_flag=True, help='Normalize the k-mer occurrences to frequencies'),
         click.option('-k', '--kmer', type=int, required=False, default=4, help='k-mer size for composition vector'),

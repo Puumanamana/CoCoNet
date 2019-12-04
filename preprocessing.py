@@ -13,8 +13,8 @@ prevalence filter and remove sequences that are too short
 
 """
 
+from pathlib import Path
 import shutil
-from os.path import basename, splitext, exists
 from tempfile import mkdtemp
 import csv
 import subprocess
@@ -37,23 +37,22 @@ def format_assembly(fasta, output=None, min_length=2048):
     '''
 
     if output is None:
-        base, ext = splitext(fasta)
-        output = "{}_gt{}{}".format(base, min_length, ext)
+        output = "{}_gt{}{}".format(fasta.stem, min_length, fasta.suffix)
 
     formated_assembly = [genome for genome in SeqIO.parse(fasta, "fasta")
                          if len(str(genome.seq).replace('N', '')) >= min_length]
 
     SeqIO.write(formated_assembly, output, "fasta")
 
-def filter_bam_aln(bam, threads, min_qual, flag, fl_range):
+def filter_bam_aln(bam, threads, min_qual, flag, fl_range, outdir=None):
     '''
     Run samtools view to filter quality
     '''
 
-    sorted_output = "{}_q{}-F{}_fl{}-{}_sorted.bam"\
-        .format(splitext(bam)[0], min_qual, flag, *fl_range)
+    sorted_output = Path("{}/{}_q{}-F{}_fl{}-{}_sorted.bam"
+                         .format(outdir, bam.stem, min_qual, flag, *fl_range))
 
-    if exists(sorted_output):
+    if sorted_output.is_file():
         return sorted_output
 
     cmds = [
@@ -88,7 +87,7 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
     - Read the output and save the result in a h5 file with keys as contigs
     '''
 
-    outputs = {fmt: "{}/{}.{}".format(tmp_dir, splitext(basename(bam))[0], fmt)
+    outputs = {fmt: "{}/{}.{}".format(tmp_dir, bam.stem, fmt)
                for fmt in ['txt', 'h5']}
 
     with open(outputs['txt'], "w") as outfile:
@@ -148,7 +147,7 @@ def bam_list_to_h5(fasta, coverage_bam, output=None,
     ctg_info = {seq.id: len(seq.seq)
                 for seq in SeqIO.parse(fasta, "fasta")}
 
-    filtered_bam_files = [filter_bam_aln(bam, threads, **bam_filter_params)
+    filtered_bam_files = [filter_bam_aln(bam, threads, outdir=output.parent, **bam_filter_params)
                           for bam in sorted(coverage_bam)]
 
     depth_h5_files = [bam_to_h5(bam, tmp_dir, ctg_info)

@@ -33,6 +33,23 @@ def initialize_model(model_type, input_shapes, architecture):
 
     return model
 
+def load_model(config):
+    '''
+    Load model:
+    - initiliaze model with parameters in config
+    - load weights with file defined in config
+    '''
+
+    input_shapes = config.get_input_shapes()
+    architecture = config.get_architecture()
+    model = initialize_model('CoCoNet', input_shapes, architecture)
+
+    checkpoint = torch.load(config.io['model'])
+    model.load_state_dict(checkpoint['state'])
+    model.eval()
+
+    return model
+
 def get_labels(pairs_file):
     '''
     Extract label from pair file
@@ -130,7 +147,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
         losses_buffer.append(loss.item())
 
         # Get test results
-        if (i % 200 == 0) or (i == n_batches):
+        if (i % (n_batches//5) == 0) or (i == n_batches):
             scores = test_summary(model, i/n_batches, data={'x': x_test, 'y': y_test})
             print("\nRunning Loss: {}".format(np.mean(losses_buffer)))
 
@@ -152,7 +169,7 @@ def test_summary(model, progress, data=None, **args):
         pos_args = [args.pop(k) for k in ['filt_fasta', 'filt_coverage', 'pairs']]
         data = {
             'x': load_data(*pos_args, mode='test', **args),
-            'y': get_labels(args['pairs']['test'])
+            'y': get_labels(pos_args[-1])
         }
     model.eval()
     outputs_test = model(*data['x'])
@@ -178,7 +195,7 @@ def get_confusion_table(preds, truth, done=0):
         false_pos = conf_df.iloc[0, 1]
         false_neg = conf_df.iloc[1, 0]
 
-        print("\033[1m {:.2%} done -- {}: Accuracy={:.2%} ({} FP, {} FN) - \033[0m"
+        print("\033[1m {:.1%} done -- {}: Accuracy={:.2%} ({} FP, {} FN) - \033[0m"
               .format(done, key, acc, false_pos, false_neg))
 
 @run_if_not_exists()

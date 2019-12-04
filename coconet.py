@@ -11,13 +11,13 @@ import numpy as np
 import torch
 
 from config import Configuration
-from parser_info import make_decorator
+from parser_info import make_decorator, _HELP_MSG
 from preprocessing import format_assembly, bam_list_to_h5, filter_h5
 from fragmentation import make_pairs
 from dl_util import initialize_model, load_model, train, test_summary, save_repr_all
 from clustering import fill_adjacency_matrix, iterate_clustering
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
 PASS_CONTEXT = click.make_pass_decorator(Configuration, ensure=True)
 
 class NaturalOrderGroup(click.Group):
@@ -40,7 +40,7 @@ def main():
     ############################################
     ''')
 
-@main.command(help='Preprocess the contig coverage')
+@main.command(help=_HELP_MSG['preprocess'])
 @make_decorator('io', 'general', 'preproc')
 @PASS_CONTEXT
 def preprocess(cfg, **kwargs):
@@ -71,7 +71,7 @@ def preprocess(cfg, **kwargs):
                   singleton_file=cfg.io['singletons'],
                   min_length=cfg.min_ctg_len, min_prevalence=cfg.min_prevalence)
 
-@main.command(help='Make train and test examples training')
+@main.command(help=_HELP_MSG['make_train_test'])
 @make_decorator('io', 'general', 'frag')
 @PASS_CONTEXT
 def make_train_test(cfg, **kwargs):
@@ -100,7 +100,7 @@ def make_train_test(cfg, **kwargs):
                    output=pair_file,
                    n_examples=n_examples[mode])
 
-@main.command(help='Train neural network')
+@main.command(help=_HELP_MSG['learn'])
 @make_decorator('io', 'general', 'dl')
 @PASS_CONTEXT
 def learn(cfg, **kwargs):
@@ -155,7 +155,7 @@ def learn(cfg, **kwargs):
                   wsize=cfg.wsize, wstep=cfg.wstep)
     return model
 
-@main.command(help='Cluster contigs')
+@main.command(help=_HELP_MSG['cluster'])
 @make_decorator('io', 'general', 'cluster')
 @PASS_CONTEXT
 def cluster(cfg, **kwargs):
@@ -191,7 +191,7 @@ def cluster(cfg, **kwargs):
         max_neighbors=cfg.max_neighbors,
     )
 
-@main.command(help='Run complete algorithm')
+@main.command(help=_HELP_MSG['run'])
 @make_decorator('io', 'general', 'preproc', 'frag', 'dl', 'cluster')
 @click.pass_context
 def run(context, **_kwargs):

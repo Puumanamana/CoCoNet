@@ -10,7 +10,7 @@ from Bio import SeqIO
 
 PARENT_DIR = os.path.join(sys.path[0], '../..')
 sys.path.insert(1, PARENT_DIR)
-from experiment import Experiment
+from config import Configuration
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -65,21 +65,23 @@ def fformat(x):
         return "{:g}".format(int(x))
     return "{:.1f}".format(x)
 
-def process_sim(n_genomes, coverage, n_samples, name):
+def process_sim(n_genomes, coverage, n_samples, name, root_dir='output_data'):
 
-    if name == '':
-        name = "{}_{}_{}".format(n_genomes, coverage, n_samples)
-
-    cfg = Experiment(name)
+    try:
+        cfg = Configuration.from_yaml('{}/{}/config.yaml'.format(root_dir, name))
+    except FileNotFoundError:
+        print('Could not find config.yaml in {}/{}. Skipping'.format(root_dir, name))
+        return {}
 
     ctg_info = pd.DataFrame({
         seq.id: [len(seq.seq), seq.id.split('|')[0]]
-        for seq in SeqIO.parse(cfg.inputs['filtered']['fasta'], 'fasta')
+        for seq in SeqIO.parse(cfg.io['fasta'], 'fasta')
+        if len(str(seq.seq).replace('N', '')) >= cfg.min_ctg_len
     }, index=['length', 'virus']).T
 
     bin_info = ctg_info.groupby('virus').length.agg(len)
 
-    (real_coverage, prevalence, xcov) = get_coverage(cfg.inputs['filtered']['coverage_h5'])
+    (real_coverage, prevalence, xcov) = get_coverage(cfg.io['filt_h5'])
 
     if n_samples == -1:
         n_samples = 3
@@ -121,12 +123,12 @@ def main():
 
     summaries = [process_sim(-1, -1, -1, "Station_Aloha")]
 
-    summaries += [process_sim(
-        n_genomes, coverage, n_samples, f"{n_genomes}_{coverage}_{n_samples}_{iter_nb}")
+    summaries += [process_sim(n_genomes, coverage, n_samples, f"{n_genomes}_{coverage}_{n_samples}_{iter_nb}")
                   for n_genomes in [500, 2000]
                   for coverage in [3, 10]
                   for n_samples in [4, 15]
                   for iter_nb in range(10)]
+    summaries = [x for x in summary if x]
 
     result = (pd.DataFrame(summaries)
               .drop(['Real_coverage_mean', 'Real_coverage_std', 'Contig length'], axis=1)

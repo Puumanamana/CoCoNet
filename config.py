@@ -84,12 +84,14 @@ class Configuration:
         to_save = self.__dict__
         config_file = Path('{}/config.yaml'.format(self.io['output']))
 
-        if config_file.is_file():
-            other_conf = Configuration.from_yaml(config_file).__dict__
-            to_save.update(other_conf)
+        if config_file.is_file() and config_file.stat().st_size > 0:
+            complete_conf = Configuration.from_yaml(config_file).__dict__
+            complete_conf.update(to_save)
+        else:
+            complete_conf = config_file
 
         with open(config_file, 'w') as handle:
-            yaml.dump(to_save, handle)
+            yaml.dump(complete_conf, handle)
 
     def set_outputs(self):
         '''
