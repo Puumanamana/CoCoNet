@@ -16,3 +16,4 @@ input_data*
 output_data*
 old*
 *#
+*.egg-info

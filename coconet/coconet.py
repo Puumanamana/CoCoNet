@@ -48,7 +48,7 @@ def preprocess(cfg, **kwargs):
     Preprocess assembly and coverage
     '''
 
-    cfg.init_config(**kwargs)
+    cfg.init_config(mkdir=True, **kwargs)
     cfg.to_yaml()
 
     print('Preprocessing fasta and {} files'.format(cfg.cov_type))
@@ -82,7 +82,7 @@ def make_train_test(cfg, **kwargs):
        - n/2 negative examples (fragments from different contigs)
     '''
 
-    cfg.init_config(**kwargs)
+    cfg.init_config(mkdir=True, **kwargs)
     cfg.to_yaml()
 
     print("Making train/test examples")
@@ -108,7 +108,7 @@ def learn(cfg, **kwargs):
     Deep learning model
     '''
 
-    cfg.init_config(**kwargs)
+    cfg.init_config(mkdir=True, **kwargs)
     cfg.to_yaml()
 
     torch.set_num_threads(cfg.threads)
@@ -163,7 +163,7 @@ def cluster(cfg, **kwargs):
     Make adjacency matrix and cluster contigs
     '''
 
-    cfg.init_config(**kwargs)
+    cfg.init_config(mkdir=True, **kwargs)
     cfg.to_yaml()
 
     torch.set_num_threads(cfg.threads)

@@ -32,11 +32,13 @@ class Configuration:
         with open(filepath) as handle:
             kwargs = yaml.load(handle, Loader=yaml.FullLoader)
 
+        # Reset output in case the folder was moved
+        kwargs['io']['output'] = Path(filepath).parent
         config.init_config(**kwargs)
 
         return config
 
-    def init_config(self, **kwargs):
+    def init_config(self, mkdir=False, **kwargs):
         '''
         Make configuration from CLI
         '''
@@ -44,7 +46,7 @@ class Configuration:
         for item in kwargs.items():
             self.set_input(*item)
 
-        self.set_outputs()
+        self.set_outputs(mkdir)
 
     def set_input(self, name, val):
         '''
@@ -90,15 +92,19 @@ class Configuration:
         else:
             complete_conf = config_file
 
+        io_to_keep = {k: v for (k, v) in self.io.items() if k in ['fasta', 'coverage', 'tmp_dir', 'output']}
+        complete_conf['io'] = io_to_keep
+
         with open(config_file, 'w') as handle:
             yaml.dump(complete_conf, handle)
 
-    def set_outputs(self):
+    def set_outputs(self, mkdir=False):
         '''
         Define output file path for all steps
         '''
 
-        self.io['output'].mkdir(exist_ok=True)
+        if mkdir:
+            self.io['output'].mkdir(exist_ok=True)
 
         output_files = {
             'filt_fasta': 'assembly_filtered.fasta',

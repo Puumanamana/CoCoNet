@@ -11,7 +11,10 @@ You can run CoCoNet with the command line. There are two required arguments:
 
 ### Running the complete algorithm
 
-You can process your dataset with CoCoNet using the following command: `python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]`
+You can process your dataset with CoCoNet using the following command:
+```
+python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]
+```
 To see all the available options, enter `python coconet.py run -h`:
 ```
 Usage: coconet.py run [OPTIONS] [FASTA] [COVERAGE]...
@@ -68,7 +71,7 @@ Options:
 
 CoCoNet is composed of multiple subcommands if you only want to perform some part of the analysis.
 To display the documentation for each subcommands, enter on your terminal `python coconet.py -h`
-```bash
+```
 Usage: coconet.py [OPTIONS] COMMAND [ARGS]...
 
   Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M. CoCoNet: An
