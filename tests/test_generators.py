@@ -11,7 +11,7 @@ import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
 
-DATA_H5 = Path(__file__).resolve().parent + "/test_data/test.h5"
+DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
 
 def get_rc_indices(k):
     uniq_idx = set()
