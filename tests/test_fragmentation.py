@@ -5,11 +5,11 @@ Unittest for train / test examples generation
 from itertools import combinations
 
 import numpy as np
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 from coconet.fragmentation import calculate_optimal_dist
 from coconet.fragmentation import make_negative_pairs, make_positive_pairs, make_pairs
+
+from data import generate_fasta_file
 
 def get_pairs_frag_with_dist(n_frags, dist):
     '''
@@ -69,13 +69,8 @@ def test_all_pairs(n_examples=50):
     Test wrapper to get both positive and negative examples in equal amounts
     '''
 
-    contigs = [
-        SeqRecord(id='V0', seq=Seq('A'*30)),
-        SeqRecord(id='V1', seq=Seq('C'*30)),
-        SeqRecord(id='V2', seq=Seq('G'*40)),
-        SeqRecord(id='V3', seq=Seq('T'*50)),
-    ]
-
+    contigs = generate_fasta_file(save=False)
+    
     step = 2
     frag_len = 3
 

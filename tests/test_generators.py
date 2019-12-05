@@ -2,7 +2,6 @@
 Tests for data generators
 '''
 
-from pathlib import Path
 from itertools import product
 from textwrap import wrap
 
@@ -10,8 +9,7 @@ import numpy as np
 import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
-
-DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+from data import generate_pair_file, generate_coverage_file
 
 def get_rc_indices(k):
     uniq_idx = set()
@@ -90,12 +88,12 @@ class TestGenerators:
 
     def test_get_coverage(self, window_size=4):
 
-        pairs = np.recarray([2, 2], dtype=[('sp', '<U10'), ('start', 'uint32'), ('end', 'uint32')])
+        pairs = generate_pair_file(save=False)
+        data_h5 = generate_coverage_file()
 
-        pairs['sp'] = [["V0", "V0"], ["V0", "V1"]]
-        pairs['start'] = [[0, 10], [5, 0]]
-        pairs['end'] = [[10, 20], [15, 10]]
+        (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
+        (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
 
-        (X1, X2) = get_coverage(pairs, DATA_H5, window_size, window_size // 2)
-        (T1, T2) = slow_coverage(pairs, DATA_H5, window_size, window_size // 2)
+        data_h5.unlink()
+
         assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from coconet.config import Configuration
 
-DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+from data import generate_coverage_file
 
 def test_init():
     '''
@@ -68,11 +68,16 @@ def test_input_sizes():
 
     cfg = Configuration()
     cfg.init_config(output='test123', kmer=4, no_rc=False, fragment_length=10, wsize=4, wstep=2)
-    cfg.io['filt_h5'] = DATA_H5
+    cfg.io['filt_h5'] = generate_coverage_file()
 
     input_shapes = {'composition': 136,
                     'coverage': (4, 2)}
-    assert input_shapes == cfg.get_input_shapes()
+
+    auto_shapes = cfg.get_input_shapes()
+
+    cfg.io['filt_h5'].unlink()
+
+    assert input_shapes == auto_shapes
 
 def test_architecture():
     '''
