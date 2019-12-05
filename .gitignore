@@ -17,3 +17,4 @@ output_data*
 old*
 *#
 *.egg-info
+dist

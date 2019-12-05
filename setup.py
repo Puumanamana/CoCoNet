@@ -1,15 +1,14 @@
 from setuptools import setup, find_packages
 
-setup(name='CoCoNet',
-      version='1.0',
+setup(name='coconet-binning',
+      version='0.0.2.1',
       description='A contig binning tool from viral metagenomes',
-      long_description=open('README.md').read(),
       url='https://github.com/Puumanamana/CoCoNet',
       author='Arisdakessian Cedric',
       author_email='carisdak@hawaii.edu',
       license='Apache License 2.0',
       zip_safe=False,
-      entryoint={'console_scripts':['coconet=coconet.coconet:main']},
+      entry_points={'console_scripts': ['coconet=coconet.coconet:main']},
       packages=find_packages(),
       python_requires='>=3.6',
       install_requires=[
@@ -21,4 +20,6 @@ setup(name='CoCoNet',
           'progressbar',
           'Biopython',
           'click',
+          'python-igraph',
+          'leidenalg'
       ])
