@@ -100,14 +100,21 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
     return occurrences
 
 def get_coverage(pairs, coverage_h5, window_size, window_step):
-    h5data = h5py.File(coverage_h5)
+    h5data = h5py.File(coverage_h5, 'r')
     contigs = np.unique(pairs['sp'].flatten())
 
     try:
         coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
     except TypeError:
-        print('Something went wrong')
-        import ipdb;ipdb.set_trace()
+        diff = set(contigs).difference(set(h5data.keys()))
+        if diff:
+            print('''
+            Error: {} contigs are in the fasta sequences but not in the coverage.
+            For example, {} generates an error.
+            '''.format(diff[0]))
+        else:
+            print('One contig seem to have a null coverage across all samples')
+        exit(42)
 
     n_pairs = len(pairs)
     n_samples, _ = np.array(list(coverage_data.values())[0]).shape

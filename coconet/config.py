@@ -30,7 +30,7 @@ class Configuration:
 
         config = Configuration()
 
-        with open(str(filepath)) as handle:
+        with open(str(filepath), 'r') as handle:
             kwargs = yaml.load(handle, Loader=yaml.FullLoader)
 
         # Reset output in case the folder was moved

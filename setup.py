@@ -18,9 +18,9 @@ setup(name='coconet-binning',
           'h5py',
           'sklearn',
           'torch',
-          'pyyaml',
+          'pyyaml>=5.1',
           'Biopython',
           'click',
-          'python-igraph==0.7.1.post6',
-          'leidenalg==0.7.0'
+          'python-igraph>=0.7.1.post6',
+          'leidenalg>=0.7.0'
       ])

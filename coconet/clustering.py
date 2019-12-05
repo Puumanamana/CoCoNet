@@ -109,7 +109,7 @@ def fill_adjacency_matrix(model, latent_repr, output, **kw):
     if output.is_file():
         return
 
-    handles = {key: h5py.File(filename) for key, filename in latent_repr.items()}
+    handles = {key: h5py.File(filename, 'r') for key, filename in latent_repr.items()}
     contigs = np.array(list(handles['coverage'].keys()))
 
     # Get neighbors for coverage feature
@@ -182,7 +182,7 @@ def iterate_clustering(model, **kw):
     adjacency_matrix = np.load(kw['adj_mat'])
     edge_threshold = kw['hits_threshold'] * kw['n_frags']**2
 
-    handles = {key: h5py.File(filename) for key, filename in kw['latent'].items()}
+    handles = {key: h5py.File(filename, 'r') for key, filename in kw['latent'].items()}
     contigs = np.array(list(handles['coverage'].keys()))
 
     communities = get_communities(

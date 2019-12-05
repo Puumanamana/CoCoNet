@@ -49,7 +49,7 @@ def slow_coverage(pairs, h5file, window_size, window_step):
     def smooth(x):
         return avg_window(x, window_size, window_step)
 
-    h5data = h5py.File(h5file)
+    h5data = h5py.File(h5file, 'r')
 
     X1, X2 = [], []
     for (sp1, st1, end1), (sp2, st2, end2) in pairs:
