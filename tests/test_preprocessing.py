@@ -1,5 +1,5 @@
 '''
-Test for preprocessing of fasta and coverage (.h5 or .bam)
+Tests for preprocessing of fasta and coverage (.h5 or .bam)
 '''
 
 def test_format_assembly():
