@@ -5,7 +5,7 @@ install:
   - pip install codecov
   - pip install .
 script:
-  - pytest --cov-report=xml tests/
+  - pytest --cov-report=xml tests/ --cov coconet
 # Push the results to codecov
 after_success:
   - codecov

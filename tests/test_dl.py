@@ -2,12 +2,53 @@
 Tests for deep learning procedure
 '''
 
-def test_init_model():
+from coconet.dl_util import initialize_model
+from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
+
+def test_init_composition_model():
     '''
     Check if model can be initialized
     '''
-    
-    assert 1 == 1
+
+    architecture = {'neurons': [64, 32]}
+    input_shapes = 136
+    model = initialize_model('composition', input_shapes, architecture)
+
+    assert isinstance(model, CompositionModel)
+
+def test_init_coverage_model():
+    '''
+    Check if model can be initialized
+    '''
+
+    architecture = {'neurons': [64, 32], 'n_filters': 16,
+                    'kernel_size': 5, 'conv_stride': 2}
+
+    input_shapes = (64, 2)
+
+    model = initialize_model('coverage', input_shapes, architecture)
+
+    assert isinstance(model, CoverageModel)
+
+def test_init_combined_model():
+    '''
+    Check if model can be initialized
+    '''
+
+    architecture = {
+        'composition': {'neurons': [64, 32]},
+        'coverage': {'neurons': [64, 32],
+                     'n_filters': 16,
+                     'kernel_size': 5,
+                     'conv_stride': 3},
+        'combined': {'neurons': 16}
+    }
+
+    input_shapes = {'composition': 136, 'coverage': (64, 2)}
+
+    model = initialize_model('CoCoNet', input_shapes, architecture)
+
+    assert isinstance(model, CoCoNet)
 
 def test_load_model():
     '''
