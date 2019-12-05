@@ -1,4 +1,5 @@
 ## CoCoNet 1.0.0
+[![Build Status](https://travis-ci.org/Puumanamana/CoCoNet.svg?branch=master)](https://travis-ci.org/Puumanamana/CoCoNet)
 
 A tool for unsupervised contig binning from viral metagenomes (Work in progress)
 
