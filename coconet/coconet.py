@@ -55,7 +55,9 @@ def preprocess(cfg, **kwargs):
     print('Preprocessing fasta and {} files'.format(cfg.cov_type))
 
     if cfg.cov_type == '.bam':
-        format_assembly(cfg.io['fasta'], output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
+        _ = format_assembly(cfg.io['fasta'],
+                            output=cfg.io['filt_fasta'],
+                            min_length=cfg.min_ctg_len)
 
         bam_list_to_h5(
             cfg.io['filt_fasta'], cfg.io['coverage_bam'],

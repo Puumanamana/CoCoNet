@@ -69,8 +69,8 @@ def test_all_pairs(n_examples=50):
     Test wrapper to get both positive and negative examples in equal amounts
     '''
 
-    contigs = generate_fasta_file(save=False)
-    
+    contigs = generate_fasta_file(10, 20, save=False)
+
     step = 2
     frag_len = 3
 

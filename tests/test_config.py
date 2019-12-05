@@ -18,7 +18,7 @@ def test_init():
 
     assert hasattr(cfg1, 'io')
     assert cfg2.a == 1
-    assert cfg2.io['output'] == Path('abc')
+    assert cfg2.io['output'] == Path('abc').resolve()
 
 def test_init_config():
     '''
@@ -43,7 +43,7 @@ def test_load_save():
 
     kwargs = {'coverage': ['xyz.h5'],
               'fasta': '/a/b/c.fasta',
-              'output': 'test123abcd'}
+              'output': 'output'}
 
     cfg = Configuration()
     cfg.init_config(mkdir=True, **kwargs)

@@ -42,6 +42,8 @@ def format_assembly(fasta, output=None, min_length=2048):
 
     SeqIO.write(formated_assembly, output, "fasta")
 
+    return Path(output)
+
 def filter_bam_aln(bam, threads, min_qual, flag, fl_range, outdir=None):
     '''
     Run samtools view to filter quality

@@ -30,7 +30,7 @@ class Configuration:
 
         config = Configuration()
 
-        with open(filepath) as handle:
+        with open(str(filepath)) as handle:
             kwargs = yaml.load(handle, Loader=yaml.FullLoader)
 
         # Reset output in case the folder was moved
@@ -74,7 +74,7 @@ class Configuration:
                 name = 'coverage_bam'
 
         if name in ['tmp_dir', 'output']:
-            filepath = Path(val)
+            filepath = Path(val).resolve()
 
         self.io[name] = filepath
 

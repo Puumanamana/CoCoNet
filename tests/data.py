@@ -29,7 +29,7 @@ def generate_coverage_file(n_samples=2, filename='coverage.h5'):
 
     return Path(filepath)
 
-def generate_fasta_file(filename='sequences.fasta', save=True):
+def generate_fasta_file(*lengths, filename='sequences.fasta', save=True):
     '''
     - Generate fasta sequences
     - Saves it locally
@@ -37,12 +37,12 @@ def generate_fasta_file(filename='sequences.fasta', save=True):
 
     filepath = '{}/{}'.format(LOCAL_DIR, filename)
 
-    contigs = [
-        SeqRecord(id='V0', seq=Seq('A'*30)),
-        SeqRecord(id='V1', seq=Seq('C'*30)),
-        SeqRecord(id='V2', seq=Seq('G'*40)),
-        SeqRecord(id='V3', seq=Seq('T'*50)),
-    ]
+    contigs = []
+    for i, length in enumerate(lengths):
+        sequence = ''.join(np.random.choice(list('ACGT'), length).tolist())
+        contigs.append(
+            SeqRecord(id='V{}'.format(i), seq=Seq(sequence))
+        )
 
     if save:
         SeqIO.write(contigs, filepath, 'fasta')
