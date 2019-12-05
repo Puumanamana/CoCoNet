@@ -2,12 +2,13 @@
 Unittest for Configuration object
 '''
 
-import sys
+import os
 from pathlib import Path
 
 from coconet.config import Configuration
 
-DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+# DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+DATA_H5 = os.path.dirname(os.path.realpath(__file__)) + "/test_data/test.h5"
 
 def test_init():
     '''

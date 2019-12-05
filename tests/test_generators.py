@@ -2,6 +2,7 @@
 Tests for data generators
 '''
 
+import os
 from pathlib import Path
 from itertools import product
 from textwrap import wrap
@@ -11,7 +12,8 @@ import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
 
-DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+# DATA_H5 = str(Path(__file__).resolve().parent) + "/test_data/test.h5"
+DATA_H5 = os.path.dirname(os.path.realpath(__file__)) + "/test_data/test.h5"
 
 def get_rc_indices(k):
     uniq_idx = set()
