@@ -10,7 +10,7 @@ setup(name='CoCoNet',
       license='Apache License 2.0',
       zip_safe=False,
       entryoint={'console_scripts':['coconet=coconet.coconet:main']},
-      packages=find_packages(exclude=['input_data', 'output_data']),
+      packages=find_packages(),
       python_requires='>=3.6',
       install_requires=[
           'numpy',

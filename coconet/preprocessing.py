@@ -27,7 +27,7 @@ from Bio.Seq import Seq
 
 from progressbar import progressbar
 
-from tools import run_if_not_exists
+from coconet.tools import run_if_not_exists
 
 @run_if_not_exists()
 def format_assembly(fasta, output=None, min_length=2048):

@@ -10,9 +10,9 @@ from Bio import SeqIO
 import torch.optim as optim
 import torch
 
-from torch_models import CompositionModel, CoverageModel, CoCoNet
-from generators import CompositionGenerator, CoverageGenerator
-from tools import run_if_not_exists, get_kmer_frequency, avg_window
+from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
+from coconet.generators import CompositionGenerator, CoverageGenerator
+from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 def initialize_model(model_type, input_shapes, architecture):
     '''

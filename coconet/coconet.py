@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Root script to run CoCoNet
 
@@ -10,12 +11,12 @@ from Bio import SeqIO
 import numpy as np
 import torch
 
-from config import Configuration
-from parser_info import make_decorator, _HELP_MSG
-from preprocessing import format_assembly, bam_list_to_h5, filter_h5
-from fragmentation import make_pairs
-from dl_util import initialize_model, load_model, train, test_summary, save_repr_all
-from clustering import fill_adjacency_matrix, iterate_clustering
+from coconet.config import Configuration
+from coconet.parser_info import make_decorator, _HELP_MSG
+from coconet.preprocessing import format_assembly, bam_list_to_h5, filter_h5
+from coconet.fragmentation import make_pairs
+from coconet.dl_util import initialize_model, load_model, train, test_summary, save_repr_all
+from coconet.clustering import fill_adjacency_matrix, iterate_clustering
 
 CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
 PASS_CONTEXT = click.make_pass_decorator(Configuration, ensure=True)

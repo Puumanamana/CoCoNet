@@ -16,10 +16,9 @@ from sklearn.metrics.pairwise import euclidean_distances
 import igraph
 import leidenalg
 
-from Bio import SeqIO
 from progressbar import progressbar
 
-from tools import run_if_not_exists
+from coconet.tools import run_if_not_exists
 
 
 def get_neighbors(file_h5):

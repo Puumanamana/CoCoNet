@@ -5,7 +5,7 @@ import numpy as np
 from Bio import SeqIO
 import torch
 
-from tools import get_kmer_frequency, get_coverage
+from coconet.tools import get_kmer_frequency, get_coverage
 
 class CompositionGenerator:
     def __init__(self, pairs_file, fasta=None,

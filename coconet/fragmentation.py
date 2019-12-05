@@ -6,7 +6,7 @@ to train the neural network
 from itertools import combinations
 import numpy as np
 
-from tools import run_if_not_exists
+from coconet.tools import run_if_not_exists
 
 def calculate_optimal_dist(n_frags, fppc):
     """
