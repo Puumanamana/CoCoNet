@@ -1,4 +1,8 @@
-import sys
+'''
+Tests for data generators
+'''
+
+from pathlib import Path
 from itertools import product
 from textwrap import wrap
 
@@ -6,6 +10,8 @@ import numpy as np
 import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
+
+DATA_H5 = Path(__file__).resolve().parent + "/test_data/test.h5"
 
 def get_rc_indices(k):
     uniq_idx = set()
@@ -90,6 +96,6 @@ class TestGenerators:
         pairs['start'] = [[0, 10], [5, 0]]
         pairs['end'] = [[10, 20], [15, 10]]
 
-        (X1, X2) = get_coverage(pairs, '{}/test_data/test.h5'.format(sys.path[0]), window_size, window_size // 2)
-        (T1, T2) = slow_coverage(pairs, '{}/test_data/test.h5'.format(sys.path[0]), window_size, window_size // 2)
+        (X1, X2) = get_coverage(pairs, DATA_H5, window_size, window_size // 2)
+        (T1, T2) = slow_coverage(pairs, DATA_H5, window_size, window_size // 2)
         assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0

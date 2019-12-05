@@ -7,6 +7,8 @@ from pathlib import Path
 
 from coconet.config import Configuration
 
+DATA_H5 = Path(__file__).resolve().parent + "/test_data/test.h5"
+
 def test_init():
     '''
     Test __init__ method for Configuration object
@@ -67,7 +69,7 @@ def test_input_sizes():
 
     cfg = Configuration()
     cfg.init_config(output='test123', kmer=4, no_rc=False, fragment_length=10, wsize=4, wstep=2)
-    cfg.io['filt_h5'] = '{}/test_data/test.h5'.format(sys.path[0])
+    cfg.io['filt_h5'] = DATA_H5
 
     input_shapes = {'composition': 136,
                     'coverage': (4, 2)}
