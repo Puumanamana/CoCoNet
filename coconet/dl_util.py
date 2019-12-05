@@ -111,14 +111,6 @@ def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=No
 
     return generators
 
-def train_batch(x, y, model, optimizer):
-    optimizer.zero_grad()
-    loss = model.compute_loss(model(*x), y)
-    loss.backward()
-    optimizer.step()
-
-    return loss.item()
-
 @run_if_not_exists()
 def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=None, **args):
     '''

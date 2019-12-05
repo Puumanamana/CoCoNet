@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='coconet-binning',
-      version='0.0.2.1',
+      version='0.0.2.2',
       description='A contig binning tool from viral metagenomes',
       url='https://github.com/Puumanamana/CoCoNet',
       author='Arisdakessian Cedric',
@@ -11,6 +11,7 @@ setup(name='coconet-binning',
       entry_points={'console_scripts': ['coconet=coconet.coconet:main']},
       packages=find_packages(),
       python_requires='>=3.6',
+      test_requires=['pytest', 'pytest-cov'],
       install_requires=[
           'numpy',
           'pandas',
@@ -20,6 +21,6 @@ setup(name='coconet-binning',
           'progressbar',
           'Biopython',
           'click',
-          'python-igraph',
-          'leidenalg'
+          'python-igraph==0.7.1.post6',
+          'leidenalg==0.7.0'
       ])

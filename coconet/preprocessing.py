@@ -25,8 +25,6 @@ import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-from progressbar import progressbar
-
 from coconet.tools import run_if_not_exists
 
 @run_if_not_exists()
@@ -104,7 +102,10 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
     with open(outputs['txt'], 'r') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter='\t')
 
-        for ctg, pos, d_i in progressbar(csv_reader, max_value=n_entries):
+        for i, (ctg, pos, d_i) in enumerate(csv_reader):
+            if i % 1000 == 0:
+                print('{:,}/{:,}'.format(i, n_entries))
+
             # 1st case: contig is not in the assembly (filtered out in previous step)
             ctg_len = ctg_info.get(ctg, None)
 

@@ -3,10 +3,20 @@ Tools to split contigs into smaller fragment
 to train the neural network
 '''
 
+from math import ceil
 from itertools import combinations
 import numpy as np
 
 from coconet.tools import run_if_not_exists
+
+def vstack_recarrays(arrays):
+    '''
+    numpy.vstack destructures the recarray.
+    Solution taken from Stackoverflow:
+    stackoverflow.com/questions/1791791/stacking-numpy-recarrays-without-losing-their-recarrayness/14613280
+    '''
+
+    return arrays[0].__array_wrap__(np.vstack(arrays))
 
 def calculate_optimal_dist(n_frags, fppc):
     """
@@ -88,17 +98,18 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
                              for ctg in contigs])
     max_encoding = np.max([len(ctg.id) for ctg in contigs])
 
-    pairs_per_ctg = n_examples // (2*len(contig_frags))
+    pairs_per_ctg = ceil(n_examples / 2 / len(contig_frags))
     frag_steps = frag_len // step
 
-    positive_pairs = np.vstack([
+    positive_pairs = vstack_recarrays([
         make_positive_pairs(idx, frag_steps, genome_frags, pairs_per_ctg, encoding_len=max_encoding)
         for idx, genome_frags in enumerate(contig_frags)
     ])
     negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs), frag_steps,
                                          encoding_len=max_encoding)
 
-    all_pairs = np.vstack([positive_pairs, negative_pairs])
+    all_pairs = vstack_recarrays([positive_pairs, negative_pairs])
+
     np.random.shuffle(all_pairs)
 
     contig_names = np.array([ctg.id for ctg in contigs])

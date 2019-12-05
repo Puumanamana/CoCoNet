@@ -16,10 +16,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 import igraph
 import leidenalg
 
-from progressbar import progressbar
-
 from coconet.tools import run_if_not_exists
-
 
 def get_neighbors(file_h5):
     '''
@@ -72,7 +69,9 @@ def compute_pairwise_comparisons(model, contigs, handles,
         adjacency_matrix = np.identity(len(contigs))*(n_frags**2+1) \
             - np.ones((len(contigs), len(contigs)))
 
-    for k, ctg in progressbar(enumerate(contigs), max_value=len(contigs)):
+    for k, ctg in enumerate(contigs):
+
+        print('Processed contigs: {:,}/{:,}'.format(k, len(contigs)), end='\r')
 
         x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                  for key, handle in handles.items()}

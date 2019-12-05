@@ -19,7 +19,8 @@ class Configuration:
         self.cov_type = '.bam'
 
         if kwargs:
-            self.init_config(**kwargs)
+            for item in kwargs.items():
+                self.set_input(*item)
 
     @classmethod
     def from_yaml(cls, filepath):
@@ -90,7 +91,7 @@ class Configuration:
             complete_conf = Configuration.from_yaml(config_file).__dict__
             complete_conf.update(to_save)
         else:
-            complete_conf = config_file
+            complete_conf = {key: val for (key, val) in self.__dict__.items()}
 
         io_to_keep = {k: v for (k, v) in self.io.items() if k in ['fasta', 'coverage', 'tmp_dir', 'output']}
         complete_conf['io'] = io_to_keep

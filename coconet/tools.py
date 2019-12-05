@@ -34,6 +34,12 @@ def run_if_not_exists(keys=('output',)):
             exists = True
 
             for key in keys:
+                if key not in kwargs:
+                    exists = False
+                    break
+                if kwargs[key] is None:
+                    exists = False
+                    break
                 if isinstance(kwargs[key], dict):
                     exists &= all(output.is_file() for output in kwargs[key].values())
                 else:

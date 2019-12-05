@@ -1,18 +1,11 @@
-import unittest
-
-import os
 import sys
 from itertools import product
 from textwrap import wrap
 
 import numpy as np
-import pandas as pd
 import h5py
 
-PARENT_DIR = os.path.join(sys.path[0], '..')
-sys.path.insert(0, PARENT_DIR)
-
-from tools import get_kmer_frequency, get_coverage, avg_window
+from coconet.tools import get_kmer_frequency, get_coverage, avg_window
 
 def get_rc_indices(k):
     uniq_idx = set()
@@ -49,23 +42,23 @@ def slow_kmer_freq(seq, k=4, rc=False):
 
 def slow_coverage(pairs, h5file, window_size, window_step):
 
-    def smooth(x, ws=window_step):
-        return avg_window(x, window_size)[::window_step]
+    def smooth(x):
+        return avg_window(x, window_size, window_step)
 
     h5data = h5py.File(h5file)
 
     X1, X2 = [], []
-    for (species, start, end) in pairs:
+    for (sp1, st1, end1), (sp2, st2, end2) in pairs:
 
-        cov1 = h5data.get(species[0])[:, start[0]:end[0]]
+        cov1 = h5data.get(sp1)[:, st1:end1]
         X1.append(np.apply_along_axis(smooth, 1, cov1))
 
-        cov2 = h5data.get(species[1])[:, start[1]:end[1]]
+        cov2 = h5data.get(sp2)[:, st2:end2]
         X2.append(np.apply_along_axis(smooth, 1, cov2))
 
     return np.array(X1, dtype=np.float32), np.array(X2, dtype=np.float32)
 
-class TestGenerators(unittest.TestCase):
+class TestGenerators:
 
     def test_get_kmer_frequency(self, k=4):
 
@@ -83,18 +76,20 @@ class TestGenerators(unittest.TestCase):
 
         assert all(result == truth)
 
-    def test_get_coverage(self, window_size=3):
+    def test_smoothing(self, wsize=3, wstep=2):
+        x_in = np.array([1, 2, 3, 4, 5])
+        result = avg_window(x_in, wsize, wstep)
+
+        assert np.mean(result - np.array([2, 4])) < 1e-10
+
+    def test_get_coverage(self, window_size=4):
 
         pairs = np.recarray([2, 2], dtype=[('sp', '<U10'), ('start', 'uint32'), ('end', 'uint32')])
 
-        pairs['sp'] = [["V0_0", "V0_0"], ["V0_0", "V0_0"]]
-        pairs['start'] = [[0, 100], [0, 50]]
-        pairs['end'] = [[50, 150], [50, 100]]
+        pairs['sp'] = [["V0", "V0"], ["V0", "V1"]]
+        pairs['start'] = [[0, 10], [5, 0]]
+        pairs['end'] = [[10, 20], [15, 10]]
 
-        (X1, X2) = get_coverage(pairs, '{}/test.h5'.format(sys.path[0]), window_size, window_size // 2)
-        (T1, T2) = slow_coverage(pairs, '{}/test.h5'.format(sys.path[0]), window_size, window_size // 2)
-
+        (X1, X2) = get_coverage(pairs, '{}/test_data/test.h5'.format(sys.path[0]), window_size, window_size // 2)
+        (T1, T2) = slow_coverage(pairs, '{}/test_data/test.h5'.format(sys.path[0]), window_size, window_size // 2)
         assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0
-
-if __name__ == "__main__":
-    unittest.main()

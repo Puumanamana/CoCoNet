@@ -1,72 +1,86 @@
-import unittest
+'''
+Unittest for train / test examples generation
+'''
 
-import os
-import sys
-sys.path.append(os.path.expanduser("~/CoCoNet"))
 from itertools import combinations
 
 import numpy as np
-import pandas as pd
-from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
-from fragmentation_util import calculate_optimal_dist
-from fragmentation_util import make_negative_pairs, make_positive_pairs, make_pairs
+from coconet.fragmentation import calculate_optimal_dist
+from coconet.fragmentation import make_negative_pairs, make_positive_pairs, make_pairs
 
 def get_pairs_frag_with_dist(n_frags, dist):
+    '''
+    Ground truth for calculation of all pairs within distance >= [dist]
+    '''
+
     count = 0
     for i, j in combinations(range(n_frags), 2):
         if abs(i-j) >= dist:
             count += 1
     return count
-    
 
-class TestFragmentation(unittest.TestCase):
-    """ """
+def test_optimal_dist(n_frags=50, fppc=5):
+    '''
+    Test if math formula for optimal dist works
+    '''
 
-    def test_optimal_dist(self, n_frags=50, fppc=5):
+    dist = calculate_optimal_dist(n_frags, fppc)
 
-        dist = calculate_optimal_dist(n_frags, fppc)
+    total_pairs_opt = get_pairs_frag_with_dist(n_frags, dist)
+    total_pairs_more = get_pairs_frag_with_dist(n_frags, dist+1)
 
-        total_pairs_opt = get_pairs_frag_with_dist(n_frags, dist)
-        total_pairs_more = get_pairs_frag_with_dist(n_frags, dist+1)
+    # With a bigger distance, we have less than fppc fragments
+    is_opt = ((total_pairs_more < fppc)
+              & (total_pairs_opt >= fppc))
 
-        # With a bigger distance, we have less than fppc fragments
-        is_opt = ((total_pairs_more < fppc)
-                  & (total_pairs_opt >= fppc))
+    print("{} < {} < {}".format(total_pairs_more, fppc, total_pairs_opt))
 
-        print("{} < {} < {}".format(total_pairs_more, fppc, total_pairs_opt))
+    assert is_opt
 
-        assert is_opt
+def test_negative_pairs(n_examples=10):
+    '''
+    Test negative examples (pairs from different genomes)
+    '''
 
-    def test_negative_pairs(self, n_examples=10):
+    fragments = np.array([200, 50, 100])
+    result = make_negative_pairs(fragments, n_examples, 3)
 
-        fragments = pd.Series({'A': 200, 'B': 50, 'C': 100})
-        result = make_negative_pairs(fragments, n_examples, 3)
+    assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
+    assert np.array(result.tolist()).shape == (n_examples, 2, 3)
 
-        assert sum(result.A.sp != result.B.sp) == n_examples
-        assert result.shape == (n_examples, 6)
+def test_positive_pairs(fppc=30, contig_frags=100):
+    '''
+    Test positive examples (pairs from the same genome)
+    '''
 
-    def test_positive_pairs(self, fppc=30, contig_frags=100):
+    min_dist = calculate_optimal_dist(contig_frags, fppc)
+    result = make_positive_pairs(0, 4, contig_frags, fppc, encoding_len=8)
 
-        min_dist = calculate_optimal_dist(contig_frags, fppc)
-        result = make_positive_pairs('V0_0', 4, contig_frags, fppc)
+    assert sum(result.sp[:, 0] == result.sp[:, 1]) == fppc
+    assert sum(np.abs(result.start[:, 0].astype(int)
+                      - result.start[:, 1].astype(int)) < min_dist) == 0
+    assert np.array(result.tolist()).shape == (fppc, 2, 3)
 
-        assert sum(result.A.sp == result.B.sp) == fppc
-        assert sum(np.abs(result.A.start.astype(int)
-                          - result.B.start.astype(int)) < min_dist) == 0
-        assert result.shape == (fppc, 6)
+def test_all_pairs(n_examples=50):
+    '''
+    Test wrapper to get both positive and negative examples in equal amounts
+    '''
 
-    def test_all_pairs(self, n_examples=1000):
-        contigs = SeqIO.parse("tests/test_genomes.fasta", "fasta")
+    contigs = [
+        SeqRecord(id='V0', seq=Seq('A'*30)),
+        SeqRecord(id='V1', seq=Seq('C'*30)),
+        SeqRecord(id='V2', seq=Seq('G'*40)),
+        SeqRecord(id='V3', seq=Seq('T'*50)),
+    ]
 
-        step = 2
-        frag_len = 5
+    step = 2
+    frag_len = 3
 
-        result = make_pairs(contigs, step, frag_len, n_examples=n_examples)
+    result = make_pairs(contigs, step, frag_len, n_examples=n_examples)
 
-        assert abs(np.mean(result.A.sp == result.B.sp) -0.5) < 0.1
-        assert result.shape == (2*n_examples, 6)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    assert abs(np.mean(result.sp[:, 0] == result.sp[:, 1]) - 0.5) < 0.1
+    assert np.array(result.tolist()).shape[1:] == (2, 3)
+    assert len(result) >= n_examples
