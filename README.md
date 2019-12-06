@@ -4,6 +4,10 @@
 A tool for unsupervised contig binning from viral metagenomes (Work in progress)
 
 ## Install
+To install CoCoNet, open a terminal and run (you can omit `--user` if you're working in a `vitualenv`):
+```bash
+> pip3 install coconet-binning --user
+```
 
 ## Usage
 You can run CoCoNet with the command line. There are two required arguments:

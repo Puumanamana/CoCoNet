@@ -145,11 +145,6 @@ def learn(cfg, **kwargs):
     model.load_state_dict(checkpoint['state'])
     model.eval()
 
-    _ = test_summary(model, 1, pairs=cfg.io['pairs']['test'],
-                     filt_fasta=cfg.io['filt_fasta'], filt_coverage=cfg.io['filt_h5'],
-                     kmer=cfg.kmer, rc=not cfg.no_rc, norm=cfg.norm,
-                     load_batch=cfg.load_batch, wsize=cfg.wsize, wstep=cfg.wstep)
-
     save_repr_all(model, cfg.io['filt_fasta'], cfg.io['filt_h5'],
                   output=cfg.io['repr'],
                   n_frags=cfg.n_frags,
