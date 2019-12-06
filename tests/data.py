@@ -3,6 +3,7 @@ Functions to generate test data
 '''
 
 from pathlib import Path
+from random import randint
 
 import h5py
 import numpy as np
@@ -12,7 +13,7 @@ from Bio.SeqRecord import SeqRecord
 
 LOCAL_DIR = Path(__file__).resolve().parent
 
-def generate_coverage_file(n_samples=2, filename='coverage.h5'):
+def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5'):
     '''
     - Generate coverage matrix
     - Saves it locally
@@ -20,12 +21,13 @@ def generate_coverage_file(n_samples=2, filename='coverage.h5'):
 
     filepath = '{}/{}'.format(LOCAL_DIR, filename)
 
-    cov = {'V0': np.tile(np.arange(50), (n_samples, 1)),
-           'V1': np.tile(10, (n_samples, 50))}
+    cov = {'V{}'.format(i): np.tile(randint(1, 30), (n_samples, length))
+           for i, length in enumerate(lengths)}
 
-    with h5py.File(filepath, 'w') as handle:
-        for key, val in cov.items():
-            handle.create_dataset(key, data=val)
+    handle = h5py.File(filepath, 'w')
+    for key, val in cov.items():
+        handle.create_dataset(key, data=val)
+    handle.close()
 
     return Path(filepath)
 

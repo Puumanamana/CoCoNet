@@ -89,7 +89,7 @@ class TestGenerators:
     def test_get_coverage(self, window_size=4):
 
         pairs = generate_pair_file(save=False)
-        data_h5 = generate_coverage_file()
+        data_h5 = generate_coverage_file(30, 40)
 
         (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
         (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
