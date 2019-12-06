@@ -3,9 +3,11 @@ python:
   - "3.6"
 install:
   - pip install codecov
+  - pip install pytest
+  - pip install pytest-cov
   - pip install .
 script:
-  - pytest --cov-report=xml tests/ --cov coconet
+  - pytest --cov-report=xml --cov coconet tests/
 # Push the results to codecov
 after_success:
   - codecov
