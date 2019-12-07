@@ -1,14 +1,14 @@
 language: python
 python:
   - "3.6"
-install:
+before_install:
   - pip install codecov
   - pip install pytest
   - pip install pytest-cov
+install:
   - pip install .
 script:
-  - pytest --cov-report=xml --cov coconet tests/
-# Push the results to codecov
+  - pytest -r  -v --cov-report=xml --cov=coconet tests/
 after_success:
   - codecov
   
