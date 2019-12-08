@@ -2,6 +2,7 @@ simulation_util/*
 figures
 data
 build
+*coverage*
 *.npy
 *.pkl
 *.h5
