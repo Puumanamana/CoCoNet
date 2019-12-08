@@ -60,17 +60,21 @@ class Configuration:
 
         if name == 'fasta':
             filepath = Path(val)
-            assert filepath.suffix in ['.fa', '.fasta', '.fna']
+            if filepath.suffix not in ['.fa', '.fasta', '.fna']:
+                print('This assembly file extension is not supported ({})'.format(filepath.suffix))
+                exit(42)
 
         if name == 'coverage':
             filepath = [Path(cov) for cov in val]
             if len(filepath) == 1:
                 filepath = filepath[0]
-                assert filepath.suffix == '.h5'
                 self.cov_type = '.h5'
                 name = 'coverage_h5'
             else:
-                assert all(cov.suffix == '.bam' for cov in filepath)
+                suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
+                if not len(suffixes) > 0:
+                    print('This coverage file extension is not supported ({})'.format(suffixes))
+                    exit(42)
                 name = 'coverage_bam'
 
         if name in ['tmp_dir', 'output']:

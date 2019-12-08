@@ -80,7 +80,7 @@ class CoverageGenerator:
         '''
         Extract coverage for next pair batch
         '''
-        print("Loading batch", end='\r')
+        print("Loading next batch")
 
         pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
         self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.window_size, self.window_step)
