@@ -81,7 +81,7 @@ _OPTIONS = {
         click.option('--cover-filters', type=int, required=False, default=32, help='Number of filters for convolution layer of coverage network.'),
         click.option('--cover-kernel', type=int, required=False, default=7, help='Kernel size for convolution layer of coverage network.'),
         click.option('--cover-stride', type=int, required=False, default=3, help='Convolution stride for convolution layer of coverage network.'),
-        click.option('--combined-neurons', type=int, required=False, default=32, help='Number of neurons for the merging network (1 layer)'),
+        click.option('--merge-neurons', type=int, required=False, default=32, help='Number of neurons for the merging network (1 layer)'),
         click.option('--norm', required=False, is_flag=True, help='Normalize the k-mer occurrences to frequencies'),
         click.option('-k', '--kmer', type=int, required=False, default=4, help='k-mer size for composition vector'),
         click.option('--no-rc', required=False, is_flag=True, help='Do not add the reverse complement k-mer occurrences to the composition vector'),

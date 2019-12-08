@@ -161,7 +161,7 @@ class Configuration:
                          'n_filters': self.cover_filters,
                          'kernel_size': self.cover_kernel,
                          'conv_stride': self.cover_stride},
-            'combined': {'neurons': self.combined_neurons}
+            'combined': {'neurons': self.merge_neurons}
         }
 
         return architecture

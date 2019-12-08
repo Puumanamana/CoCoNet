@@ -183,10 +183,10 @@ def cluster(cfg, **kwargs):
         assignments=cfg.io['assignments'],
         refined_assignments=cfg.io['refined_assignments'],
         n_frags=cfg.n_frags,
-        hits_threshold=cfg.hits_threshold,
+        hits_threshold=cfg.hits_thresh,
         gamma1=cfg.gamma1,
         gamma2=cfg.gamma2,
-        max_neighbors=cfg.max_neighbors,
+        max_neighbors=cfg.max_neighs,
     )
 
 @main.command(help=_HELP_MSG['run'])

@@ -48,7 +48,7 @@ Run complete algorithm.
 
     --n-frags            | Number of fragments to split a contigs
 			 | [default: 30]
-    --max-neigh          | Maximum number of neighbors to consider to compute the adjacency matrix.
+    --max-neighbors      | Maximum number of neighbors to consider to compute the adjacency matrix.
 			 | [default: 100]
     --hits-thresh        | Minimum percent of edges between two contigs to form an edge between them.
 			 | [default: 0.8]
@@ -58,7 +58,7 @@ Run complete algorithm.
 			 | [default: 0.75]
     --batch-size         | Batch size for training
 			 | [default: 256]
-    --lr                 | Learning rate for gradient descent
+    --learning-rate      | Learning rate for gradient descent
 			 | [default: 0.0001]
     --load-batch         | Number of coverage batch to load in memory.
 			 | Consider lowering this value if your RAM is limited.
@@ -73,7 +73,7 @@ Run complete algorithm.
 			 | [default: 7]
     --cover-stride       | Convolution stride for convolution layer of coverage network.
 			 | [default: 3]
-    --combined-nodes     | Number of neurons for the merging network (1 layer)
+    --merge-nodes        | Number of neurons for the merging network (1 layer)
 			 | [default: 32]
     --norm               | Normalize the k-mer occurrences to frequencies
 			 | [default: False]

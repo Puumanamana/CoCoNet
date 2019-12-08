@@ -89,7 +89,7 @@ def test_architecture():
             'cover_filters': 30,
             'cover_kernel': 5,
             'cover_stride': 2,
-            'combined_neurons': 16}
+            'merge_neurons': 16}
 
     cfg = Configuration()
     cfg.init_config(output='test123', **args)
@@ -100,7 +100,7 @@ def test_architecture():
                      'n_filters': args['cover_filters'],
                      'kernel_size': args['cover_kernel'],
                      'conv_stride': args['cover_stride']},
-        'combined': {'neurons': args['combined_neurons']}
+        'combined': {'neurons': args['merge_neurons']}
     }
 
     assert architecture == cfg.get_architecture()

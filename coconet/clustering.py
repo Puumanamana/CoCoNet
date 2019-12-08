@@ -180,7 +180,7 @@ def iterate_clustering(model, **kw):
 
     # Pre-clustering
     adjacency_matrix = np.load(kw['adj_mat'])
-    edge_threshold = kw['hits_threshold'] * kw['n_frags']**2
+    edge_threshold = kw['hits_thresh'] * kw['n_frags']**2
 
     handles = {key: h5py.File(filename, 'r') for key, filename in kw['latent'].items()}
     contigs = np.array(list(handles['coverage'].keys()))
