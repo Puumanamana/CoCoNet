@@ -49,47 +49,48 @@ Run complete algorithm.
 .. table:: Options
     :widths: 50 50
 
---n-frags            | Number of fragments to split a contigs
-                     | [default: 30]
---max-neighbors      | Maximum number of neighbors to consider
-                     | to compute the adjacency matrix.
-                     | [default: 100]
---hits-threshold     | Minimum percent of edges between two contigs
-                     | to form an edge between them.
-                     | [default: 0.8]
---gamma1             | CPM optimization value for the first run of the Leiden clustering
-                     | [default: 0.1]
---gamma2             | CPM optimization value for the second run of the Leiden clustering
-                     | [default: 0.75]
---batch-size         | Batch size for training
-                     | [default: 256]
---learning-rate      | Learning rate for gradient descent
-                     | [default: 0.0001]
---load-batch         | Number of coverage batch to load in memory.
-                     | Consider lowering this value if your RAM is limited.
-		     | [default: 500]
---compo-neurons      | Number of neurons for the composition network (2 layers)
-                     | [default: 64, 32]
---cover-neurons      | Number of neurons for the coverage network (2 layers)
-                     | [default: 64, 32]
---cover-filters      | Number of filters for convolution layer of coverage network.
-                     | [default: 32]
---cover-kernel       | Kernel size for convolution layer of coverage network.
-                     | [default: 7]
---cover-stride       | Convolution stride for convolution layer of coverage network.
-                     | [default: 3]
---combined-neurons   | Number of neurons for the merging network (1 layer)
-                     | [default: 32]
---norm               | Normalize the k-mer occurrences to frequencies
-                     | [default: False]
--k, --kmer           | k-mer size for composition vector
-                     | [default: 4]
---no-rc              | Do not add the reverse complement k-mer occurrences
-                     | to the composition vector
-                     | [default: False]
---wsize              | Smoothing window size for coverage vector
-                     | [default: 64]
+    --n-frags            | Number of fragments to split a contigs
+			 | [default: 30]
+    --max-neighbors      | Maximum number of neighbors to consider
+			 | to compute the adjacency matrix.
+			 | [default: 100]
+    --hits-threshold     | Minimum percent of edges between two contigs
+			 | to form an edge between them.
+			 | [default: 0.8]
+    --gamma1             | CPM optimization value for the first run of the Leiden clustering
+			 | [default: 0.1]
+    --gamma2             | CPM optimization value for the second run of the Leiden clustering
+			 | [default: 0.75]
+    --batch-size         | Batch size for training
+			 | [default: 256]
+    --learning-rate      | Learning rate for gradient descent
+			 | [default: 0.0001]
+    --load-batch         | Number of coverage batch to load in memory.
+			 | Consider lowering this value if your RAM is limited.
+			 | [default: 500]
+    --compo-neurons      | Number of neurons for the composition network (2 layers)
+			 | [default: 64, 32]
+    --cover-neurons      | Number of neurons for the coverage network (2 layers)
+			 | [default: 64, 32]
+    --cover-filters      | Number of filters for convolution layer of coverage network.
+			 | [default: 32]
+    --cover-kernel       | Kernel size for convolution layer of coverage network.
+			 | [default: 7]
+    --cover-stride       | Convolution stride for convolution layer of coverage network.
+			 | [default: 3]
+    --combined-neurons   | Number of neurons for the merging network (1 layer)
+			 | [default: 32]
+    --norm               | Normalize the k-mer occurrences to frequencies
+			 | [default: False]
+    -k, --kmer           | k-mer size for composition vector
+			 | [default: 4]
+    --no-rc              | Do not add the reverse complement k-mer occurrences
+			 | to the composition vector
+			 | [default: False]
+    --wsize              | Smoothing window size for coverage vector
+			 | [default: 64]
 
+			 
 Running specific steps
 ----------------------
 
