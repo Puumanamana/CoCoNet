@@ -2,8 +2,8 @@
 Functions to generate test data
 '''
 
+from math import ceil
 from pathlib import Path
-from random import randint
 
 import h5py
 import numpy as np
@@ -11,22 +11,52 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from coconet.dl_util import initialize_model
+
 LOCAL_DIR = Path(__file__).resolve().parent
 
-def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5'):
+FL = 20
+STEP = 2
+WSIZE = 3
+WSTEP = 2
+
+TEST_LEARN_PRMS = {'batch_size': 4, 'learning_rate': 1e-3,
+                   'kmer': 4, 'rc': True, 'norm': False,
+                   'wsize': WSIZE, 'wstep': WSTEP, 'load_batch': 30}
+TEST_CTG_LENGTHS = [60, 100, 80]
+
+TEST_ARCHITECTURE = {
+    'composition': {'neurons': [8, 4]},
+    'coverage': {'neurons': [8, 4],
+                 'n_filters': 2,
+                 'kernel_size': 3,
+                 'conv_stride': 2},
+    'merge': {'neurons': 2}
+}
+
+TEST_SHAPES = {'composition': 136,
+               'coverage': (ceil((FL - WSIZE+1) / WSTEP), 2)}
+
+def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5',
+                           baselines=None):
     '''
     - Generate coverage matrix
     - Saves it locally
     '''
 
+    if baselines is None:
+        baselines = [10] * len(lengths)
+
     filepath = '{}/{}'.format(LOCAL_DIR, filename)
 
-    cov = {'V{}'.format(i): np.tile(randint(1, 30), (n_samples, length))
-           for i, length in enumerate(lengths)}
+    coverage = {}
+
+    for i, (length, bl) in enumerate(zip(lengths, baselines)):
+        coverage['V{}'.format(i)] = bl + np.random.normal(0, bl//5, [n_samples, length])
 
     handle = h5py.File(filepath, 'w')
-    for key, val in cov.items():
-        handle.create_dataset(key, data=val)
+    for key, val in coverage.items():
+        handle.create_dataset(key, data=val.astype(np.float32))
     handle.close()
 
     return Path(filepath)
@@ -70,3 +100,9 @@ def generate_pair_file(filename='pairs.npy', save=True):
         return Path(filepath)
 
     return pairs
+
+def generate_rd_model(fl=100, wsize=5, wstep=2):
+
+    model = initialize_model('CoCoNet', TEST_SHAPES, TEST_ARCHITECTURE)
+
+    return model

@@ -29,7 +29,7 @@ def initialize_model(model_type, input_shapes, architecture):
     else:
         compo_model = initialize_model("composition", input_shapes['composition'], architecture['composition'])
         cover_model = initialize_model("coverage", input_shapes['coverage'], architecture['coverage'])
-        model = CoCoNet(compo_model, cover_model, **architecture['combined'])
+        model = CoCoNet(compo_model, cover_model, **architecture['merge'])
 
     return model
 

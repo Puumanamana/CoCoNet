@@ -1,9 +1,9 @@
+
 '''
 Tests for deep learning procedure
 '''
 
 from pathlib import Path
-from math import ceil
 
 import torch
 from Bio import SeqIO
@@ -16,33 +16,9 @@ from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.generators import CompositionGenerator, CoverageGenerator
 
 from .data import generate_fasta_file, generate_coverage_file, generate_pair_file
+from .data import FL, STEP, TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
 
 LOCAL_DIR = Path(__file__).parent
-
-FL = 20
-STEP = 2
-WSIZE = 3
-WSTEP = 2
-
-TEST_LEARN_PRMS = {'batch_size': 4, 'learning_rate': 1e-3,
-                   'kmer': 4, 'rc': True, 'norm': False,
-                   'wsize': WSIZE, 'wstep': WSTEP, 'load_batch': 30}
-TEST_CTG_LENGTHS = [60, 100, 80]
-
-
-TEST_ARCHITECTURE = {
-    'composition': {'neurons': [8, 4]},
-    'coverage': {'neurons': [8, 4],
-                 'n_filters': 2,
-                 'kernel_size': 3,
-                 'conv_stride': 2},
-    'combined': {'neurons': 2}
-}
-
-TEST_SHAPES = {'composition': 136,
-               'coverage': (ceil((FL - WSIZE+1) / WSTEP), 2)}
-
-
 
 def test_init_composition_model():
     '''

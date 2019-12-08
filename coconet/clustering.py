@@ -124,23 +124,7 @@ def fill_adjacency_matrix(model, latent_repr, output, **kw):
 
     np.save(output, adjacency_matrix)
 
-def check_partitions(communities, adjacency_matrix, gamma, debug=False):
-    def count_mean_edges(s):
-        sub_adj = adjacency_matrix[s, :][:, s]
-        return np.sum(sub_adj) / sub_adj.size
-
-    clusters = (communities.reset_index()
-                .groupby('clusters')['index']
-                .agg(conn=count_mean_edges, cize=len, indices=list)
-                .sort_values(by='conn'))
-
-    if clusters.conn.min() < gamma:
-        print('Suspicious cluster: {}'.format(clusters.conn.idxmin()))
-
-        if debug:
-            import ipdb;ipdb.set_trace()
-
-def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|', debug=False):
+def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|'):
     '''
     Cluster using with either Louvain or Leiden algorithm defined in config
     Use the adjacency matrix previously filled
@@ -162,8 +146,6 @@ def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|', debug=F
         'truth': [x.split(truth_sep)[0] for x in contigs],
         'contigs': contigs
     }).set_index('contigs')
-
-    check_partitions(assignments.reset_index(), adjacency_matrix, gamma, debug=debug)
 
     assignments.clusters = pd.factorize(assignments.clusters)[0]
     assignments.truth = pd.factorize(assignments.truth)[0]
