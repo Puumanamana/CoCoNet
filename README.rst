@@ -27,7 +27,7 @@ CoCoNet is available in the command line. For a list of all the options, open a 
 
     python coconet.py run -h
 
-For more details, please see the `documentation <https://coconet.readthedocs.io/en/latest/index.html>`_
+For more details, please see the documentation on `ReadTheDocs<https://coconet.readthedocs.io/en/latest/index.html>`_
 
 Contribute
 ----------
