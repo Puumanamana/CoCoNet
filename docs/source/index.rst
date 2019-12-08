@@ -10,10 +10,10 @@ Welcome to CoCoNet's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-	     getting_started
-	     basic_usage
-	     subcommands
-	     examples
+   getting_started
+   basic_usage
+   subcommands
+   examples
 
 Indices and tables
 ==================
