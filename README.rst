@@ -47,7 +47,7 @@ Run complete algorithm.
 [COVERAGE] List of paths to your coverage files (bam formatted)
 
 .. table:: Options
-    :widths: 20 50
+    :widths: 50 50
 
 --n-frags            | Number of fragments to split a contigs
                      | [default: 30]
