@@ -46,9 +46,6 @@ Run complete algorithm.
 [FASTA] Path to your assembly file (fasta formatted)
 [COVERAGE] List of paths to your coverage files (bam formatted)
 
-.. table:: Options
-    :widths: 10 20
-
     --n-frags            | Number of fragments to split a contigs
 			 | [default: 30]
     --max-neighbors      | Maximum number of neighbors to consider
