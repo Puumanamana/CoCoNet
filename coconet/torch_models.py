@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 
 class CompositionModel(nn.Module):
-    def __init__(self, input_size, neurons=[64, 32]):
+    def __init__(self, input_size, *neurons):
         super(CompositionModel, self).__init__()
 
         self.compo_shared = nn.Linear(input_size, neurons[0])
@@ -58,7 +58,7 @@ class CompositionModel(nn.Module):
         return self.loss_op(pred["composition"], truth).mean()
 
 class CoverageModel(nn.Module):
-    def __init__(self, input_size, n_samples, neurons=[128, 64],
+    def __init__(self, input_size, n_samples, *neurons,
                  n_filters=64, kernel_size=16, conv_stride=8):
         super(CoverageModel, self).__init__()
 
@@ -123,7 +123,7 @@ class CoverageModel(nn.Module):
         return self.loss_op(pred["coverage"], truth).mean()
 
 class CoCoNet(nn.Module):
-    def __init__(self, composition_model, coverage_model, neurons=[32]):
+    def __init__(self, composition_model, coverage_model, neurons=32):
         super(CoCoNet, self).__init__()
         self.composition_model = composition_model
         self.coverage_model = coverage_model

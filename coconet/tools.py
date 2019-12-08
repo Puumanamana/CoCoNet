@@ -59,6 +59,10 @@ def run_if_not_exists(keys=('output',)):
 
 @lru_cache(maxsize=None)
 def kmer_rc_idx(k=4):
+    '''
+    Get the non redundant kmer indexes when reverse complements is on
+    '''
+
     mapping = []
     uniq_idx = set()
 
@@ -75,12 +79,20 @@ def kmer_rc_idx(k=4):
     return (list(uniq_idx), np.array(mapping))
 
 def get_kmer_number(sequence, k=4):
+    '''
+    Converts A, C, G, T sequence into sequence of kmer numbers
+    '''
+
     kmer_encoding = sequence.translate(KMER_CODES)
     kmer_indices = [int(kmer_encoding[i:i+2*k], 2) for i in range(0, 2*(len(sequence)-k+1), 2)]
 
     return kmer_indices
 
 def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
+    '''
+    - Compute kmer occurrences in sequence
+    - If kmer index are provided, skip the first part (faster)
+    '''
 
     if rc:
         uniq_idx, rev_mapping = kmer_rc_idx(kmer)
@@ -100,6 +112,11 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
     return occurrences
 
 def get_coverage(pairs, coverage_h5, window_size, window_step):
+    '''
+    - Extracting coverage from h5 for all pairs of contigs in pairs
+    - Smooth coverage with a sliding window of [window_size, window_step]
+    '''
+
     h5data = h5py.File(coverage_h5, 'r')
     contigs = np.unique(pairs['sp'].flatten())
 
@@ -130,9 +147,6 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
 
     for i, (species, start, end) in enumerate(pairs[sorted_idx]):
         cov_sp = seen.get((species, start), None)
-
-        if i%100 == 0:
-            print("{:,}/{:,}".format(i, pairs.shape[0]), end='\r')
 
         if cov_sp is None:
             cov_sp = np.apply_along_axis(

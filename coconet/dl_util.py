@@ -21,10 +21,12 @@ def initialize_model(model_type, input_shapes, architecture):
     '''
 
     if model_type == 'composition':
-        model = CompositionModel(input_shapes, **architecture)
+        neurons = architecture.pop('neurons')
+        model = CompositionModel(input_shapes, *neurons, **architecture)
 
     elif model_type == 'coverage':
-        model = CoverageModel(*input_shapes, **architecture)
+        neurons = architecture.pop('neurons')
+        model = CoverageModel(*input_shapes, *neurons, **architecture)
 
     else:
         compo_model = initialize_model("composition", input_shapes['composition'], architecture['composition'])

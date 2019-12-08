@@ -18,7 +18,6 @@
 # -- Project information -----------------------------------------------------
 
 project = 'CoCoNet'
-copyright = '2019, Cedric Arisdakessian'
 author = 'Cedric Arisdakessian'
 
 # The full version, including alpha/beta/rc tags

@@ -71,8 +71,6 @@ def compute_pairwise_comparisons(model, contigs, handles,
 
     for k, ctg in enumerate(contigs):
 
-        print('Processed contigs: {:,}/{:,}'.format(k, len(contigs)), end='\r')
-
         x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                  for key, handle in handles.items()}
 

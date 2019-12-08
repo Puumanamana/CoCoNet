@@ -94,7 +94,6 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
         subprocess.call(["samtools", "depth", "-d", "20000", bam],
                         stdout=outfile)
 
-    n_entries = sum(1 for _ in open(outputs['txt']))
     h5_handle = h5py.File(outputs['h5'], 'w')
 
     # Save the coverage of each contig in a separate file
@@ -104,7 +103,7 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
     with open(outputs['txt'], 'r') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter='\t')
 
-        for i, (ctg, pos, d_i) in enumerate(csv_reader):
+        for ctg, pos, d_i in csv_reader:
             # 1st case: contig is not in the assembly (filtered out in previous step)
             ctg_len = ctg_info.get(ctg, None)
 
