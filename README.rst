@@ -17,6 +17,7 @@ Detailed documentation is available on `ReadTheDocs <https://coconet.readthedocs
 Installation
 ------------
 To install CoCoNet, open a terminal and run (you can omit --user if you're working in a vitualenv):
+
 .. code-block:: bash
 
     pip3 install coconet-binning --user
@@ -31,6 +32,7 @@ Running the complete algorithm
 ------------------------------
 
 You can process your dataset with CoCoNet using the following command:
+
 .. code-block:: bash
 
     python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]
