@@ -40,6 +40,7 @@ Options:
 --tmp-dir                       Temporary directory for bam processing
                    				[default: ./tmp42]
 --fragment-step                 Fragments spacing  [default: 128]
+--test-ratio                    Ratio for train / test split  [default: 0.1]
 --n-train                       Number of training examples  [default:
 				                1000000]
 --n-test                        Number of test examples  [default: 10000]

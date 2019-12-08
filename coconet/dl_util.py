@@ -139,7 +139,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
         losses_buffer.append(loss.item())
 
         # Get test results
-        if (i % (n_batches//5) == 0) or (i == n_batches):
+        if (i % (1 + n_batches//5) == 0) or (i == n_batches):
             scores = test_summary(model, i/n_batches, data={'x': x_test, 'y': y_test})
             print("\nRunning Loss: {}".format(np.mean(losses_buffer)))
 
@@ -164,6 +164,7 @@ def test_summary(model, progress, data=None, **args):
             'y': get_labels(pos_args[-1])
         }
     model.eval()
+
     outputs_test = model(*data['x'])
     model.train()
     get_confusion_table(outputs_test, data["y"], done=progress)
@@ -174,10 +175,9 @@ def get_confusion_table(preds, truth, done=0):
     Confusion table and other metrics for
     predicted labels [pred] and true labels [true]
     '''
-
     for key, pred in preds.items():
         conf_df = pd.DataFrame(
-            confusion_matrix(truth.detach().numpy().astype(int),
+            confusion_matrix(truth.detach().numpy().astype(int)[:, 0],
                              (pred.detach().numpy()[:, 0] > 0.5).astype(int)),
             columns=["0 (Pred)", "1 (Pred)"],
             index=["0 (True)", "1 (True)"]

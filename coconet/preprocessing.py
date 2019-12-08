@@ -105,9 +105,6 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
         csv_reader = csv.reader(csv_file, delimiter='\t')
 
         for i, (ctg, pos, d_i) in enumerate(csv_reader):
-            if i % 1000 == 0:
-                print('{:,}/{:,}'.format(i, n_entries))
-
             # 1st case: contig is not in the assembly (filtered out in previous step)
             ctg_len = ctg_info.get(ctg, None)
 

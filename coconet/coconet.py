@@ -91,7 +91,7 @@ def make_train_test(cfg, **kwargs):
     print("Making train/test examples")
     assembly = [contig for contig in SeqIO.parse(cfg.io['filt_fasta'], 'fasta')]
 
-    assembly_idx = {'test': np.random.choice(len(assembly), int(0.1*len(assembly)))}
+    assembly_idx = {'test': np.random.choice(len(assembly), int(cfg.test_ratio*len(assembly)))}
     assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'])
 
     n_examples = {'train': cfg.n_train, 'test': cfg.n_test}
@@ -181,10 +181,10 @@ def cluster(cfg, **kwargs):
         assignments_file=cfg.io['assignments'],
         refined_assignments_file=cfg.io['refined_assignments'],
         n_frags=cfg.n_frags,
-        hits_threshold=cfg.hits_thresh,
+        hits_threshold=cfg.hits_threshold,
         gamma1=cfg.gamma1,
         gamma2=cfg.gamma2,
-        max_neighbors=cfg.max_neighs,
+        max_neighbors=cfg.max_neighbors,
     )
 
 @main.command(help=_HELP_MSG['run'])

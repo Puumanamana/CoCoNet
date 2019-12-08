@@ -79,6 +79,8 @@ _OPTIONS = {
     'frag': [
         click.option('--fragment-step', type=int, required=False, default=128,
                      help='Fragments spacing'),
+        click.option('--test-ratio', type=click.FloatRange(.1, .99), required=False, default=0.1,
+                     help='Ratio for train / test split'),
         click.option('--n-train', type=int, required=False, default=int(1e6),
                      help='Number of training examples'),
         click.option('--n-test', type=int, required=False, default=int(1e4),

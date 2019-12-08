@@ -2,6 +2,7 @@
 Configuration object to handle CLI, loading/resuming runs
 '''
 
+import sys
 from pathlib import Path
 from math import ceil
 
@@ -61,8 +62,7 @@ class Configuration:
         if name == 'fasta':
             filepath = Path(val)
             if filepath.suffix not in ['.fa', '.fasta', '.fna']:
-                print('This assembly file extension is not supported ({})'.format(filepath.suffix))
-                exit(42)
+                sys.exit('This assembly file extension is not supported ({})'.format(filepath.suffix))
 
         if name == 'coverage':
             filepath = [Path(cov) for cov in val]
@@ -73,8 +73,7 @@ class Configuration:
             else:
                 suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
                 if not len(suffixes) > 0:
-                    print('This coverage file extension is not supported ({})'.format(suffixes))
-                    exit(42)
+                    sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
                 name = 'coverage_bam'
 
         if name in ['tmp_dir', 'output']:

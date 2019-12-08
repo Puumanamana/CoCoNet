@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from math import ceil
 from time import time
@@ -112,8 +113,7 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
             For example, {} generates an error.
             '''.format(len(diff), diff[0]))
         else:
-            print('One contig seem to have a null coverage across all samples')
-        exit(42)
+            sys.exit('One contig seem to have a null coverage across all samples')
 
     n_pairs = len(pairs)
     n_samples, _ = np.array(list(coverage_data.values())[0]).shape

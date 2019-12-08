@@ -3,6 +3,7 @@ Tools to split contigs into smaller fragment
 to train the neural network
 '''
 
+import sys
 from math import ceil
 from itertools import combinations
 import numpy as np
@@ -75,8 +76,10 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     pair_idx = np.random.choice(len(n_frags_all),
                                 [5*n_examples, 2])
 
-    cond = pair_idx[:, 0] != pair_idx[:, 1]
-    pair_idx = pair_idx[cond][:n_examples, :]
+    pair_idx = np.unique(pair_idx, axis=0)[:n_examples]
+
+    if len(pair_idx) < n_examples:
+        sys.exit("Not enough contigs in data. Consider increasing the test_ratio parameter.")
 
     rd_frags = np.array([[np.random.choice(n_frags_all[ctg])
                           for ctg in pair_idx[:, i]]
