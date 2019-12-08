@@ -7,6 +7,8 @@ CoCoNet documentation
     :target: https://codecov.io/gh/Puumanamana/CoCoNet
 .. image:: https://readthedocs.org/projects/coconet/badge/?version=latest
     :target: https://coconet.readthedocs.io/en/latest/?badge=latest
+.. image:: https://api.codacy.com/project/badge/Grade/552eeafebb52496ebb409f421bd4edb6
+    :target: https://www.codacy.com/manual/Puumanamana/CoCoNet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Puumanamana/CoCoNet&amp;utm_campaign=Badge_Grade			 
 
 Citation (Work in progress)
 ---------------------------
