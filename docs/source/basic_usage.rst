@@ -3,8 +3,11 @@ Usage
 
 coconet run [OPTIONS] [FASTA] [COVERAGE]...
 
-| [FASTA]     Path to your assembly file (fasta formatted)
-| [COVERAGE]  List of paths to your coverage files (bam formatted)
++------------------+------------------------------------------------------+
+|**FASTA**         |  Path to your assembly file (fasta formatted)        |
++------------------+------------------------------------------------------+
+|**COVERAGE**      | List of paths to your coverage files (bam formatted) |
++------------------+------------------------------------------------------+
 
 Options:
 
