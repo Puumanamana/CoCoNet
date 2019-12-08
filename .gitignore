@@ -2,7 +2,6 @@ build
 *coverage*
 *.npy
 *.h5
-*.fast[aq]
 *.zip
 *.gz
 *.bak
