@@ -9,7 +9,7 @@ import numpy as np
 import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
-from data import generate_pair_file, generate_coverage_file
+from .data import generate_pair_file, generate_coverage_file
 
 def get_rc_indices(k):
     uniq_idx = set()

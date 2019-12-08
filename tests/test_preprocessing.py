@@ -6,7 +6,7 @@ from Bio import SeqIO
 
 from coconet.preprocessing import format_assembly
 
-from data import generate_fasta_file
+from .data import generate_fasta_file
 
 def test_format_assembly():
     '''

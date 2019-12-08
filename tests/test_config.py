@@ -6,7 +6,7 @@ from pathlib import Path
 
 from coconet.config import Configuration
 
-from data import generate_coverage_file
+from .data import generate_coverage_file
 
 def test_init():
     '''

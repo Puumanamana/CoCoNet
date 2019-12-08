@@ -9,7 +9,7 @@ import numpy as np
 from coconet.fragmentation import calculate_optimal_dist
 from coconet.fragmentation import make_negative_pairs, make_positive_pairs, make_pairs
 
-from data import generate_fasta_file
+from .data import generate_fasta_file
 
 def get_pairs_frag_with_dist(n_frags, dist):
     '''

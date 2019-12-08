@@ -15,7 +15,7 @@ from coconet.dl_util import get_npy_lines, get_labels, get_confusion_table
 from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.generators import CompositionGenerator, CoverageGenerator
 
-from data import generate_fasta_file, generate_coverage_file, generate_pair_file
+from .data import generate_fasta_file, generate_coverage_file, generate_pair_file
 
 LOCAL_DIR = Path(__file__).parent
 
