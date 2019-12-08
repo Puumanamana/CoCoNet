@@ -190,7 +190,7 @@ def cluster(cfg, **kwargs):
     )
 
 @main.command(help=_HELP_MSG['run'])
-@make_decorator('io', 'general', 'preproc', 'frag', 'dl', 'cluster')
+@make_decorator('cluster', 'dl', 'frag', 'preproc', 'general', 'io')
 @click.pass_context
 def run(context, **_kwargs):
     '''
