@@ -4,6 +4,9 @@
 
 A tool for unsupervised contig binning from viral metagenomes (Work in progress)
 
+## Documentation
+Detailed documentation is available on [ReadTheDocs](https://coconet.readthedocs.io/en/latest/index.html).
+
 ## Install
 To install CoCoNet, open a terminal and run (you can omit `--user` if you're working in a `vitualenv`):
 ```bash
