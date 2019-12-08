@@ -12,6 +12,7 @@ Welcome to CoCoNet's documentation!
    :maxdepth: 2
    :caption: Contents
 
+   self
    getting_started
    basic_usage
    subcommands
