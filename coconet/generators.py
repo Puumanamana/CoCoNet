@@ -56,7 +56,7 @@ class CompositionGenerator:
 
 class CoverageGenerator:
     """
-    Genearator for coverage data. 
+    Genearator for coverage data
     It loads the coverage every [load_batch] batches.
     """
     def __init__(self, pairs_file, coverage_h5=None,

@@ -47,7 +47,7 @@ def test_bam_to_h5():
     Test if depth from samtools can be converted to h5
     '''
 
-    bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))    
+    bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))
     ctg_info = {seq.id: len(seq.seq) for seq in
                 SeqIO.parse("{}/sim_data/assembly.fasta".format(LOCAL_DIR), 'fasta')}
     h5 = bam_to_h5(bam_file, '/tmp', ctg_info)
@@ -66,7 +66,7 @@ def test_bamlist_to_h5():
     h5_out = Path('coverage.h5')
     singleton_file = Path('singletons.txt')
 
-    fasta_filt = format_assembly(fasta, min_length=512)    
+    fasta_filt = format_assembly(fasta, min_length=512)
     bam_list_to_h5(fasta_filt, bam_list, output=h5_out, singleton_file=singleton_file,
                    min_qual=50, flag=3596, fl_range=[0, 1000], rm_filt_bam=True)
 
@@ -96,8 +96,7 @@ def test_filter_h5():
 
     for f in [h5_data, fasta, 'singletons.txt'] + filt:
         Path(f).unlink()
-    
+
     assert singletons.shape == (1, 2+3)
     assert n_filt == 1
     assert len(h5_data_filt) == 2
-

@@ -35,7 +35,7 @@ def test_pairwise_comparisons():
 
     for v in h5_data.values():
         v.unlink()
-    
+
     assert matrix[0, 0] == 25
     assert matrix[0, 2] == -1
     assert 0 <= matrix[0, 1] <= 25
@@ -52,9 +52,9 @@ def test_pairwise_comparisons_no_neighbors():
 
     for v in h5_data.values():
         v.unlink()
-    
+
     assert np.all(matrix >= 0) & np.all(matrix <= 25)
-    
+
 def test_fill_adj():
     output = Path('adj_test.npy')
     model = generate_rd_model()
@@ -62,7 +62,7 @@ def test_fill_adj():
                for k in ['composition', 'coverage']}
 
     fill_adjacency_matrix(model, h5_data, output, n_frags=5)
-    
+
     for v in h5_data.values():
         v.unlink()
 
@@ -92,7 +92,7 @@ def test_iterate_clustering():
 
     files = ['singletons.txt', 'adj_mat.npy', 'assignments.csv',
              'refined_assignments.csv', 'refined_adjacency_matrix.npy']
-    
+
     np.save('adj_mat.npy', np.array([
         [1, 1, 0, 0, 0],
         [1, 1, 0, 0, 0],
@@ -107,7 +107,7 @@ def test_iterate_clustering():
     iterate_clustering(model, h5_data, files[1], files[0], n_frags=5)
 
     assert all(Path(f).is_file() for f in files)
-    
+
     for f in files + list(h5_data.values()):
         Path(f).unlink()
 

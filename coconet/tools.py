@@ -1,4 +1,3 @@
-from typing import Dict
 from pathlib import Path
 from math import ceil
 from time import time
@@ -111,7 +110,7 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
             print('''
             Error: {} contigs are in the fasta sequences but not in the coverage.
             For example, {} generates an error.
-            '''.format(diff[0]))
+            '''.format(len(diff), diff[0]))
         else:
             print('One contig seem to have a null coverage across all samples')
         exit(42)

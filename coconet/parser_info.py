@@ -59,7 +59,8 @@ _OPTIONS = {
 
     'preproc': [
         click.option('--min-ctg-len', type=int, required=False, default=2048, help='Minimum contig length'),
-        click.option('--min-prevalence', type=int, required=False, default=2, help='Minimum contig prevalence for binning. Contig with less that value are filtered out.'),
+        click.option('--min-prevalence', type=int, required=False, default=2,
+                     help='Minimum contig prevalence for binning. Contig with less that value are filtered out.'),
         click.option('--min-mapping-quality', type=click.IntRange(1, 60), required=False, default=50, help='Minimum mapping quality for bam filtering'),
         click.option('--flag', type=int, required=False, default=3596, help='Sam Flag for bam filtering'),
         click.option('--fl-range', type=int, required=False, default=(200, 500), nargs=2, help='Only allow for paired alignments with spacing within this range'),
@@ -75,7 +76,8 @@ _OPTIONS = {
     'dl': [
         click.option('--batch-size', type=int, required=False, default=256, help='Batch size for training'),
         click.option('--learning-rate', type=float, required=False, default=1e-4, help='Learning rate for gradient descent'),
-        click.option('--load-batch', type=int, required=False, default=500, help='Number of coverage batch to load in memory. Consider lowering this value if your RAM is limited.'),
+        click.option('--load-batch', type=int, required=False, default=500,
+                     help='Number of coverage batch to load in memory. Consider lowering this value if your RAM is limited.'),
         click.option('--compo-neurons', type=int, required=False, default=(64, 32), nargs=2, help='Number of neurons for the composition network (2 layers)'),
         click.option('--cover-neurons', type=int, required=False, default=(64, 32), nargs=2, help='Number of neurons for the coverage network (2 layers)'),
         click.option('--cover-filters', type=int, required=False, default=32, help='Number of filters for convolution layer of coverage network.'),
@@ -93,7 +95,8 @@ _OPTIONS = {
     'cluster': [
         click.option('--n-frags', type=int, required=False, default=30, help='Number of fragments to split a contigs'),
         click.option('--max-neighbors', type=int, required=False, default=100, help='Maximum number of neighbors to consider to compute the adjacency matrix.'),
-        click.option('--hits-threshold', type=click.FloatRange(0, 1), required=False, default=0.8, help='Minimum percent of edges between two contigs to form an edge between them.'),
+        click.option('--hits-threshold', type=click.FloatRange(0, 1), required=False, default=0.8,
+                     help='Minimum percent of edges between two contigs to form an edge between them.'),
         click.option('--gamma1', type=click.FloatRange(0, 1), required=False, default=0.1, help='CPM optimization value for the first run of the Leiden clustering'),
         click.option('--gamma2', type=click.FloatRange(0, 1), required=False, default=0.75, help='CPM optimization value for the second run of the Leiden clustering'),
     ]

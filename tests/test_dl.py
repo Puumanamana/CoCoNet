@@ -84,7 +84,7 @@ def test_load_data_compo():
     fasta = list(SeqIO.parse(fasta_file, 'fasta'))
     pairs_file = Path('pairs.npy').resolve()
 
-    make_pairs(fasta, STEP, FL, output=pairs_file, n_examples=50)    
+    make_pairs(fasta, STEP, FL, output=pairs_file, n_examples=50)
 
     gen = CompositionGenerator(pairs_file, fasta_file,
                                batch_size=TEST_LEARN_PRMS['batch_size'],

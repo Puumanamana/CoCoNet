@@ -62,38 +62,37 @@ def slow_coverage(pairs, h5file, window_size, window_step):
 
     return np.array(X1, dtype=np.float32), np.array(X2, dtype=np.float32)
 
-class TestGenerators:
 
-    def test_get_kmer_frequency(self, k=4):
+def test_get_kmer_frequency(k=4):
 
-        seq = "AAAATCG"
-        result = get_kmer_frequency(seq, k)
-        truth = slow_kmer_freq(seq, k)
+    seq = "AAAATCG"
+    result = get_kmer_frequency(seq, k)
+    truth = slow_kmer_freq(seq, k)
 
-        assert all(result == truth)
+    assert all(result == truth)
 
-    def test_get_kmer_frequency_with_rc(self, k=4):
+def test_get_kmer_frequency_with_rc(k=4):
 
-        seq = "AAAAT"
-        result = get_kmer_frequency(seq, k, rc=True)
-        truth = slow_kmer_freq(seq, k, rc=True)
+    seq = "AAAAT"
+    result = get_kmer_frequency(seq, k, rc=True)
+    truth = slow_kmer_freq(seq, k, rc=True)
 
-        assert all(result == truth)
+    assert all(result == truth)
 
-    def test_smoothing(self, wsize=3, wstep=2):
-        x_in = np.array([1, 2, 3, 4, 5])
-        result = avg_window(x_in, wsize, wstep)
+def test_smoothing(wsize=3, wstep=2):
+    x_in = np.array([1, 2, 3, 4, 5])
+    result = avg_window(x_in, wsize, wstep)
 
-        assert np.mean(result - np.array([2, 4])) < 1e-10
+    assert np.mean(result - np.array([2, 4])) < 1e-10
 
-    def test_get_coverage(self, window_size=4):
+def test_get_coverage(window_size=4):
 
-        pairs = generate_pair_file(save=False)
-        data_h5 = generate_coverage_file(30, 40)
+    pairs = generate_pair_file(save=False)
+    data_h5 = generate_coverage_file(30, 40)
 
-        (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
-        (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
+    (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
+    (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
 
-        data_h5.unlink()
+    data_h5.unlink()
 
-        assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0
+    assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0
