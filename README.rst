@@ -1,38 +1,47 @@
-## CoCoNet 1.0.0
-[![Build Status](https://travis-ci.org/Puumanamana/CoCoNet.svg?branch=master)](https://travis-ci.org/Puumanamana/CoCoNet)
-[![codecov](https://codecov.io/gh/Puumanamana/CoCoNet/branch/master/graph/badge.svg)](https://codecov.io/gh/Puumanamana/CoCoNet)
+CoCoNet 1.0.0
+=============
+.. image:: https://travis-ci.org/Puumanamana/CoCoNet.svg?branch=master
+    :target: https://travis-ci.org/Puumanamana/CoCoNet
+.. image:: https://codecov.io/gh/Puumanamana/CoCoNet/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/Puumanamana/CoCoNet
 
-A tool for unsupervised contig binning from viral metagenomes (Work in progress)
+Citation (Work in progress)
+--------
+Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
+CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
 
-## Documentation
-Detailed documentation is available on [ReadTheDocs](https://coconet.readthedocs.io/en/latest/index.html).
+Documentation
+-------------
+Detailed documentation is available on `ReadTheDocs <https://coconet.readthedocs.io/en/latest/index.html>`
 
-## Install
-To install CoCoNet, open a terminal and run (you can omit `--user` if you're working in a `vitualenv`):
-```bash
-> pip3 install coconet-binning --user
-```
+Installation
+------------
+To install CoCoNet, open a terminal and run (you can omit --user if you're working in a vitualenv):
 
-## Usage
+.. code-block:: bash
+    > pip3 install coconet-binning --user
+
+Usage
+-----
 You can run CoCoNet with the command line. There are two required arguments:
-- The assembly in the `fasta` format
-- The coverage files in the `bam` format
+- The assembly in the *fasta* format
+- The coverage files in the *bam* format
 
-### Running the complete algorithm
+Running the complete algorithm
+------------------------------
 
 You can process your dataset with CoCoNet using the following command:
-```
-python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]
-```
-To see all the available options, enter `python coconet.py run -h`:
-```
+.. code-block:: bash
+    python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]
+
+To see all the available options, enter :bash:`python coconet.py run -h`:
+
 Usage: coconet.py run [OPTIONS] [FASTA] [COVERAGE]...
 
-  Run complete algorithm.
+Run complete algorithm.
 
-  [FASTA] Path to your assembly file (fasta formatted)
-
-  [COVERAGE] List of paths to your coverage files (bam formatted)
+[FASTA] Path to your assembly file (fasta formatted)
+[COVERAGE] List of paths to your coverage files (bam formatted)
 
 Options:
   --n-frags INTEGER               Number of fragments to split a contigs
@@ -74,17 +83,18 @@ Options:
                                   [default: False]
   --wsize INTEGER                 Smoothing window size for coverage vector
                                   [default: 64]
-```
 
-### Running specific steps
+
+Running specific steps
+----------------------
 
 CoCoNet is composed of multiple subcommands if you only want to perform some part of the analysis.
-To display the documentation for each subcommands, enter on your terminal `python coconet.py -h`
-```
+To display the documentation for each subcommands, enter on your terminal :bash:`python coconet.py -h`
+
 Usage: coconet.py [OPTIONS] COMMAND [ARGS]...
 
-  Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M. CoCoNet: An
-  Efficient Deep Learning Tool for Viral Metagenome Binning
+Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M. CoCoNet: An
+Efficient Deep Learning Tool for Viral Metagenome Binning
 
 Options:
   -h, --help  Show this message and exit.  [default: False]
@@ -95,11 +105,11 @@ Commands:
   learn            Train neural network.
   cluster          Cluster contigs.
   run              Run complete algorithm.
-```
 
-For each subcommand, you can display the list of available parameters by entering `python coconet.py SUBCMD -h`.
+For each subcommand, you can display the list of available parameters by entering :bash:`python coconet.py SUBCMD -h`.
 
-## Contribute ##
+Contribute
+----------
 
- - Issue Tracker: [github](https://github.com/Puumanamana/CoCoNet/issues)
- - Source Code: [github](https://github.com/Puumanamana/CoCoNet)
+ - Issue Tracker: `github <https://github.com/Puumanamana/CoCoNet/issues>`
+ - Source Code: `github <https://github.com/Puumanamana/CoCoNet>`
