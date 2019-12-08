@@ -87,7 +87,7 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
     - Read the output and save the result in a h5 file with keys as contigs
     '''
 
-    outputs = {fmt: "{}/{}.{}".format(tmp_dir, bam.stem, fmt)
+    outputs = {fmt: Path("{}/{}.{}".format(tmp_dir, bam.stem, fmt))
                for fmt in ['txt', 'h5']}
 
     with open(outputs['txt'], "w") as outfile:
@@ -132,7 +132,7 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
 @run_if_not_exists()
 def bam_list_to_h5(fasta, coverage_bam, output=None,
                    threads=1, min_prevalence=2, singleton_file='./singletons.txt',
-                   tmp_dir='auto', **bam_filter_params):
+                   tmp_dir='auto', rm_filt_bam=False, **bam_filter_params):
     '''
     - Extract the coverage of the sequences in fasta from the bam files
     - Remove N nucleotides from the FASTA and
@@ -155,6 +155,10 @@ def bam_list_to_h5(fasta, coverage_bam, output=None,
 
     depth_h5_files = [bam_to_h5(bam, tmp_dir, ctg_info)
                       for bam in filtered_bam_files]
+
+    if rm_filt_bam:
+        for bam in filtered_bam_files:
+            bam.unlink()
 
     singletons_handle = open(singleton_file, 'w')
     singletons_handle.write(
@@ -219,7 +223,7 @@ def filter_h5(fasta, h5, filt_fasta=None, filt_h5=None,
     n_samples = h5_reader.get(list(h5_reader.keys())[0]).shape[0]
 
     singletons_handle.write(
-        '\t'.join(["contigs", "length"]+["sample_{}".format(i) for i in range(n_samples)])
+        '\t'.join(["contigs", "length"] + ["sample_{}".format(i) for i in range(n_samples)])
     )
 
     for ctg in h5_reader:

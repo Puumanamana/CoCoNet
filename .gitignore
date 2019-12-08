@@ -1,12 +1,7 @@
-simulation_util/*
-figures
-data
 build
 *coverage*
 *.npy
-*.pkl
 *.h5
-*.pickle
 *.fast[aq]
 *.zip
 *.gz
@@ -14,8 +9,6 @@ build
 *.png
 !*.py
 !*.nf
-input_data*
-output_data*
 old*
 *#
 *.egg-info

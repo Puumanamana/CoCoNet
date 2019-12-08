@@ -38,7 +38,7 @@ TEST_SHAPES = {'composition': 136,
                'coverage': (ceil((FL - WSIZE+1) / WSTEP), 2)}
 
 def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5',
-                           baselines=None):
+                           baselines=None, empty_samples=None):
     '''
     - Generate coverage matrix
     - Saves it locally
@@ -53,6 +53,10 @@ def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5',
 
     for i, (length, bl) in enumerate(zip(lengths, baselines)):
         coverage['V{}'.format(i)] = bl + np.random.normal(0, bl//5, [n_samples, length])
+
+    if empty_samples is not None:
+        for i, null_entries in enumerate(empty_samples):
+            coverage['V{}'.format(i)][null_entries, :] = 0
 
     handle = h5py.File(filepath, 'w')
     for key, val in coverage.items():
