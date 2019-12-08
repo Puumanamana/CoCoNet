@@ -50,9 +50,11 @@ Options:
 
 --n-frags            | Number of fragments to split a contigs
                      | [default: 30]
---max-neighbors      | Maximum number of neighbors to consider to compute the adjacency matrix.
+--max-neighbors      | Maximum number of neighbors to consider
+                     | to compute the adjacency matrix.
                      | [default: 100]
---hits-threshold     | Minimum percent of edges between two contigs to form an edge between them.
+--hits-threshold     | Minimum percent of edges between two contigs
+                     | to form an edge between them.
                      | [default: 0.8]
 --gamma1             | CPM optimization value for the first run of the Leiden clustering
                      | [default: 0.1]
@@ -81,7 +83,8 @@ Options:
                      | [default: False]
 -k, --kmer           | k-mer size for composition vector
                      | [default: 4]
---no-rc              | Do not add the reverse complement k-mer occurrences to the composition vector
+--no-rc              | Do not add the reverse complement k-mer occurrences
+                     | to the composition vector
                      | [default: False]
 --wsize              | Smoothing window size for coverage vector
                      | [default: 64]
