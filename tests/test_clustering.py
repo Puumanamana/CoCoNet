@@ -6,8 +6,10 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pandas as pd
 
-from coconet.clustering import get_neighbors, compute_pairwise_comparisons, fill_adjacency_matrix, get_communities
+from coconet.clustering import get_neighbors, compute_pairwise_comparisons, fill_adjacency_matrix
+from coconet.clustering import get_communities, iterate_clustering
 from .data import generate_coverage_file, generate_rd_model
 
 LOCAL_DIR = Path(__file__).parent
@@ -84,4 +86,29 @@ def test_get_communities():
     assert all(assignments.clusters[:2] == 0) and all(assignments.clusters[2:] == 1)
 
 def test_iterate_clustering():
-    pass
+    model = generate_rd_model()
+    h5_data = {k: generate_coverage_file(*[10]*5, n_samples=5, filename=k+'.h5')
+               for k in ['composition', 'coverage']}
+
+    files = ['singletons.txt', 'adj_mat.npy', 'assignments.csv',
+             'refined_assignments.csv', 'refined_adjacency_matrix.npy']
+    
+    np.save('adj_mat.npy', np.array([
+        [1, 1, 0, 0, 0],
+        [1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1],
+        [0, 0, 1, 1, 1],
+        [0, 0, 0, 1, 1]]
+    ))
+
+    (pd.DataFrame([['V0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
+     .to_csv(files[0], sep='\t'))
+
+    iterate_clustering(model, h5_data, files[1], files[0], n_frags=5)
+
+    assert all(Path(f).is_file() for f in files)
+    
+    for f in files + list(h5_data.values()):
+        Path(f).unlink()
+
+    

@@ -153,7 +153,16 @@ def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|'):
     return assignments
 
 @run_if_not_exists(keys=('refined_assignments', 'refined_adj_mat'))
-def iterate_clustering(model, **kw):
+def iterate_clustering(model, repr_file, adj_mat_file,
+                       singletons_file=None,
+                       assignments_file='assignments.csv',
+                       refined_adj_mat_file='refined_adjacency_matrix.npy',
+                       refined_assignments_file='refined_assignments.csv',
+                       n_frags=30,
+                       hits_threshold=0.9,
+                       gamma1=0.1,
+                       gamma2=0.75,
+                       max_neighbors=100):
     '''
     - Go through all clusters
     - Fill the pairwise comparisons within clusters
@@ -161,27 +170,26 @@ def iterate_clustering(model, **kw):
     '''
 
     # Pre-clustering
-    adjacency_matrix = np.load(kw['adj_mat'])
-    edge_threshold = kw['hits_thresh'] * kw['n_frags']**2
+    adjacency_matrix = np.load(adj_mat_file)
+    edge_threshold = hits_threshold * n_frags**2
 
-    handles = {key: h5py.File(filename, 'r') for key, filename in kw['latent'].items()}
+    handles = {key: h5py.File(filename, 'r') for key, filename in repr_file.items()}
     contigs = np.array(list(handles['coverage'].keys()))
 
     communities = get_communities(
         (adjacency_matrix > edge_threshold).astype(int),
         contigs,
-        gamma=kw['gamma1'],
-        debug=True,
+        gamma=gamma1
     )
 
-    ignored = pd.read_csv(kw['singletons'], sep='\t', usecols=['contigs'], index_col='contigs')
+    ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
     ignored['clusters'] = np.arange(len(ignored)) + communities.clusters.max() + 1
     ignored['truth'] = -1
 
     communities = pd.concat([communities, ignored])
     communities.truth = pd.factorize(communities.index.str.split('|').str[0])[0]
 
-    communities.to_csv(kw['assignments'])
+    communities.to_csv(assignments_file)
 
     # Refining the clusters
     communities['ctg_index'] = np.arange(communities.shape[0])
@@ -196,7 +204,7 @@ def iterate_clustering(model, **kw):
         adjacency_submatrix = compute_pairwise_comparisons(
             model, contigs[ctg_indices], handles,
             init_matrix=adjacency_matrix[ctg_indices, :][:, ctg_indices],
-            n_frags=kw['n_frags'], max_neighbors=kw['max_neighbors']
+            n_frags=n_frags, max_neighbors=max_neighbors
         )
         mask = np.isin(np.arange(adjacency_matrix.shape[0]), ctg_indices)
         mask = mask.reshape(-1, 1).dot(mask.reshape(1, -1))
@@ -207,13 +215,13 @@ def iterate_clustering(model, **kw):
             sub_communities = get_communities(
                 (adjacency_submatrix > edge_threshold).astype(int),
                 contigs[ctg_indices],
-                gamma=kw['gamma2'],
+                gamma=gamma2,
             )
             communities.loc[sub_communities.index, 'clusters'] = (1 + sub_communities.clusters
                                                                   + communities.clusters.max())
-    np.save(kw['refined_adj_mat'], adjacency_matrix)
+    np.save(refined_adj_mat_file, adjacency_matrix)
 
     communities.clusters = pd.factorize(communities.clusters)[0]
     communities.drop('ctg_index', axis=1, inplace=True)
 
-    communities.to_csv(kw['refined_assignments'])
+    communities.to_csv(refined_assignments_file)

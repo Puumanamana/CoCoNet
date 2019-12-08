@@ -15,7 +15,7 @@ from coconet.config import Configuration
 from coconet.parser_info import make_decorator, _HELP_MSG
 from coconet.preprocessing import format_assembly, bam_list_to_h5, filter_h5
 from coconet.fragmentation import make_pairs
-from coconet.dl_util import initialize_model, load_model, train, test_summary, save_repr_all
+from coconet.dl_util import initialize_model, load_model, train, save_repr_all
 from coconet.clustering import fill_adjacency_matrix, iterate_clustering
 
 CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
@@ -175,13 +175,11 @@ def cluster(cfg, **kwargs):
 
     print('Clustering contigs')
     iterate_clustering(
-        model,
-        latent=cfg.io['repr'],
-        singletons=cfg.io['singletons'],
-        adj_mat=cfg.io['adjacency_matrix'],
-        refined_adj_mat=cfg.io['refined_adjacency_matrix'],
-        assignments=cfg.io['assignments'],
-        refined_assignments=cfg.io['refined_assignments'],
+        model, cfg.io['repr'], cfg.io['adjacency_matrix'],
+        singletons_file=cfg.io['singletons'],
+        refined_adj_mat_file=cfg.io['refined_adjacency_matrix'],
+        assignments_file=cfg.io['assignments'],
+        refined_assignments_file=cfg.io['refined_assignments'],
         n_frags=cfg.n_frags,
         hits_threshold=cfg.hits_thresh,
         gamma1=cfg.gamma1,
