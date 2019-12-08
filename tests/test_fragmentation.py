@@ -45,7 +45,7 @@ def test_negative_pairs(n_examples=10):
     Test negative examples (pairs from different genomes)
     '''
 
-    fragments = np.array([200, 50, 100])
+    fragments = np.array([200, 100, 100, 90, 200])
     result = make_negative_pairs(fragments, n_examples, 3)
 
     assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
@@ -76,6 +76,6 @@ def test_all_pairs(n_examples=50):
 
     result = make_pairs(contigs, step, frag_len, n_examples=n_examples)
 
-    assert abs(np.mean(result.sp[:, 0] == result.sp[:, 1]) - 0.5) < 0.1
+    assert np.mean(result.sp[:, 0] == result.sp[:, 1]) > 0.4
     assert np.array(result.tolist()).shape[1:] == (2, 3)
     assert len(result) >= n_examples

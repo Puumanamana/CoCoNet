@@ -21,12 +21,10 @@ def initialize_model(model_type, input_shapes, architecture):
     '''
 
     if model_type == 'composition':
-        neurons = architecture.pop('neurons')
-        model = CompositionModel(input_shapes, *neurons, **architecture)
+        model = CompositionModel(input_shapes, **architecture)
 
     elif model_type == 'coverage':
-        neurons = architecture.pop('neurons')
-        model = CoverageModel(*input_shapes, *neurons, **architecture)
+        model = CoverageModel(*input_shapes, **architecture)
 
     else:
         compo_model = initialize_model("composition", input_shapes['composition'], architecture['composition'])
@@ -179,7 +177,7 @@ def get_confusion_table(preds, truth, done=0):
     '''
     for key, pred in preds.items():
         conf_df = pd.DataFrame(
-            confusion_matrix(truth.detach().numpy().astype(int)[:, 0],
+            confusion_matrix(truth.detach().numpy().astype(int),
                              (pred.detach().numpy()[:, 0] > 0.5).astype(int)),
             columns=["0 (Pred)", "1 (Pred)"],
             index=["0 (True)", "1 (True)"]
