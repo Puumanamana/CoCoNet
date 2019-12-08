@@ -1,3 +1,6 @@
+CoCoNet documentation
+=====================
+
 .. image:: https://travis-ci.org/Puumanamana/CoCoNet.svg?branch=master
     :target: https://travis-ci.org/Puumanamana/CoCoNet
 .. image:: https://codecov.io/gh/Puumanamana/CoCoNet/branch/master/graph/badge.svg
