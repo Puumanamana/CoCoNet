@@ -46,7 +46,8 @@ Run complete algorithm.
 [FASTA] Path to your assembly file (fasta formatted)
 [COVERAGE] List of paths to your coverage files (bam formatted)
 
-Options:
+.. table:: Options
+    :widths: 20 50
 
 --n-frags            | Number of fragments to split a contigs
                      | [default: 30]
