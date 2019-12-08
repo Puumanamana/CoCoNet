@@ -12,13 +12,14 @@ CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
 
 Documentation
 -------------
-Detailed documentation is available on `ReadTheDocs <https://coconet.readthedocs.io/en/latest/index.html>`
+Detailed documentation is available on `ReadTheDocs <https://coconet.readthedocs.io/en/latest/index.html>`_
 
 Installation
 ------------
 To install CoCoNet, open a terminal and run (you can omit --user if you're working in a vitualenv):
 
 .. code-block:: bash
+
     > pip3 install coconet-binning --user
 
 Usage
@@ -34,7 +35,7 @@ You can process your dataset with CoCoNet using the following command:
 .. code-block:: bash
     python coconet.py [ASSEMBLY] [COV_SAMPLE_1] [COV_SAMPLE_2] ... [COV_SAMPLE_N]
 
-To see all the available options, enter :bash:`python coconet.py run -h`:
+To see all the available options, enter :bash:``python coconet.py run -h``Detailed documentation is available on `ReadTheDocs <https://coconet.readthedocs.io/en/latest/index.html>`_:
 
 Usage: coconet.py run [OPTIONS] [FASTA] [COVERAGE]...
 
@@ -111,5 +112,5 @@ For each subcommand, you can display the list of available parameters by enterin
 Contribute
 ----------
 
- - Issue Tracker: `github <https://github.com/Puumanamana/CoCoNet/issues>`
- - Source Code: `github <https://github.com/Puumanamana/CoCoNet>`
+ - Issue Tracker: `github <https://github.com/Puumanamana/CoCoNet/issues>`_
+ - Source Code: `github <https://github.com/Puumanamana/CoCoNet>`_
