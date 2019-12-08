@@ -51,7 +51,7 @@ _OPTIONS = {
     'general': [
         click.option('-n', '--name', type=str, required=False, default='ds', help='Dataset name'),
         click.option('-fl', '--fragment-length', type=int, required=False, default=1024, help='Fragment length for contig splitting'),
-        click.option('-@', '--threads', type=int, required=False, default=30, help='Number of threads'),
+        click.option('-t', '--threads', type=int, required=False, default=30, help='Number of threads'),
     ],
 
     'core': [
