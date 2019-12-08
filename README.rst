@@ -2,7 +2,9 @@
     :target: https://travis-ci.org/Puumanamana/CoCoNet
 .. image:: https://codecov.io/gh/Puumanamana/CoCoNet/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/Puumanamana/CoCoNet
-			 
+.. image:: https://readthedocs.org/projects/coconet/badge/?version=latest
+    :target: https://coconet.readthedocs.io/en/latest/?badge=latest
+
 Citation (Work in progress)
 ---------------------------
 Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
