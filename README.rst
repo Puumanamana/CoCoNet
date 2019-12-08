@@ -52,7 +52,7 @@ Options:
 -n, --name                      Dataset name  [default: ds]
 -fl, --fragment-length          Fragment length for contig splitting
 				[default: 1024]
--@, --threads                   Number of threads  [default: 30]
+-`@`, --threads                  Number of threads  [default: 30]
 --min-ctg-len                   Minimum contig length  [default: 2048]
 --min-prevalence                Minimum contig prevalence for binning.
 				Contig with less that value are filtered
