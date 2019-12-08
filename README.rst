@@ -47,46 +47,46 @@ Run complete algorithm.
 [COVERAGE] List of paths to your coverage files (bam formatted)
 
 Options:
-  --n-frags INTEGER               Number of fragments to split a contigs
-                                  [default: 30]
-  --max-neighbors INTEGER         Maximum number of neighbors to consider to
-                                  compute the adjacency matrix.  [default:
-                                  100]
-  --hits-threshold FLOAT RANGE    Minimum percent of edges between two contigs
-                                  to form an edge between them.  [default:
-                                  0.8]
-  --gamma1 FLOAT RANGE            CPM optimization value for the first run of
-                                  the Leiden clustering  [default: 0.1]
-  --gamma2 FLOAT RANGE            CPM optimization value for the second run of
-                                  the Leiden clustering  [default: 0.75]
-  --batch-size INTEGER            Batch size for training  [default: 256]
-  --learning-rate FLOAT           Learning rate for gradient descent
-                                  [default: 0.0001]
-  --load-batch INTEGER            Number of coverage batch to load in memory.
-                                  Consider lowering this value if your RAM is
-                                  limited.  [default: 500]
-  --compo-neurons INTEGER...      Number of neurons for the composition
-                                  network (2 layers)  [default: 64, 32]
-  --cover-neurons INTEGER...      Number of neurons for the coverage network
-                                  (2 layers)  [default: 64, 32]
-  --cover-filters INTEGER         Number of filters for convolution layer of
-                                  coverage network.  [default: 32]
-  --cover-kernel INTEGER          Kernel size for convolution layer of
-                                  coverage network.  [default: 7]
-  --cover-stride INTEGER          Convolution stride for convolution layer of
-                                  coverage network.  [default: 3]
-  --combined-neurons INTEGER      Number of neurons for the merging network (1
-                                  layer)  [default: 32]
-  --norm                          Normalize the k-mer occurrences to
-                                  frequencies  [default: False]
-  -k, --kmer INTEGER              k-mer size for composition vector  [default:
-                                  4]
-  --no-rc                         Do not add the reverse complement k-mer
-                                  occurrences to the composition vector
-                                  [default: False]
-  --wsize INTEGER                 Smoothing window size for coverage vector
-                                  [default: 64]
 
+--n-frags INTEGER               Number of fragments to split a contigs
+				[default: 30]
+--max-neighbors INTEGER         Maximum number of neighbors to consider to
+				compute the adjacency matrix.  [default:
+				100]
+--hits-threshold FLOAT RANGE    Minimum percent of edges between two contigs
+				to form an edge between them.  [default:
+				0.8]
+--gamma1 FLOAT RANGE            CPM optimization value for the first run of
+				the Leiden clustering  [default: 0.1]
+--gamma2 FLOAT RANGE            CPM optimization value for the second run of
+				the Leiden clustering  [default: 0.75]
+--batch-size INTEGER            Batch size for training  [default: 256]
+--learning-rate FLOAT           Learning rate for gradient descent
+				[default: 0.0001]
+--load-batch INTEGER            Number of coverage batch to load in memory.
+				Consider lowering this value if your RAM is
+				limited.  [default: 500]
+--compo-neurons INTEGER...      Number of neurons for the composition
+				network (2 layers)  [default: 64, 32]
+--cover-neurons INTEGER...      Number of neurons for the coverage network
+				(2 layers)  [default: 64, 32]
+--cover-filters INTEGER         Number of filters for convolution layer of
+				coverage network.  [default: 32]
+--cover-kernel INTEGER          Kernel size for convolution layer of
+				coverage network.  [default: 7]
+--cover-stride INTEGER          Convolution stride for convolution layer of
+				coverage network.  [default: 3]
+--combined-neurons INTEGER      Number of neurons for the merging network (1
+				layer)  [default: 32]
+--norm                          Normalize the k-mer occurrences to
+				frequencies  [default: False]
+-k, --kmer INTEGER              k-mer size for composition vector  [default:
+				4]
+--no-rc                         Do not add the reverse complement k-mer
+				occurrences to the composition vector
+				[default: False]
+--wsize INTEGER                 Smoothing window size for coverage vector
+				[default: 64]
 
 Running specific steps
 ----------------------
@@ -100,14 +100,15 @@ Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M. CoCoNet: An
 Efficient Deep Learning Tool for Viral Metagenome Binning
 
 Options:
-  -h, --help  Show this message and exit.  [default: False]
+-h, --help  Show this message and exit.  [default: False]
 
 Commands:
-  preprocess       Preprocess the contig assembly and coverage.
-  make-train-test  Make train and test examples for neural network.
-  learn            Train neural network.
-  cluster          Cluster contigs.
-  run              Run complete algorithm.
+
+preprocess       Preprocess the contig assembly and coverage.
+make-train-test  Make train and test examples for neural network.
+learn            Train neural network.
+cluster          Cluster contigs.
+run              Run complete algorithm.
 
 For each subcommand, you can display the list of available parameters by entering :bash:`python coconet.py SUBCMD -h`.
 
