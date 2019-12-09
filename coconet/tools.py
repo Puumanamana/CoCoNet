@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 from math import ceil
-from time import time
 from textwrap import wrap
 from functools import lru_cache
 
@@ -10,18 +9,6 @@ import numpy as np
 
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
 KMER_CODES_REV = {ord('A'): '11', ord('C'): '10', ord('G'): '01', ord('T'): '00'}
-
-def timer(func):
-    def wrapper(*args, **kwargs):
-        t_init = time()
-        res = func(*args, **kwargs)
-        duration = time() - t_init
-
-        print("{}: {} s".format(func.__name__, duration))
-        return res
-
-    return wrapper
-
 
 def run_if_not_exists(keys=('output',)):
     '''
