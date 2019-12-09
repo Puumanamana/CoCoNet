@@ -28,7 +28,8 @@ def test_all():
     runner = CliRunner()
     fasta = '{}/sim_data/assembly.fasta'.format(LOCAL_DIR)
     bam = ['{}/sim_data/sample_{}.bam'.format(LOCAL_DIR, i) for i in range(1, 3)]
-    outdir = Path('out_test')
+    outdir = Path('./out_test')
+
     options = (
         ['--output', outdir]
         + ['--n-train', 32]
@@ -36,12 +37,23 @@ def test_all():
         + ['--batch-size', 2]
         + ['--min-prevalence', 0]
         + ['--test-ratio', 0.2]
+        + ['--threads', 1]
+        + ['--n-frags', 5]
+        + ['--compo-neurons', 8, 4]
+        + ['--cover-neurons', 8, 4]
+        + ['--cover-kernel', 2]
+        + ['--wsize', 2]
+        + ['--wstep', 2]
     )
 
     res = runner.invoke(main, ['run', fasta] + bam + options)
+
+    print(res.output)
+    print(res.exc_info)
 
     for filepath in outdir.glob('./*'):
         filepath.unlink()
     outdir.rmdir()
 
     assert res.exit_code == 0
+
