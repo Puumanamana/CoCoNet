@@ -74,7 +74,7 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
                                ('end', 'uint32')])
 
     pair_idx = np.random.choice(len(n_frags_all),
-                                [10*n_examples, 2])
+                                [5*n_examples, 2])
 
     cond = pair_idx[:, 0] != pair_idx[:, 1]
     pair_idx = pair_idx[cond][:n_examples, :]

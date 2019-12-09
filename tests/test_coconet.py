@@ -25,14 +25,23 @@ def test_all():
     test parser and overall app
     '''
 
-    pass
-    # runner = CliRunner()
-    # fasta = '{}/sim_data/'.format(LOCAL_DIR)
-    # bam = ['{}/sim_data/sample_{}.bam'.format(LOCAL_DIR, i) for i in range(1, 3)]
-    # main_runner = runner.invoke(main, ['run']).runner
+    runner = CliRunner()
+    fasta = '{}/sim_data/assembly.fasta'.format(LOCAL_DIR)
+    bam = ['{}/sim_data/sample_{}.bam'.format(LOCAL_DIR, i) for i in range(1, 3)]
+    outdir = Path('out_test')
+    options = (
+        ['--output', outdir]
+        + ['--n-train', 32]
+        + ['--n-test', 8]
+        + ['--batch-size', 2]
+        + ['--min-prevalence', 0]
+        + ['--test-ratio', 0.2]
+    )
 
-    # main_runner.invoke('run')
-    # main_runner.env = {'fasta': fasta, 'coverage': bam}
-    
-    # assert result.exit_code == 0
+    res = runner.invoke(main, ['run', fasta] + bam + options)
 
+    for filepath in outdir.glob('./*'):
+        filepath.unlink()
+    outdir.rmdir()
+
+    assert res.exit_code == 0

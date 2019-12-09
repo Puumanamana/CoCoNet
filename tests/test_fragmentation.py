@@ -76,6 +76,6 @@ def test_all_pairs(n_examples=50):
 
     result = make_pairs(contigs, step, frag_len, n_examples=n_examples)
 
-    assert np.mean(result.sp[:, 0] == result.sp[:, 1]) > 0.4
+    assert 0.4 < np.mean(result.sp[:, 0] == result.sp[:, 1]) < 0.6
     assert np.array(result.tolist()).shape[1:] == (2, 3)
     assert len(result) >= n_examples

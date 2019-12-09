@@ -170,15 +170,18 @@ def test_summary(model, progress, data=None, **args):
     get_confusion_table(outputs_test, data["y"], done=progress)
     return {key: val.detach().numpy()[:, 0] for (key, val) in outputs_test.items()}
 
-def get_confusion_table(preds, truth, done=0):
+def get_confusion_table(preds_pth, truth_pth, done=0):
     '''
     Confusion table and other metrics for
     predicted labels [pred] and true labels [true]
     '''
-    for key, pred in preds.items():
+    truth = truth_pth.detach().numpy().astype(int)
+
+    for key, pred_pth in preds_pth.items():
+        pred = (pred_pth.detach().numpy()[:, 0] > 0.5).astype(int)
+
         conf_df = pd.DataFrame(
-            confusion_matrix(truth.detach().numpy().astype(int),
-                             (pred.detach().numpy()[:, 0] > 0.5).astype(int)),
+            confusion_matrix(truth, pred, labels=[0, 1]),
             columns=["0 (Pred)", "1 (Pred)"],
             index=["0 (True)", "1 (True)"]
         )
