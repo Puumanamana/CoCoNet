@@ -56,4 +56,3 @@ def test_all():
     outdir.rmdir()
 
     assert res.exit_code == 0
-
