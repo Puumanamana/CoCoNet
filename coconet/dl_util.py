@@ -194,7 +194,8 @@ def get_confusion_table(preds_pth, truth_pth, done=0):
               .format(done, key, acc, false_pos, false_neg))
 
 @run_if_not_exists()
-def save_repr_all(model, fasta, coverage, n_frags=30, frag_len=1024, output=None, rc=True, kmer=4, wsize=64, wstep=32):
+def save_repr_all(model, fasta, coverage, n_frags=30, frag_len=1024,
+                  output=None, rc=True, kmer=4, wsize=64, wstep=32):
     '''
     - Calculate intermediate representation for all fragments of all contigs
     - Save it in a .h5 file

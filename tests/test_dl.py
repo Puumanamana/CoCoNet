@@ -8,15 +8,18 @@ from pathlib import Path
 import torch
 from Bio import SeqIO
 import numpy as np
+import h5py
 
+from coconet.config import Configuration
 from coconet.fragmentation import make_pairs
-from coconet.dl_util import initialize_model, train
+from coconet.dl_util import initialize_model, load_model, train, save_repr_all
 from coconet.dl_util import get_npy_lines, get_labels, get_confusion_table
 from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.generators import CompositionGenerator, CoverageGenerator
 
 from .data import generate_fasta_file, generate_coverage_file, generate_pair_file
-from .data import FL, STEP, TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
+from .data import FL, STEP, WSIZE, WSTEP
+from .data import TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
 
 LOCAL_DIR = Path(__file__).parent
 
@@ -80,7 +83,7 @@ def test_load_data_compo():
     Test composition generator
     '''
 
-    fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=True)
+    fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS)
     fasta = list(SeqIO.parse(fasta_file, 'fasta'))
     pairs_file = Path('pairs.npy').resolve()
 
@@ -164,7 +167,8 @@ def test_learn_save_load_model():
     make_pairs(fasta, STEP, FL, output=pair_files['train'], n_examples=50)
     make_pairs(fasta, STEP, FL, output=pair_files['test'], n_examples=5)
 
-    train(model, fasta_file, coverage_file, pair_files, results_file, output=model_file, **TEST_LEARN_PRMS)
+    train(model, fasta_file, coverage_file, pair_files, results_file, output=model_file,
+          **TEST_LEARN_PRMS)
 
     tests = model_file.is_file() and results_file.is_file()
 
@@ -173,10 +177,66 @@ def test_learn_save_load_model():
 
     assert tests
 
+def test_load_model():
+    '''
+    Test if model can be loaded
+    '''
+
+    args = {'compo_neurons': TEST_ARCHITECTURE['composition']['neurons'],
+            'cover_neurons': TEST_ARCHITECTURE['coverage']['neurons'],
+            'cover_filters': TEST_ARCHITECTURE['coverage']['n_filters'],
+            'cover_kernel': TEST_ARCHITECTURE['coverage']['kernel_size'],
+            'cover_stride': TEST_ARCHITECTURE['coverage']['conv_stride'],
+            'merge_neurons': TEST_ARCHITECTURE['merge']['neurons'],
+            'kmer': 4, 'no_rc': True,
+            'fragment_length': FL, 'wsize': WSIZE, 'wstep': WSTEP}
+
+    cfg = Configuration()
+    cfg.init_config(output='.', **args)
+    cfg.io['filt_h5'] = generate_coverage_file(FL)
+
+    model = initialize_model('CoCoNet', cfg.get_input_shapes(), cfg.get_architecture())
+    model_path = Path('CoCoNet.pth')
+
+    torch.save({
+        'state': model.state_dict()
+    }, model_path)
+
+    loaded_model = load_model(cfg)
+
+    model_path.unlink()
+    cfg.io['filt_h5'].unlink()
+
+    assert isinstance(loaded_model, CoCoNet)
 
 def test_save_repr():
     '''
     Test save repr
     '''
 
-    assert 1 == 1
+    model = initialize_model('CoCoNet', TEST_SHAPES, TEST_ARCHITECTURE)
+    fasta = generate_fasta_file(*TEST_CTG_LENGTHS)
+    coverage = generate_coverage_file(*TEST_CTG_LENGTHS)
+
+    output = {k: Path('repr_{}.h5'.format(k)) for k in ['composition', 'coverage']}
+
+    save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, output=output,
+                  wsize=WSIZE, wstep=WSTEP)
+
+    assert all(out.is_file() for out in output.values())
+
+    handles = {k: h5py.File(v) for (k, v) in output.items()}
+    firsts = {k: handle.get(list(handle.keys())[0]).shape
+              for k, handle in handles.items()}
+
+    latent_dim = (TEST_ARCHITECTURE['composition']['neurons'][-1]
+                  + TEST_ARCHITECTURE['coverage']['neurons'][-1])
+
+    assert firsts['composition'] == (5, latent_dim)
+    assert firsts['coverage'] == (5, latent_dim)
+
+    fasta.unlink()
+    coverage.unlink()
+    for key, filename in output.items():
+        handles[key].close()
+        filename.unlink()

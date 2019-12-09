@@ -105,7 +105,7 @@ def generate_pair_file(filename='pairs.npy', save=True):
 
     return pairs
 
-def generate_rd_model(fl=100, wsize=5, wstep=2):
+def generate_rd_model():
 
     model = initialize_model('CoCoNet', TEST_SHAPES, TEST_ARCHITECTURE)
 
