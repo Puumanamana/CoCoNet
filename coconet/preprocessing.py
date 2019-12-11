@@ -56,9 +56,9 @@ def filter_bam_aln(bam, threads, min_qual, flag, fl_range, outdir=None):
         return sorted_output
 
     cmds = [
-        ['samtools', 'view', '-h', bam, '-@', str(threads)],
+        ['samtools', 'view', '-h', bam.resolve(), '-@', str(threads)],
         ['awk', '($9>{} && $9<{}) || ($9<-{} && $9>-{}) || ($9=="")'.format(*(2*fl_range))],
-        ['samtools', 'view', '-bh', bam, '-@', str(threads), '-q', str(min_qual), '-F', str(flag)],
+        ['samtools', 'view', '-bh', '-@', str(threads), '-q', str(min_qual), '-F', str(flag)],
         ['samtools', 'sort', '-@', str(threads), '-o', sorted_output],
         ['samtools', 'index', '-@', str(threads), sorted_output]
     ]
@@ -91,7 +91,7 @@ def bam_to_h5(bam, tmp_dir, ctg_info):
                for fmt in ['txt', 'h5']}
 
     with open(outputs['txt'], "w") as outfile:
-        subprocess.call(["samtools", "depth", "-d", "20000", bam],
+        subprocess.call(["samtools", "depth", "-d", "20000", bam.resolve()],
                         stdout=outfile)
 
     h5_handle = h5py.File(outputs['h5'], 'w')
