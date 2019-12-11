@@ -9,6 +9,7 @@ Clustering utils:
 import numpy as np
 import pandas as pd
 import h5py
+from tqdm import tqdm
 
 import torch
 from sklearn.metrics.pairwise import euclidean_distances
@@ -69,7 +70,11 @@ def compute_pairwise_comparisons(model, contigs, handles,
         adjacency_matrix = np.identity(len(contigs))*(n_frags**2+1) \
             - np.ones((len(contigs), len(contigs)))
 
-    for k, ctg in enumerate(contigs):
+    contig_iter = enumerate(contigs)
+    if len(contigs) >= 10:
+        contig_iter = tqdm(contig_iter)
+
+    for k, ctg in contig_iter:
 
         x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                  for key, handle in handles.items()}

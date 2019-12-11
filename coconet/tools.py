@@ -98,7 +98,7 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
     return occurrences
 
-def get_coverage(pairs, coverage_h5, window_size, window_step):
+def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
     '''
     - Extracting coverage from h5 for all pairs of contigs in pairs
     - Smooth coverage with a sliding window of [window_size, window_step]
@@ -144,6 +144,9 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
             seen[(species, start)] = cov_sp
 
         coverage_feature[sorted_idx[i]] = cov_sp
+
+        if pbar is not None:
+            pbar.update(0.5)
 
     return (coverage_feature[:n_pairs, :, :],
             coverage_feature[n_pairs:, :, :])

@@ -1,6 +1,8 @@
 from collections import deque
+from itertools import chain
 import re
 
+from tqdm import tqdm
 import h5py
 import pandas as pd
 import numpy as np
@@ -100,8 +102,8 @@ def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=No
         generators.append(CoverageGenerator(pairs, h5,
                                             batch_size=batch_size,
                                             load_batch=args['load_batch'],
-                                            window_size=args['wsize'],
-                                            window_step=args['wstep']))
+                                            wsize=args['wsize'],
+                                            wstep=args['wstep']))
 
     if model_type not in ['composition', 'coverage']:
         generators = zip(*generators)
@@ -124,11 +126,16 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
 
     (x_test, x_train_gen) = (load_data(fasta, coverage, pairs[mode], mode=mode, batch_size=batch_size, **args)
                              for mode in ['test', 'train'])
-    (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']))
+    (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']).detach().numpy().astype(int)[:, 0])
 
     optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'])
-    n_batches = get_npy_lines(pairs['train']) // batch_size
+    n_examples = get_npy_lines(pairs['train'])
+    n_batches = n_examples // batch_size
     losses_buffer = deque(maxlen=500)
+
+    pbar_scores = tqdm(total=n_examples, position=1,
+                       bar_format="{percentage:3.0f}%|{bar} {postfix:<150}")
+    test_msg = ''
 
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
@@ -139,59 +146,66 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
         losses_buffer.append(loss.item())
 
         # Get test results
-        if (i % (1 + n_batches//5) == 0) or (i == n_batches):
-            scores = test_summary(model, i/n_batches, data={'x': x_test, 'y': y_test})
-            print("\nRunning Loss: {}".format(np.mean(losses_buffer)))
+        if (i % (n_batches//10) == 0) or (i == n_batches):
+            predictions = run_test(model, x_test=x_test)
+            scores = get_test_scores(predictions, y_test)
+
+            test_msg = "- test accuracy: {}<{:.1%}> {}<{:.1%}> {}<{:.1%}>".format(
+                *chain(*[[k, v['acc']] for k, v in scores.items()])
+            )
+
+        pbar_scores.set_postfix_str(
+            "learning - training loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
+        )
+        pbar_scores.update(batch_size)
 
     torch.save({
         'state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'loss': loss,
     }, output)
 
     # Save last test performance to file
-    scores.update({'truth': y_test.long().numpy()[:, 0]})
-    pd.DataFrame(scores).to_csv(nn_test_path, index=False)
+    predictions.update({'truth': y_test})
+    pd.DataFrame(predictions).to_csv(nn_test_path, index=False)
 
     print('Finished Training')
 
-def test_summary(model, progress, data=None, **args):
+def run_test(model, x_test=None, **args):
     '''
     Run model on test data and outputs confusion table
     '''
-    if data is None:
+    if x_test is None:
         pos_args = [args.pop(k) for k in ['filt_fasta', 'filt_coverage', 'pairs']]
-        data = {
-            'x': load_data(*pos_args, mode='test', **args),
-            'y': get_labels(pos_args[-1])
-        }
-    model.eval()
+        x_test = load_data(*pos_args, mode='test', **args)
 
-    outputs_test = model(*data['x'])
+    model.eval()
+    outputs_test = model(*x_test)
     model.train()
-    get_confusion_table(outputs_test, data["y"], done=progress)
+
     return {key: val.detach().numpy()[:, 0] for (key, val) in outputs_test.items()}
 
-def get_confusion_table(preds_pth, truth_pth, done=0):
+def get_test_scores(preds, truth):
     '''
     Confusion table and other metrics for
     predicted labels [pred] and true labels [true]
     '''
-    truth = truth_pth.detach().numpy().astype(int)
+    scores = {}
 
-    for key, pred_pth in preds_pth.items():
-        pred = (pred_pth.detach().numpy()[:, 0] > 0.5).astype(int)
+    for key, pred in preds.items():
+        pred_bin = (np.array(pred) > 0.5).astype(int)
 
         conf_df = pd.DataFrame(
-            confusion_matrix(truth, pred, labels=[0, 1]),
+            confusion_matrix(truth, pred_bin, labels=[0, 1]),
             columns=["0 (Pred)", "1 (Pred)"],
             index=["0 (True)", "1 (True)"]
         )
 
-        acc = np.trace(conf_df.values)/np.sum(conf_df.values)
-        false_pos = conf_df.iloc[0, 1]
-        false_neg = conf_df.iloc[1, 0]
+        scores[key] = {
+            'acc': np.trace(conf_df.values)/np.sum(conf_df.values),
+            'fp': conf_df.iloc[0, 1],
+            'fn': conf_df.iloc[1, 0]
+        }
 
-        print("\033[1m {:.1%} done -- {}: Accuracy={:.2%} ({} FP, {} FN) - \033[0m"
-              .format(done, key, acc, false_pos, false_neg))
+    return scores
 
 @run_if_not_exists()
 def save_repr_all(model, fasta, coverage, n_frags=30, frag_len=1024,

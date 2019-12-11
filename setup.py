@@ -23,5 +23,6 @@ setup(name='coconet-binning',
           'Biopython',
           'click',
           'python-igraph>=0.7.1.post6',
-          'leidenalg>=0.7.0'
+          'leidenalg>=0.7.0',
+          'tqdm>=4.40.0'
       ])

@@ -1,6 +1,7 @@
 from multiprocessing.pool import Pool
 from functools import partial
 
+from tqdm import tqdm
 import numpy as np
 from Bio import SeqIO
 import torch
@@ -60,15 +61,21 @@ class CoverageGenerator:
     It loads the coverage every [load_batch] batches.
     """
     def __init__(self, pairs_file, coverage_h5=None,
-                 batch_size=64, load_batch=1000, window_size=16, window_step=8):
+                 batch_size=64, load_batch=1000, wsize=16, wstep=8):
         self.i = 0
         self.pairs = np.load(pairs_file)
         self.coverage_h5 = coverage_h5
         self.batch_size = batch_size
-        self.n_batches = max(1, int(len(self.pairs) / self.batch_size))
+        self.n_batches = max(1, len(self.pairs) // self.batch_size)
         self.load_batch = load_batch
-        self.window_size = window_size
-        self.window_step = window_step
+        self.wsize = wsize
+        self.wstep = wstep
+
+        self.pbar = None
+        if self.n_batches > 1:
+            self.pbar = tqdm(total=len(self.pairs), position=0,
+                             bar_format="{percentage:3.0f}%|{bar} {postfix:<150}")
+            self.pbar.set_postfix_str('data loader')
 
     def __iter__(self):
         return self
@@ -80,10 +87,9 @@ class CoverageGenerator:
         '''
         Extract coverage for next pair batch
         '''
-        print("Loading next batch")
 
         pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
-        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.window_size, self.window_step)
+        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.wsize, self.wstep, pbar=self.pbar)
 
     def __next__(self):
         if self.i < self.n_batches:

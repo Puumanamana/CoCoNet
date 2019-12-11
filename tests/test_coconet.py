@@ -32,7 +32,7 @@ def test_all():
 
     options = (
         ['--output', outdir]
-        + ['--n-train', 32]
+        + ['--n-train', 64]
         + ['--n-test', 8]
         + ['--batch-size', 2]
         + ['--min-prevalence', 0]
@@ -56,3 +56,6 @@ def test_all():
     outdir.rmdir()
 
     assert res.exit_code == 0
+
+if __name__ == '__main__':
+    test_all()

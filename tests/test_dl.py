@@ -13,7 +13,7 @@ import h5py
 from coconet.config import Configuration
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import initialize_model, load_model, train, save_repr_all
-from coconet.dl_util import get_npy_lines, get_labels, get_confusion_table
+from coconet.dl_util import get_npy_lines, get_labels, get_test_scores
 from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.generators import CompositionGenerator, CoverageGenerator
 
@@ -117,8 +117,8 @@ def test_load_data_cover():
     gen = CoverageGenerator(pairs_file, coverage_file,
                             batch_size=TEST_LEARN_PRMS['batch_size'],
                             load_batch=TEST_LEARN_PRMS['load_batch'],
-                            window_size=TEST_LEARN_PRMS['wsize'],
-                            window_step=TEST_LEARN_PRMS['wstep'])
+                            wsize=TEST_LEARN_PRMS['wsize'],
+                            wstep=TEST_LEARN_PRMS['wstep'])
 
     X1, X2 = next(gen)
 
@@ -128,22 +128,23 @@ def test_load_data_cover():
     assert X1.shape == X2.shape
     assert X1.shape == (TEST_LEARN_PRMS['batch_size'], 2, 9)
 
-def test_nn_summary():
+def test_run_test():
     '''
-    Check if summary runs
+    Check if run_test works
     '''
 
-    assert 1 == 1
+    # TO IMPLEMENT
 
 def test_confusion_table():
     '''
     Check if confusion table works
     '''
 
-    pred = {'fake': torch.from_numpy(np.array([0.5, 0.6, 0.7, 0.3]).reshape(-1, 1))}
-    truth = torch.from_numpy(np.array([0, 0, 1, 0]))
+    pred = {'fake': np.array([0.5, 0.6, 0.7, 0.3]),
+            'other': [1, 0.3, 0.2, 0.1]}
+    truth = np.array([0, 0, 1, 0])
 
-    get_confusion_table(pred, truth)
+    get_test_scores(pred, truth)
 
 def test_learn_save_load_model():
     '''

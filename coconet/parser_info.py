@@ -92,7 +92,7 @@ _OPTIONS = {
                      help='Batch size for training'),
         click.option('--learning-rate', type=float, required=False, default=1e-4,
                      help='Learning rate for gradient descent'),
-        click.option('--load-batch', type=int, required=False, default=500,
+        click.option('--load-batch', type=int, required=False, default=200,
                      help='Number of coverage batch to load in memory. Consider lowering this value if your RAM is limited.'),
         click.option('--compo-neurons', type=int, required=False, default=(64, 32), nargs=2,
                      help='Number of neurons for the composition network (2 layers)'),
