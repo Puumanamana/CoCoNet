@@ -29,8 +29,11 @@ def to_path(_ctx, _param, value):
     return value
 
 _HELP_INPUTS = '''
-[FASTA] Path to your assembly file (fasta formatted)\n
-[COVERAGE] List of paths to your coverage files (bam formatted)
+Positional arguments:
+
+<fasta>      Path to your assembly file (fasta formatted)
+
+<coverage>   List of paths to your coverage files (bam formatted)
 '''
 
 _HELP_MSG = {
@@ -117,12 +120,10 @@ _OPTIONS = {
         click.option('--wstep', type=int, required=False, default=32,
                      help='Subsampling step for coverage vector'),
         click.option('--n-frags', type=int, required=False, default=30,
-                     help='Number of fragments to split a contigs')
+                     help='Number of fragments to split the contigs for the clustering phase')
     ],
 
     'cluster': [
-        click.option('--n-frags', type=int, required=False, default=30,
-                     help='Number of fragments to split a contigs'),
         click.option('--max-neighbors', type=int, required=False, default=100,
                      help='Maximum number of neighbors to consider to compute the adjacency matrix.'),
         click.option('--hits-threshold', type=click.FloatRange(0, 1), required=False, default=0.8,

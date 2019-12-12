@@ -168,10 +168,11 @@ def cluster(cfg, **kwargs):
 
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg)
+    n_frags = full_cfg.n_frags
 
     print('Computing adjacency matrix')
     fill_adjacency_matrix(model, cfg.io['repr'], output=cfg.io['adjacency_matrix'],
-                          n_frags=cfg.n_frags, max_neighbors=cfg.max_neighbors)
+                          n_frags=n_frags, max_neighbors=cfg.max_neighbors)
 
     print('Clustering contigs')
     iterate_clustering(
@@ -180,7 +181,7 @@ def cluster(cfg, **kwargs):
         refined_adj_mat_file=cfg.io['refined_adjacency_matrix'],
         assignments_file=cfg.io['assignments'],
         refined_assignments_file=cfg.io['refined_assignments'],
-        n_frags=cfg.n_frags,
+        n_frags=n_frags,
         hits_threshold=cfg.hits_threshold,
         gamma1=cfg.gamma1,
         gamma2=cfg.gamma2,
