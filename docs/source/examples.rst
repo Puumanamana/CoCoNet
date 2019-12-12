@@ -1,7 +1,7 @@
 Workflow example
 ----------------
 
-Here is an example of how to analyze paired-end reads.
+The following workflow is a typical example for the analysis of metagenomics paired-end reads. We omitted some steps such as the gene prediction or taxonomic assignment since they are out of the scope of this project. Although this workflow should work on your personal data, each step's parameters should be tuned to your data. See each method documentation for how to optimize those parameters.
 
 Quality filtering and trimming
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -30,11 +30,15 @@ You are now ready to assembly your reads. For instance, using `metaspades <https
 
 .. code-block:: bash
 
+   # Resources (nb of cores, memory in GB)
+   export THREADS=20 MAX_MEM=300
+	
    # concatenate the paired samples
    zcat filtered/*_P_R1.fastq.gz > filtered/all_paired_R1.fastq
    zcat filtered/*_P_R2.fastq.gz > filtered/all_paired_R2.fastq
-   
-   metaspades.py --threads 20 --memory 400 -k 21,33,55,77 \
+
+   # Run metaspades with multiple kmer lengths
+   metaspades.py --threads $THREADS --memory $MAX_MEM -k 21,33,55,77 \
        -1 filtered/all_paired_R1.fastq -2 filt_paired/all_paired_R2.fastq \
        -s filt_unpaired/all_unpaired.fastq \
        -o metaspades_output 
