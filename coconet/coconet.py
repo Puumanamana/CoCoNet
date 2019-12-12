@@ -91,7 +91,9 @@ def make_train_test(cfg, **kwargs):
     print("Making train/test examples")
     assembly = [contig for contig in SeqIO.parse(cfg.io['filt_fasta'], 'fasta')]
 
-    assembly_idx = {'test': np.random.choice(len(assembly), int(cfg.test_ratio*len(assembly)))}
+    n_ctg_for_test = max(2, int(cfg.test_ratio*len(assembly)))
+
+    assembly_idx = {'test': np.random.choice(len(assembly), n_ctg_for_test)}
     assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'])
 
     n_examples = {'train': cfg.n_train, 'test': cfg.n_test}

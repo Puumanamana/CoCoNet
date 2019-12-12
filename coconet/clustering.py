@@ -73,7 +73,7 @@ def compute_pairwise_comparisons(model, contigs, handles,
     contig_iter = tqdm(enumerate(contigs), ncols=100, total=len(contigs))
 
     if neighbors is None:
-        contig_iter.bar_format = "{desc:<30}::{percentage:3.0f}%|{bar}"
+        contig_iter.bar_format = "{desc:<40}::{percentage:3.0f}%|{bar}"
         contig_iter.set_description(
             "Refining bin #{} ({} contigs)"
             .format(bin_id, len(contigs))

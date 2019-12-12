@@ -114,7 +114,7 @@ class Configuration:
             'filt_fasta': 'assembly_filtered.fasta',
             'filt_h5': 'coverage_filtered.h5',
             'singletons': 'singletons.txt',
-            'pairs': {'train': 'pairs_train.npy', 'test': 'pairs_test.npy'},
+            'pairs': {'test': 'pairs_test.npy', 'train': 'pairs_train.npy'},
             'model': 'CoCoNet.pth',
             'nn_test': 'CoCoNet_test.csv',
             'repr': {'composition': 'representation_compo.h5',

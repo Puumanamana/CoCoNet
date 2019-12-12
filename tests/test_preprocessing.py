@@ -117,3 +117,6 @@ def test_filter_h5():
     assert singletons.shape == (1, 2+3)
     assert n_filt == 1
     assert len(h5_data_filt) == 2
+
+if __name__ == '__main__':
+    test_bamlist_to_h5()

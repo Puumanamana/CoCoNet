@@ -105,6 +105,7 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
 
     contig_frags = np.array([(1+len(ctg.seq)-frag_len)//step
                              for ctg in contigs])
+
     max_encoding = np.max([len(ctg.id) for ctg in contigs])
 
     pairs_per_ctg = ceil(n_examples / 2 / len(contig_frags))
@@ -114,6 +115,7 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
         make_positive_pairs(idx, frag_steps, genome_frags, pairs_per_ctg, encoding_len=max_encoding)
         for idx, genome_frags in enumerate(contig_frags)
     ])
+
     negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs), frag_steps,
                                          encoding_len=max_encoding)
 
