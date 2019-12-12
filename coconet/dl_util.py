@@ -147,7 +147,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
 
         # Get test results
         if (i % (n_batches//10) == 0) or (i == n_batches):
-            predictions = run_test(model, x_test=x_test)
+            predictions = run_test(model, x_test)
             scores = get_test_scores(predictions, y_test)
 
             test_msg = "- test accuracy: {}<{:.1%}> {}<{:.1%}> {}<{:.1%}>".format(
@@ -169,13 +169,10 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
 
     print('Finished Training')
 
-def run_test(model, x_test=None, **args):
+def run_test(model, x_test):
     '''
-    Run model on test data and outputs confusion table
+    Run model on test data
     '''
-    if x_test is None:
-        pos_args = [args.pop(k) for k in ['filt_fasta', 'filt_coverage', 'pairs']]
-        x_test = load_data(*pos_args, mode='test', **args)
 
     model.eval()
     outputs_test = model(*x_test)
