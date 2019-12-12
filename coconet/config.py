@@ -125,8 +125,8 @@ class Configuration:
             output_files.update({
                 'adjacency_matrix': 'adjacency_matrix.npy',
                 'refined_adjacency_matrix': 'adjacency_matrix_refined.npy',
-                'assignments': 'leiden_{}-{}.csv'.format(self.hits_threshold, self.gamma1),
-                'refined_assignments': 'leiden_{}-{}-{}.csv'.format(self.hits_threshold, self.gamma1, self.gamma2)
+                'assignments': 'intermediate_bins_{}-{}.csv'.format(self.hits_threshold, self.gamma1),
+                'refined_assignments': 'final_bins_{}-{}-{}.csv'.format(self.hits_threshold, self.gamma1, self.gamma2)
             })
 
         for name, filename in output_files.items():

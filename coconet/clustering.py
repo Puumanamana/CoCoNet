@@ -50,10 +50,10 @@ def get_neighbors(file_h5):
 
     return neighbors_ordered
 
-
 def compute_pairwise_comparisons(model, contigs, handles,
                                  init_matrix=None, neighbors=None,
-                                 n_frags=30, max_neighbors=100):
+                                 n_frags=30, max_neighbors=100,
+                                 bin_id=0):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
@@ -70,12 +70,18 @@ def compute_pairwise_comparisons(model, contigs, handles,
         adjacency_matrix = np.identity(len(contigs))*(n_frags**2+1) \
             - np.ones((len(contigs), len(contigs)))
 
-    contig_iter = enumerate(contigs)
-    if len(contigs) >= 10:
-        contig_iter = tqdm(contig_iter)
+    contig_iter = tqdm(enumerate(contigs), ncols=100, total=len(contigs))
+
+    if neighbors is None:
+        contig_iter.bar_format = "{desc:<30}::{percentage:3.0f}%|{bar}"
+        contig_iter.set_description(
+            "Refining bin #{} ({} contigs)"
+            .format(bin_id, len(contigs))
+        )
+    else:
+        contig_iter.bar_format = "{desc:<70}::{percentage:3.0f}%|{bar}"
 
     for k, ctg in contig_iter:
-
         x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                  for key, handle in handles.items()}
 
@@ -87,12 +93,18 @@ def compute_pairwise_comparisons(model, contigs, handles,
             scores = adjacency_matrix[k, neighbors[k]]
             new_neighbors_k = neighbors[k][scores < 0][:max_neighbors]
 
+            contig_iter.set_description(
+                "Contig #{} - Computing comparison with neighbors ({} contigs)"
+                .format(k, len(new_neighbors_k))
+            )
+
         for n_i in new_neighbors_k:
-            x_other = {key: torch.from_numpy(
-                np.array(
+            x_other = {
+                key: torch.from_numpy(np.array(
                     handle.get(contigs[n_i])[:]
                 )[other_idx])
-                       for key, handle in handles.items()}
+                for key, handle in handles.items()
+            }
             probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()
             # Get number of expected matches
             adjacency_matrix[k, n_i] = sum(probs)
@@ -127,7 +139,7 @@ def fill_adjacency_matrix(model, latent_repr, output, **kw):
 
     np.save(output, adjacency_matrix)
 
-def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|'):
+def get_communities(adjacency_matrix, contigs, gamma=0.5):
     '''
     Cluster using with either Louvain or Leiden algorithm defined in config
     Use the adjacency matrix previously filled
@@ -144,14 +156,8 @@ def get_communities(adjacency_matrix, contigs, gamma=0.5, truth_sep='|'):
                    .sort_values()
                    .index)
 
-    assignments = pd.DataFrame({
-        'clusters': communities,
-        'truth': [x.split(truth_sep)[0] for x in contigs],
-        'contigs': contigs
-    }).set_index('contigs')
-
+    assignments = pd.DataFrame({'contigs': contigs, 'clusters': communities}).set_index('contigs')
     assignments.clusters = pd.factorize(assignments.clusters)[0]
-    assignments.truth = pd.factorize(assignments.truth)[0]
 
     return assignments
 
@@ -187,11 +193,8 @@ def iterate_clustering(model, repr_file, adj_mat_file,
 
     ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
     ignored['clusters'] = np.arange(len(ignored)) + communities.clusters.max() + 1
-    ignored['truth'] = -1
 
     communities = pd.concat([communities, ignored])
-    communities.truth = pd.factorize(communities.index.str.split('|').str[0])[0]
-
     communities.to_csv(assignments_file)
 
     # Refining the clusters
@@ -199,7 +202,7 @@ def iterate_clustering(model, repr_file, adj_mat_file,
     # Get the contigs indices from each cluster
     clusters = communities.groupby('clusters')['ctg_index'].agg(list)
 
-    for ctg_indices in clusters.values:
+    for bin_id, ctg_indices in enumerate(clusters.values, 1):
         if len(ctg_indices) < 3:
             continue
 
@@ -207,7 +210,7 @@ def iterate_clustering(model, repr_file, adj_mat_file,
         adjacency_submatrix = compute_pairwise_comparisons(
             model, contigs[ctg_indices], handles,
             init_matrix=adjacency_matrix[ctg_indices, :][:, ctg_indices],
-            n_frags=n_frags, max_neighbors=max_neighbors
+            n_frags=n_frags, max_neighbors=max_neighbors, bin_id=bin_id
         )
         mask = np.isin(np.arange(adjacency_matrix.shape[0]), ctg_indices)
         mask = mask.reshape(-1, 1).dot(mask.reshape(1, -1))
