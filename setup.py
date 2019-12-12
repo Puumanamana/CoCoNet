@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(name='coconet-binning',
-      version='0.0.2.2',
+      version='0.1',
       description='A contig binning tool from viral metagenomes',
+      long_description=open('README.rst').read(),
       url='https://github.com/Puumanamana/CoCoNet',
       author='Arisdakessian Cedric',
       author_email='carisdak@hawaii.edu',
