@@ -1,3 +1,11 @@
+'''
+Helpful routines for coconet
+- Decorator to prevent re-executing finished steps (for resuming)
+- kmer calculation
+- coverage extraction from a hdf5 and npy file
+- smoothing window
+'''
+
 import sys
 from pathlib import Path
 from math import ceil

@@ -77,13 +77,12 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
                                 [5*n_examples, 2])
 
     cond = pair_idx[:, 0] != pair_idx[:, 1]
-    pair_idx = pair_idx[cond][:n_examples, :]
+    pair_idx = np.unique(pair_idx[cond], axis=0)[:n_examples, :]
 
     if pair_idx.size == 0:
         sys.exit("No contigs found in data. Aborting")
 
     if len(pair_idx) < n_examples:
-        print("Low contigs in data. Consider increasing the test_ratio parameter.")
         pair_idx = np.vstack(np.triu_indices(len(n_frags_all), k=1)).T
         subset = np.random.choice(len(pair_idx), n_examples)
         pair_idx = pair_idx[subset]

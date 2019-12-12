@@ -146,6 +146,37 @@ def test_confusion_table():
 
     get_test_scores(pred, truth)
 
+def test_composition_model():
+    '''
+    Test if composition model can compute an output
+    '''
+
+    model = initialize_model('composition', TEST_SHAPES['composition'], TEST_ARCHITECTURE['composition'])
+    x_rd = [torch.FloatTensor(4, TEST_SHAPES['composition']).random_(0, 10) for _ in range(2)]
+    y_rd = torch.FloatTensor(4, 1).random_(0, 1)
+
+    pred = model(*x_rd)
+    loss = model.compute_loss(pred, y_rd)
+
+    assert 'composition' in pred
+    assert y_rd.shape == pred['composition'].shape
+    assert isinstance(loss, torch.FloatTensor)
+
+def test_coverage_model():
+    '''
+    Test if coverage model can compute an output
+    '''
+    model = initialize_model('coverage', TEST_SHAPES['coverage'], TEST_ARCHITECTURE['coverage'])
+    x_rd = [torch.FloatTensor(4, *TEST_SHAPES['coverage'][::-1]).random_(0, 10) for _ in range(2)]
+    y_rd = torch.FloatTensor(4, 1).random_(0, 1)
+
+    pred = model(*x_rd)
+    loss = model.compute_loss(pred, y_rd)
+
+    assert 'coverage' in pred
+    assert y_rd.shape == pred['coverage'].shape
+    assert isinstance(loss, torch.FloatTensor)
+
 def test_learn_save_load_model():
     '''
     Check:
@@ -241,3 +272,6 @@ def test_save_repr():
     for key, filename in output.items():
         handles[key].close()
         filename.unlink()
+
+if __name__ == '__main__':
+    test_coverage_model()

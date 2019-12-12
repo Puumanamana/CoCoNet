@@ -51,6 +51,17 @@ def test_negative_pairs(n_examples=10):
     assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
     assert np.array(result.tolist()).shape == (n_examples, 2, 3)
 
+def test_negative_pairs_with_few_ctg(n_examples=100):
+    '''
+    Test negative examples with too many examples
+    '''
+
+    fragments = np.array([200, 100, 100, 90])
+    result = make_negative_pairs(fragments, n_examples, 3)
+
+    assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
+    assert np.array(result.tolist()).shape == (n_examples, 2, 3)
+
 def test_positive_pairs(fppc=30, contig_frags=100):
     '''
     Test positive examples (pairs from the same genome)
@@ -79,3 +90,7 @@ def test_all_pairs(n_examples=50):
     assert 0.4 < np.mean(result.sp[:, 0] == result.sp[:, 1]) < 0.6
     assert np.array(result.tolist()).shape[1:] == (2, 3)
     assert len(result) >= n_examples
+
+if __name__ == '__main__':
+    test_negative_pairs()
+    test_negative_pairs_with_few_ctg()

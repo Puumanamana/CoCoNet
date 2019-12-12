@@ -30,6 +30,23 @@ def test_format_assembly():
 
     assert filtered_lengths == [20, 15]
 
+def test_format_assembly_when_exists():
+    '''
+    Test fasta filtering is not performed if already exists
+    '''
+
+    fasta_raw = generate_fasta_file(20, 10, 15)
+    fasta_filt = format_assembly(fasta_raw, min_length=12)
+    fasta_filt_twice = format_assembly(fasta_raw, output=fasta_filt, min_length=12)
+
+    filtered_lengths = [len(seq.seq) for seq in SeqIO.parse(fasta_filt, 'fasta')]
+
+    fasta_raw.unlink()
+    fasta_filt.unlink()
+
+    assert filtered_lengths == [20, 15]
+    assert fasta_filt_twice is None
+
 def test_filter_bam():
     '''
     Test if bam are filtered correctly
@@ -37,7 +54,7 @@ def test_filter_bam():
 
     bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))
     output = filter_bam_aln(bam_file, 5, 50, 3596, [0, 1000], outdir=LOCAL_DIR)
-    
+
     assert output.is_file()
 
     output.unlink()

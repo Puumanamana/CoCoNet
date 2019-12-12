@@ -4,6 +4,7 @@ Tests for data generators
 
 from itertools import product
 from textwrap import wrap
+import pytest
 
 import numpy as np
 import h5py
@@ -96,3 +97,13 @@ def test_get_coverage(window_size=4):
     data_h5.unlink()
 
     assert np.sum(X1 != T1) + np.sum(X2 != T2) == 0
+
+def test_get_coverage_with_unmatched_ctg(window_size=4):
+
+    pairs = generate_pair_file(save=False)
+    data_h5 = generate_coverage_file(30)
+
+    with pytest.raises(TypeError):
+        assert get_coverage(pairs, data_h5, window_size, window_size // 2)
+
+    data_h5.unlink()
