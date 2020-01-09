@@ -50,10 +50,9 @@ def get_neighbors(file_h5):
 
     return neighbors_ordered
 
-def compute_pairwise_comparisons(model, contigs, handles,
-                                 init_matrix=None, neighbors=None,
-                                 n_frags=30, max_neighbors=100,
-                                 bin_id=0):
+def compute_pairwise_comparisons(model, graph, handles, contigs=None,
+                                 neighbors=None, max_neighbors=100,
+                                 n_frags=30, bin_id=-1):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
@@ -63,36 +62,35 @@ def compute_pairwise_comparisons(model, contigs, handles,
     ref_idx, other_idx = (np.repeat(np.arange(n_frags), n_frags),
                           np.tile(np.arange(n_frags), n_frags))
 
-    adjacency_matrix = init_matrix
-
-    # Start from scratch or from a provided expected hits matrix
-    if init_matrix is None:
-        adjacency_matrix = np.identity(len(contigs))*(n_frags**2+1) \
-            - np.ones((len(contigs), len(contigs)))
+    if contigs is None:
+        contigs = [v['name'] for v in graph.vs]
 
     contig_iter = tqdm(enumerate(contigs), ncols=100, total=len(contigs))
 
-    if neighbors is None:
-        contig_iter.bar_format = "{desc:<40}::{percentage:3.0f}%|{bar}"
-        contig_iter.set_description(
-            "Refining bin #{} ({} contigs)"
-            .format(bin_id, len(contigs))
-        )
+    if bin_id < 0:
+        contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar}"
     else:
-        contig_iter.bar_format = "{desc:<70}::{percentage:3.0f}%|{bar}"
+        contig_iter.bar_format = "{desc:<40} {percentage:3.0f}%|{bar}"
+        contig_iter.set_description(
+            "Refining bin #{} ({} contigs)".format(bin_id, len(contigs))
+        )
+
+    edges = []
+    weights = []
 
     for k, ctg in contig_iter:
         x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
                  for key, handle in handles.items()}
 
-        if neighbors is None:
-            # We use all contigs that where not already processed
-            scores = adjacency_matrix[k, :]
-            new_neighbors_k = np.arange(len(contigs))[scores < 0]
+        # graph.neighbors() returns the index of the contigs that are connected to ctg
+        if bin_id == -1:
+            processed = np.isin(neighbors[k], graph.neighbors(ctg))
+            new_neighbors_k = neighbors[k][~processed][:max_neighbors]
         else:
-            scores = adjacency_matrix[k, neighbors[k]]
-            new_neighbors_k = neighbors[k][scores < 0][:max_neighbors]
+            processed = np.isin(neighbors, graph.neighbors(ctg))
+            new_neighbors_k = np.arange(len(neighbors))[~processed][:max_neighbors]
 
+        if bin_id < 0:
             contig_iter.set_description(
                 "Contig #{} - Computing comparison with neighbors ({} contigs)"
                 .format(k, len(new_neighbors_k))
@@ -105,15 +103,19 @@ def compute_pairwise_comparisons(model, contigs, handles,
                 )[other_idx])
                 for key, handle in handles.items()
             }
-            probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()
-            # Get number of expected matches
-            adjacency_matrix[k, n_i] = sum(probs)
-            adjacency_matrix[n_i, k] = adjacency_matrix[k, n_i]
 
-    return adjacency_matrix
+            probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()
+
+            edges.append((ctg, contigs[n_i]))
+            weights.append(sum(probs))
+
+    if edges:
+        prev_weights = graph.es['weight']
+        graph.add_edges(edges)
+        graph.es['weight'] = prev_weights + weights
 
 @run_if_not_exists()
-def fill_adjacency_matrix(model, latent_repr, output, **kw):
+def make_pregraph(model, latent_repr, output, **kw):
     '''
     Fill contig-contig adjacency matrix. For a given contig:
     - Extract neighbors
@@ -134,44 +136,41 @@ def fill_adjacency_matrix(model, latent_repr, output, **kw):
     for i, n_i in enumerate(get_neighbors(latent_repr['composition'])):
         neighbors[i] = np.intersect1d(neighbors[i], n_i)
 
-    adjacency_matrix = compute_pairwise_comparisons(
-        model, contigs, handles, neighbors=neighbors, **kw)
+    # Initialize graph
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
+    graph.es['weight'] = []
+    # Compute edges
+    compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, **kw)
+    # Save pre-graph
+    graph.write_pickle(output)
 
-    np.save(output, adjacency_matrix)
-
-def get_communities(adjacency_matrix, contigs, gamma=0.5):
+def get_communities(graph, threshold, gamma=0.5):
     '''
     Cluster using with either Louvain or Leiden algorithm defined in config
     Use the adjacency matrix previously filled
     '''
 
-    graph = igraph.Graph.Adjacency(adjacency_matrix.tolist())
+    cluster_graph = graph.copy()
+    cluster_graph.es.select(weight_lt=threshold).delete()
+
     optimiser = leidenalg.Optimiser()
 
-    partition = leidenalg.CPMVertexPartition(graph, resolution_parameter=gamma)
+    partition = leidenalg.CPMVertexPartition(cluster_graph, resolution_parameter=gamma)
     optimiser.optimise_partition(partition)
 
-    communities = (pd.Series(dict(enumerate(partition)))
-                   .explode()
-                   .sort_values()
-                   .index)
+    communities = pd.Series(dict(enumerate(partition))).explode().sort_values()
 
-    assignments = pd.DataFrame({'contigs': contigs, 'clusters': communities}).set_index('contigs')
-    assignments.clusters = pd.factorize(assignments.clusters)[0]
+    graph.vs['cluster'] = communities.index
 
-    return assignments
-
-@run_if_not_exists(keys=('refined_assignments', 'refined_adj_mat'))
-def iterate_clustering(model, repr_file, adj_mat_file,
+@run_if_not_exists(keys=('assignments_file', 'graph_file'))
+def iterate_clustering(model, repr_file, pre_graph_file,
                        singletons_file=None,
-                       assignments_file='assignments.csv',
-                       refined_adj_mat_file='refined_adjacency_matrix.npy',
-                       refined_assignments_file='refined_assignments.csv',
+                       graph_file=None,
+                       assignments_file=None,
                        n_frags=30,
                        hits_threshold=0.9,
-                       gamma1=0.1,
-                       gamma2=0.75,
-                       max_neighbors=100):
+                       gamma1=0.1, gamma2=0.75):
     '''
     - Go through all clusters
     - Fill the pairwise comparisons within clusters
@@ -179,55 +178,53 @@ def iterate_clustering(model, repr_file, adj_mat_file,
     '''
 
     # Pre-clustering
-    adjacency_matrix = np.load(adj_mat_file)
+    pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
     edge_threshold = hits_threshold * n_frags**2
 
     handles = {key: h5py.File(filename, 'r') for key, filename in repr_file.items()}
     contigs = np.array(list(handles['coverage'].keys()))
+    get_communities(pre_graph, edge_threshold, gamma=gamma1)
 
-    communities = get_communities(
-        (adjacency_matrix > edge_threshold).astype(int),
-        contigs,
-        gamma=gamma1
-    )
-
+    clusters = pre_graph.vs['cluster']
     ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
-    ignored['clusters'] = np.arange(len(ignored)) + communities.clusters.max() + 1
+    ignored['clusters'] = np.arange(len(ignored)) + max(clusters) + 1
 
-    communities = pd.concat([communities, ignored])
-    communities.to_csv(assignments_file)
+    if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size == 0:
+        pre_graph.add_vertices(ignored.index.values)
+        pre_graph.vs['cluster'] = clusters + ignored.clusters.tolist()
+
+    mapping_id_ctg = pd.Series(pre_graph.vs.indices, index=pre_graph.vs['name'])
 
     # Refining the clusters
-    communities['ctg_index'] = np.arange(communities.shape[0])
-    # Get the contigs indices from each cluster
-    clusters = communities.groupby('clusters')['ctg_index'].agg(list)
+    contigs = []
+    assignments = []
+    clusters = np.unique(pre_graph.vs['cluster'])
+    last_cluster = max(clusters)
 
-    for bin_id, ctg_indices in enumerate(clusters.values, 1):
-        if len(ctg_indices) < 3:
+    print('Refining graph ({} clusters)'.format(len(clusters)))
+    for cluster in clusters:
+        contigs_c = pre_graph.vs.select(cluster=cluster)['name']
+        contigs += contigs_c
+
+        if len(contigs_c) < 3:
+            assignments += [cluster] * len(contigs_c)
             continue
 
-        # Compute remaining pairwise comparisons
-        adjacency_submatrix = compute_pairwise_comparisons(
-            model, contigs[ctg_indices], handles,
-            init_matrix=adjacency_matrix[ctg_indices, :][:, ctg_indices],
-            n_frags=n_frags, max_neighbors=max_neighbors, bin_id=bin_id
-        )
-        mask = np.isin(np.arange(adjacency_matrix.shape[0]), ctg_indices)
-        mask = mask.reshape(-1, 1).dot(mask.reshape(1, -1))
+        # Compute all comparisons in this cluster
+        compute_pairwise_comparisons(model, pre_graph, handles, contigs=np.array(contigs_c),
+                                     neighbors=mapping_id_ctg[contigs_c].values, max_neighbors=5000,
+                                     n_frags=n_frags, bin_id=cluster)
+        # Find the leiden communities
+        sub_graph = pre_graph.subgraph(contigs_c)
+        get_communities(sub_graph, edge_threshold, gamma=gamma2)
 
-        adjacency_matrix[mask] = adjacency_submatrix.flatten()
+        assignments += [x + last_cluster + 1 for x in sub_graph.vs['cluster']]
+        last_cluster = max(assignments)
 
-        if not np.all(adjacency_submatrix > edge_threshold):
-            sub_communities = get_communities(
-                (adjacency_submatrix > edge_threshold).astype(int),
-                contigs[ctg_indices],
-                gamma=gamma2,
-            )
-            communities.loc[sub_communities.index, 'clusters'] = (1 + sub_communities.clusters
-                                                                  + communities.clusters.max())
-    np.save(refined_adj_mat_file, adjacency_matrix)
+    assignments = pd.Series(dict(zip(contigs, assignments)))
+    pre_graph.vs['cluster'] = assignments.loc[pre_graph.vs['name']].values
+    pre_graph.write_pickle(graph_file)
+    get_communities(pre_graph, edge_threshold, gamma=gamma2)
 
-    communities.clusters = pd.factorize(communities.clusters)[0]
-    communities.drop('ctg_index', axis=1, inplace=True)
-
-    communities.to_csv(refined_assignments_file)
+    communities = pd.Series(pre_graph.vs['cluster'], index=pre_graph.vs['name'])
+    communities.to_csv(assignments_file, header=False)

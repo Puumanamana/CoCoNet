@@ -11,7 +11,7 @@ from Bio import SeqIO
 from coconet.preprocessing import format_assembly, filter_h5, filter_bam_aln
 from coconet.preprocessing import bam_to_h5, bam_list_to_h5
 
-from .data import generate_fasta_file, generate_coverage_file
+from .data import generate_fasta_file, generate_h5_file
 
 LOCAL_DIR = Path(__file__).parent
 
@@ -98,7 +98,7 @@ def test_filter_h5():
     '''
 
     lengths = [60, 100, 80]
-    h5_data = generate_coverage_file(*lengths, n_samples=3,
+    h5_data = generate_h5_file(*lengths, n_samples=3,
                                      baselines=[20, 40, 30],
                                      empty_samples=[[False]*3, [True, True, False], [False]*3])
     fasta = generate_fasta_file(*lengths)

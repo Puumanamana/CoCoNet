@@ -37,7 +37,7 @@ TEST_ARCHITECTURE = {
 TEST_SHAPES = {'composition': 136,
                'coverage': (ceil((FL - WSIZE+1) / WSTEP), 2)}
 
-def generate_coverage_file(*lengths, n_samples=2, filename='coverage.h5',
+def generate_h5_file(*lengths, n_samples=2, filename='coverage.h5',
                            baselines=None, empty_samples=None):
     '''
     - Generate coverage matrix

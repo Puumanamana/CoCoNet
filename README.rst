@@ -34,5 +34,5 @@ For more details, please see the documentation on `ReadTheDocs <https://coconet.
 Contribute
 ----------
 
- - Issue Tracker: `github <https://github.com/Puumanamana/CoCoNet/issues>`_
- - Source Code: `github <https://github.com/Puumanamana/CoCoNet>`_
+- Issue Tracker: `github <https://github.com/Puumanamana/CoCoNet/issues>`__
+- Source Code: `github <https://github.com/Puumanamana/CoCoNet>`__

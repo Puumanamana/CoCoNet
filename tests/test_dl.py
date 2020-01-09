@@ -17,7 +17,7 @@ from coconet.dl_util import get_npy_lines, get_labels, get_test_scores
 from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.generators import CompositionGenerator, CoverageGenerator
 
-from .data import generate_fasta_file, generate_coverage_file, generate_pair_file
+from .data import generate_fasta_file, generate_h5_file, generate_pair_file
 from .data import FL, STEP, WSIZE, WSTEP
 from .data import TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
 
@@ -109,7 +109,7 @@ def test_load_data_cover():
     '''
 
     fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=False)
-    coverage_file = generate_coverage_file(*TEST_CTG_LENGTHS)
+    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
     pairs_file = Path('pairs.npy').resolve()
 
     make_pairs(fasta_file, STEP, FL, output=pairs_file, n_examples=50)
@@ -191,7 +191,7 @@ def test_learn_save_load_model():
     pair_files = {'train': Path('{}/pairs_train.npy'.format(LOCAL_DIR)),
                   'test': Path('{}/pairs_test.npy'.format(LOCAL_DIR))}
 
-    coverage_file = generate_coverage_file(*TEST_CTG_LENGTHS)
+    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
     fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=True)
 
     fasta = list(SeqIO.parse(fasta_file, 'fasta'))
@@ -225,7 +225,7 @@ def test_load_model():
 
     cfg = Configuration()
     cfg.init_config(output='.', **args)
-    cfg.io['filt_h5'] = generate_coverage_file(FL)
+    cfg.io['filt_h5'] = generate_h5_file(FL)
 
     model = initialize_model('CoCoNet', cfg.get_input_shapes(), cfg.get_architecture())
     model_path = Path('CoCoNet.pth')
@@ -248,7 +248,7 @@ def test_save_repr():
 
     model = initialize_model('CoCoNet', TEST_SHAPES, TEST_ARCHITECTURE)
     fasta = generate_fasta_file(*TEST_CTG_LENGTHS)
-    coverage = generate_coverage_file(*TEST_CTG_LENGTHS)
+    coverage = generate_h5_file(*TEST_CTG_LENGTHS)
 
     output = {k: Path('repr_{}.h5'.format(k)) for k in ['composition', 'coverage']}
 

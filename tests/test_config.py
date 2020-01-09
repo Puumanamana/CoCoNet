@@ -6,7 +6,7 @@ from pathlib import Path
 
 from coconet.config import Configuration
 
-from .data import generate_coverage_file
+from .data import generate_h5_file
 
 def test_init():
     '''
@@ -68,7 +68,7 @@ def test_input_sizes():
 
     cfg = Configuration()
     cfg.init_config(output='test123', kmer=4, no_rc=False, fragment_length=10, wsize=4, wstep=2)
-    cfg.io['filt_h5'] = generate_coverage_file(10)
+    cfg.io['filt_h5'] = generate_h5_file(10)
 
     input_shapes = {'composition': 136,
                     'coverage': (4, 2)}

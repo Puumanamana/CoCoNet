@@ -14,7 +14,7 @@ Outputs
 
 The output data folder contains many files. The ones you might be interested in are:
 
-- The binning outcome, `final_bins_*.csv` with 2 columns: the first is the contig name, and the second is the bin number.
+- The binning outcome, `bins_*.csv` with 2 columns: the first is the contig name, and the second is the bin number.
 - The run configuration `config.yaml` with the run parameters.
 - The filtered alignments (both .bam and .h5 formats) and the filtered assembly (.fasta).
 - The list of contigs that were set aside because they didn't pass the prevalence filter, `singletons.txt`. The first column is the contig name, the second is its length, and the remaining ones are the total coverage for each sample.

@@ -16,7 +16,7 @@ from coconet.parser_info import make_decorator, _HELP_MSG
 from coconet.preprocessing import format_assembly, bam_list_to_h5, filter_h5
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import initialize_model, load_model, train, save_repr_all
-from coconet.clustering import fill_adjacency_matrix, iterate_clustering
+from coconet.clustering import make_pregraph, iterate_clustering
 
 CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
 PASS_CONTEXT = click.make_pass_decorator(Configuration, ensure=True)
@@ -172,22 +172,19 @@ def cluster(cfg, **kwargs):
     model = load_model(full_cfg)
     n_frags = full_cfg.n_frags
 
-    print('Computing adjacency matrix')
-    fill_adjacency_matrix(model, cfg.io['repr'], output=cfg.io['adjacency_matrix'],
-                          n_frags=n_frags, max_neighbors=cfg.max_neighbors)
+    print('Computing pre-graph')
+    make_pregraph(model, cfg.io['repr'], output=cfg.io['pre_graph'],
+                  n_frags=n_frags, max_neighbors=cfg.max_neighbors)
 
-    print('Clustering contigs')
+    print('Finalizing graph')
     iterate_clustering(
-        model, cfg.io['repr'], cfg.io['adjacency_matrix'],
+        model, cfg.io['repr'], cfg.io['pre_graph'],
         singletons_file=cfg.io['singletons'],
-        refined_adj_mat_file=cfg.io['refined_adjacency_matrix'],
+        graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
-        refined_assignments_file=cfg.io['refined_assignments'],
         n_frags=n_frags,
         hits_threshold=cfg.hits_threshold,
-        gamma1=cfg.gamma1,
-        gamma2=cfg.gamma2,
-        max_neighbors=cfg.max_neighbors,
+        gamma1=cfg.gamma1, gamma2=cfg.gamma2
     )
 
 @main.command(help=_HELP_MSG['run'])

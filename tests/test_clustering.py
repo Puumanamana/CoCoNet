@@ -7,15 +7,16 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
+import igraph
 
-from coconet.clustering import get_neighbors, compute_pairwise_comparisons, fill_adjacency_matrix
+from coconet.clustering import get_neighbors, compute_pairwise_comparisons, make_pregraph
 from coconet.clustering import get_communities, iterate_clustering
-from .data import generate_coverage_file, generate_rd_model
+from .data import generate_h5_file, generate_rd_model
 
 LOCAL_DIR = Path(__file__).parent
 
 def test_get_neighbors():
-    h5_data = generate_coverage_file(*[100]*4, n_samples=5, baselines=[10, 10, 50, 50])
+    h5_data = generate_h5_file(*[100]*4, n_samples=5, baselines=[10, 10, 50, 50])
     neighbors = get_neighbors(h5_data)
     h5_data.unlink()
 
@@ -24,44 +25,33 @@ def test_get_neighbors():
 
 def test_pairwise_comparisons():
     model = generate_rd_model()
-    h5_data = {k: generate_coverage_file(8, 8 , 8, n_samples=5, filename=k+'.h5')
+    h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
                for k in ['composition', 'coverage']}
 
     handles = {k: h5py.File(v) for k, v in h5_data.items()}
     contigs = ['V0', 'V1', 'V2']
+
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
+    graph.es['weight'] = []
     neighbors = [np.array([0, 1]), np.array([0, 1]), np.array([2])]
 
-    matrix = compute_pairwise_comparisons(model, contigs, handles, neighbors=neighbors, n_frags=5)
+    compute_pairwise_comparisons(model, graph, handles, contigs=contigs, neighbors=neighbors, n_frags=5)
 
     for v in h5_data.values():
         v.unlink()
 
-    assert matrix[0, 0] == 25
-    assert matrix[0, 2] == -1
-    assert 0 <= matrix[0, 1] <= 25
+    assert (0, 1) in graph.get_edgelist()
+    assert (1, 2) not in graph.get_edgelist()
+    assert 0 <= graph.es['weight'][0] <= 25
 
-def test_pairwise_comparisons_no_neighbors():
+def test_make_pregraph():
+    output = Path('pregraph.pkl')
     model = generate_rd_model()
-    h5_data = {k: generate_coverage_file(8, 8 , 8, n_samples=5, filename=k+'.h5')
+    h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
                for k in ['composition', 'coverage']}
 
-    handles = {k: h5py.File(v) for k, v in h5_data.items()}
-    contigs = ['V0', 'V1', 'V2']
-
-    matrix = compute_pairwise_comparisons(model, contigs, handles, n_frags=5)
-
-    for v in h5_data.values():
-        v.unlink()
-
-    assert np.all(matrix >= 0) & np.all(matrix <= 25)
-
-def test_fill_adj():
-    output = Path('adj_test.npy')
-    model = generate_rd_model()
-    h5_data = {k: generate_coverage_file(8, 8 , 8, n_samples=5, filename=k+'.h5')
-               for k in ['composition', 'coverage']}
-
-    fill_adjacency_matrix(model, h5_data, output, n_frags=5)
+    make_pregraph(model, h5_data, output, n_frags=5)
 
     for v in h5_data.values():
         v.unlink()
@@ -71,48 +61,79 @@ def test_fill_adj():
     output.unlink()
 
 def test_get_communities():
-    adj_mat = np.array([
-        [1, 1, 0, 0, 0],
-        [1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 1],
-        [0, 0, 1, 1, 1],
-        [0, 0, 0, 1, 1]])
+    adj = np.array([
+        [10, 10, 0, -1, -1],
+        [9, 10, 0, 0, 0],
+        [0, 0, 10, 8, 9],
+        [0, -1, 9, 10, 10],
+        [0, 0, 0, 10, 10]])
 
-    contigs = ['V{}|0'.format(i) for i in range(len(adj_mat))]
+    contigs = ['V{}|0'.format(i) for i in range(len(adj))]
 
-    assignments = get_communities(adj_mat, contigs, gamma=0.5)
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
 
-    assert assignments.shape == (len(adj_mat), 1)
-    assert all(assignments.clusters[:2] == 0) and all(assignments.clusters[2:] == 1)
+    edges = [(i, j, adj[i,j]) for i in range(len(contigs)) for j in range(len(contigs))
+             if adj[i, j] >= 0]
+    for i, j, w in edges:
+        graph.add_edge(i, j, weight=w)
+
+    get_communities(graph, 8, gamma=0.5)
+    clusters = np.array(graph.vs['cluster'])
+
+    assert clusters[0] == clusters[1]
+    assert all(clusters[2:] == clusters[2])
+    assert clusters[1] != clusters[2]
 
 def test_iterate_clustering():
     model = generate_rd_model()
-    h5_data = {k: generate_coverage_file(*[10]*5, n_samples=5, filename=k+'.h5')
+    h5_data = {k: generate_h5_file(*[8]*5, n_samples=5, filename=k+'.h5')
                for k in ['composition', 'coverage']}
 
-    files = ['singletons.txt', 'adj_mat.npy', 'assignments.csv',
-             'refined_assignments.csv', 'refined_adjacency_matrix.npy']
+    files = ['singletons.txt', 'pre_graph.pkl', 'graph.pkl', 'assignments.csv']
 
-    np.save(
-        'adj_mat.npy',
-        np.array([[25, 24, 0, 0, 0],
-                  [23, 25, 0, 0, 0],
-                  [0, 0, 25, 25, 25],
-                  [0, 0, 24, 25, 24],
-                  [0, 0, 18, 23, 25]])
-    )
-    (pd.DataFrame([['V0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
+    adj = np.array([[25, 24, 0, 0, -1],
+                    [23, 25, 0, -1, 0],
+                    [0, -1, 25, 25, 25],
+                    [-1, 0, 24, 25, 24],
+                    [0, -1, 18, 23, 25]])
+
+    contigs = ["V{}".format(i) for i in range(5)]
+    edges = [(i, j, adj[i, j]) for i in range(len(contigs)) for j in range(len(contigs))
+             if adj[i, j] >= 0]
+
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
+    for i, j, w in edges:
+        graph.add_edge(i, j, weight=w)
+
+    graph.write_pickle(files[1])
+
+    # Singleton to be included in the end
+    (pd.DataFrame([['W0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
      .to_csv(files[0], sep='\t'))
 
     iterate_clustering(model, h5_data, files[1],
                        singletons_file=files[0],
-                       assignments_file=files[2],
+                       graph_file=files[2],
+                       assignments_file=files[3],
                        n_frags=5)
 
-    assert all(Path(f).is_file() for f in files)
+    clustering = pd.read_csv(files[3], header=None, index_col=0)[1]
+    
+    all_files = all(Path(f).is_file() for f in files)
 
     for f in files + list(h5_data.values()):
         Path(f).unlink()
 
+    assert all_files
+    assert clustering.loc['V0'] == clustering.loc['V1']
+    assert clustering.loc['V2'] == clustering.loc['V3']
+    assert clustering.loc['V3'] == clustering.loc['V4']
+    assert len(clustering[clustering == clustering.loc['W0']]) == 1
+
 if __name__ == '__main__':
-    test_iterate_clustering()
+    # test_get_communities()
+    test_pairwise_comparisons()
+    # test_iterate_clustering()
+    # test_make_pregraph()

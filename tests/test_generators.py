@@ -10,7 +10,7 @@ import numpy as np
 import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window
-from .data import generate_pair_file, generate_coverage_file
+from .data import generate_pair_file, generate_h5_file
 
 def get_rc_indices(k):
     uniq_idx = set()
@@ -89,7 +89,7 @@ def test_smoothing(wsize=3, wstep=2):
 def test_get_coverage(window_size=4):
 
     pairs = generate_pair_file(save=False)
-    data_h5 = generate_coverage_file(30, 40)
+    data_h5 = generate_h5_file(30, 40)
 
     (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
     (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
@@ -101,7 +101,7 @@ def test_get_coverage(window_size=4):
 def test_get_coverage_with_unmatched_ctg(window_size=4):
 
     pairs = generate_pair_file(save=False)
-    data_h5 = generate_coverage_file(30)
+    data_h5 = generate_h5_file(30)
 
     with pytest.raises(TypeError):
         assert get_coverage(pairs, data_h5, window_size, window_size // 2)
