@@ -7,14 +7,12 @@ import click
 
 orig_init = click.core.Option.__init__
 
-
 def new_init(self, *args, **kwargs):
     '''
     Show default values in the help documentation
     '''
     orig_init(self, *args, **kwargs)
     self.show_default = True
-
 
 click.core.Option.__init__ = new_init
 

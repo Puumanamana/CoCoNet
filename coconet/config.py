@@ -72,7 +72,7 @@ class Configuration:
                 name = 'coverage_h5'
             else:
                 suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
-                if not len(suffixes) > 0:
+                if not suffixes:
                     sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
                 name = 'coverage_bam'
 

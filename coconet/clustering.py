@@ -79,9 +79,6 @@ def compute_pairwise_comparisons(model, graph, handles, contigs=None,
     weights = []
 
     for k, ctg in contig_iter:
-        x_ref = {key: torch.from_numpy(np.array(handle.get(ctg)[:])[ref_idx])
-                 for key, handle in handles.items()}
-
         # graph.neighbors() returns the index of the contigs that are connected to ctg
         if bin_id == -1:
             processed = np.isin(neighbors[k], graph.neighbors(ctg))
@@ -90,24 +87,37 @@ def compute_pairwise_comparisons(model, graph, handles, contigs=None,
             processed = np.isin(neighbors, graph.neighbors(ctg))
             new_neighbors_k = np.arange(len(neighbors))[~processed][:max_neighbors]
 
+        if new_neighbors_k.size == 0:
+            continue
+
         if bin_id < 0:
             contig_iter.set_description(
                 "Contig #{} - Computing comparison with neighbors ({} contigs)"
                 .format(k, len(new_neighbors_k))
             )
 
-        for n_i in new_neighbors_k:
-            x_other = {
-                key: torch.from_numpy(np.array(
-                    handle.get(contigs[n_i])[:]
-                )[other_idx])
-                for key, handle in handles.items()
-            }
+        x_ref = {}
+        for key, handle in handles.items():
+            x_npy = np.tile(
+                handle.get(ctg)[:][ref_idx],
+                (len(new_neighbors_k), 1)
+            )
+            x_ref[key] = torch.from_numpy(x_npy)
 
-            probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()
+        x_other = {}
+        for key, handle in handles.items():
+            x_npy = np.vstack(
+                [handle.get(contigs[n_i])[:][other_idx]
+                 for n_i in new_neighbors_k]
+            )
+            x_other[key] = torch.from_numpy(x_npy)
 
+        probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
+        probs = np.convolve(probs, np.ones(n_frags**2), 'valid')[::n_frags**2]
+
+        for n_i, p_i in zip(new_neighbors_k, probs):
             edges.append((ctg, contigs[n_i]))
-            weights.append(sum(probs))
+            weights.append(p_i)
 
     if edges:
         prev_weights = graph.es['weight']
