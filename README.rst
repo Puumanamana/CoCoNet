@@ -12,7 +12,7 @@ CoCoNet documentation
 
 Citation (Work in progress)
 ---------------------------
-Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
+Arisdakessian C., Nigro O., Steward G., Poisson G., Belcaid M.
 CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
 
 Description
