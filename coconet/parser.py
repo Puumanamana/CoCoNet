@@ -54,7 +54,7 @@ def parse_args():
 
     dl_group = parser.add_argument_group(title='Neural network')
     dl_group.add_argument('--batch-size', type=int, default=256, help='Batch size for training')
-    dl_group.add_argument('--learning-rate', type=float, default=1e-4, help='Learning rate for gradient descent')    
+    dl_group.add_argument('--learning-rate', type=float, default=1e-4, help='Learning rate for gradient descent')
     dl_group.add_argument('--load-batch', type=int, default=200, help='Number of coverage batch to load in memory. Consider lowering this value if your RAM is limited.')
     dl_group.add_argument('--compo-neurons', type=int, default=[64, 32], nargs=2, help='Number of neurons for the composition dense layers (x2)')
     dl_group.add_argument('--cover-neurons', type=int, default=[64, 32], nargs=2, help='Number of neurons for the coverage dense layers (x2)')
