@@ -72,9 +72,9 @@ def parse_args():
 
     cluster_group = parser.add_argument_group(title='Clustering')
     cluster_group.add_argument('--max-neighbors', type=int, default=100, help='Maximum number of neighbors to consider to compute the adjacency matrix.')
-    cluster_group.add_argument('--hits-threshold', type=int, default=0.8, help='Minimum percent of edges between two contigs to form an edge between them')
-    cluster_group.add_argument('--gamma1', type=int, default=0.1, help='CPM optimization value for the first run of the Leiden clustering')
-    cluster_group.add_argument('--gamma2', type=int, default=0.75, help='CPM optimization value for the second run of the Leiden clustering')
+    cluster_group.add_argument('--hits-threshold', type=float, default=0.8, help='Minimum percent of edges between two contigs to form an edge between them')
+    cluster_group.add_argument('--gamma1', type=float, default=0.1, help='CPM optimization value for the first run of the Leiden clustering')
+    cluster_group.add_argument('--gamma2', type=float, default=0.75, help='CPM optimization value for the second run of the Leiden clustering')
 
     args, unknown = parser.parse_known_args()
 
