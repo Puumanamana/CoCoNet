@@ -3,31 +3,20 @@ Tests for data generators
 '''
 
 from itertools import product
-from textwrap import wrap
 import pytest
 
 import numpy as np
 import h5py
 
-from coconet.tools import get_kmer_frequency, get_coverage, avg_window
+from coconet.tools import get_kmer_frequency, get_coverage, avg_window, kmer_rc_idx
 from .data import generate_pair_file, generate_h5_file
-
-def get_rc_indices(k):
-    uniq_idx = set()
-
-    for i in range(4**k):
-        kmer_rev = ''.join(wrap('{:08b}'.format(4**k-1-i), 2)[::-1])
-        idx = int(kmer_rev, 2)
-
-        if idx not in uniq_idx:
-            uniq_idx.add(i)
-    return list(uniq_idx)
 
 def slow_kmer_freq(seq, k=4, rc=False):
 
-    rc_trans = str.maketrans('ACGT', 'TGCA')
-    nucl = ["A", "C", "G", "T"]
-    kmer_counts = {"".join(nucls): 0 for nucls in product(nucl, repeat=k)}
+    nucls = "ACGT"
+    rc_trans = str.maketrans(nucls, nucls[::-1])
+
+    kmer_counts = {"".join(kmer): 0 for kmer in product(list(nucls), repeat=k)}
 
     for i in range(len(seq)-k+1):
         kmer_counts[seq[i:i+k]] += 1
@@ -40,7 +29,7 @@ def slow_kmer_freq(seq, k=4, rc=False):
     freqs = np.array(list(kmer_counts.values()))
 
     if rc:
-        indices = get_rc_indices(k)
+        indices, _ = kmer_rc_idx(k)
         freqs = freqs[indices]
 
     return freqs
@@ -64,21 +53,31 @@ def slow_coverage(pairs, h5file, window_size, window_step):
     return np.array(X1, dtype=np.float32), np.array(X2, dtype=np.float32)
 
 
-def test_get_kmer_frequency(k=4):
+def test_get_kmer_frequency(k=4, n_repeat=10):
 
-    seq = "AAAATCG"
-    result = get_kmer_frequency(seq, k)
-    truth = slow_kmer_freq(seq, k)
+    is_equal = True
+    random_seqs = [''.join(letters) for letters in np.random.choice(list('ACGT'), [20, n_repeat])]
 
-    assert all(result == truth)
+    for seq in random_seqs:
+        result = get_kmer_frequency(seq, k)
+        truth = slow_kmer_freq(seq, k)
 
-def test_get_kmer_frequency_with_rc(k=4):
+        is_equal &= all(result == truth)
 
-    seq = "AAAAT"
-    result = get_kmer_frequency(seq, k, rc=True)
-    truth = slow_kmer_freq(seq, k, rc=True)
+    assert is_equal
 
-    assert all(result == truth)
+def test_get_kmer_frequency_with_rc(k=4, n_repeat=10):
+
+    is_equal = True
+    random_seqs = [''.join(letters) for letters in np.random.choice(list('ACGT'), [20, n_repeat])]
+
+    for seq in random_seqs:
+        result = get_kmer_frequency(seq, k, rc=True)
+        truth = slow_kmer_freq(seq, k, rc=True)
+
+        is_equal &= all(result == truth)
+
+    assert is_equal
 
 def test_smoothing(wsize=3, wstep=2):
     x_in = np.array([1, 2, 3, 4, 5])

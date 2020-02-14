@@ -73,8 +73,8 @@ class CoverageGenerator:
 
         self.pbar = None
         if self.n_batches > 1:
-            self.pbar = tqdm(total=len(self.pairs), position=0,
-                             bar_format="{percentage:3.0f}%|{bar} {postfix:<150}")
+            self.pbar = tqdm(total=len(self.pairs), position=0, ncols=100,
+                             bar_format="{percentage:3.0f}%|{bar:20} {postfix}")
             self.pbar.set_postfix_str('data loader')
 
     def __iter__(self):

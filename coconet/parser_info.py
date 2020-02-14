@@ -69,7 +69,7 @@ _OPTIONS = {
                      help='Minimum contig prevalence for binning. Contig with less that value are filtered out.'),
         click.option('--min-mapping-quality', type=click.IntRange(1, 60), required=False, default=50,
                      help='Minimum mapping quality for bam filtering'),
-        click.option('--flag', type=int, required=False, default=3596,
+        click.option('--flag', type=int, required=False, default=3852,
                      help='Sam Flag for bam filtering'),
         click.option('--fl-range', type=int, required=False, default=(200, 500), nargs=2,
                      help='Only allow for paired alignments with spacing within this range'),

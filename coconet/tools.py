@@ -16,7 +16,6 @@ import h5py
 import numpy as np
 
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
-KMER_CODES_REV = {ord('A'): '11', ord('C'): '10', ord('G'): '01', ord('T'): '00'}
 
 def run_if_not_exists(keys=('output',)):
     '''
@@ -51,6 +50,15 @@ def run_if_not_exists(keys=('output',)):
 
     return run_if_not_exists_key
 
+@lru_cache(maxsize=None)
+def kmer_count(k, rc=False):
+    if not rc:
+        return 4**k
+
+    n_palindromes = 0
+    if k % 2 == 0:
+        n_palindromes = 4**(k//2)
+    return (4**k - n_palindromes) // 2 + n_palindromes
 
 @lru_cache(maxsize=None)
 def kmer_rc_idx(k=4):

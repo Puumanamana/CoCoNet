@@ -36,7 +36,7 @@ def test_pairwise_comparisons():
     graph.es['weight'] = []
     neighbors = [np.array([0, 1]), np.array([0, 1]), np.array([2])]
 
-    compute_pairwise_comparisons(model, graph, handles, contigs=contigs, neighbors=neighbors, n_frags=5)
+    compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, n_frags=5)
 
     for v in h5_data.values():
         v.unlink()
@@ -133,7 +133,7 @@ def test_iterate_clustering():
     assert len(clustering[clustering == clustering.loc['W0']]) == 1
 
 if __name__ == '__main__':
-    # test_get_communities()
-    test_pairwise_comparisons()
+    test_get_communities()
+    # test_pairwise_comparisons()
     # test_iterate_clustering()
     # test_make_pregraph()

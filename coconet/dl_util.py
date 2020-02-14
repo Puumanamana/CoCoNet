@@ -133,8 +133,8 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
     n_batches = n_examples // batch_size
     losses_buffer = deque(maxlen=500)
 
-    pbar_scores = tqdm(total=n_examples, position=1,
-                       bar_format="{percentage:3.0f}%|{bar} {postfix:<150}")
+    pbar_scores = tqdm(total=n_examples, position=1, ncols=100,
+                       bar_format="{percentage:3.0f}%|{bar:20} {postfix}")
     test_msg = ''
 
     for i, batch_x in enumerate(x_train_gen, 1):
@@ -155,7 +155,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
             )
 
         pbar_scores.set_postfix_str(
-            "learning - training loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
+            "Running loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
         )
         pbar_scores.update(batch_size)
 

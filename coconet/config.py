@@ -9,6 +9,7 @@ from math import ceil
 import yaml
 import h5py
 
+from coconet.tools import kmer_count
 
 class Configuration:
     """
@@ -148,7 +149,7 @@ class Configuration:
             n_samples = handle.get(list(handle.keys())[0]).shape[0]
 
         input_shapes = {
-            'composition': 4**self.kmer * (self.no_rc) + 136 * (1-self.no_rc), # Fix the 136 with the good calculation
+            'composition': kmer_count(self.kmer, rc=not self.no_rc),
             'coverage': (ceil((self.fragment_length-self.wsize+1) / self.wstep), n_samples)
         }
 

@@ -1,10 +1,8 @@
 '''
-Clustering utils:
-- save_repr_all()
-- fill_adjacency_matrix()
-- get_communities()
-- iterate_clustering()
+Groups all the functions required to run the clustering steps
 '''
+
+import sys
 
 import numpy as np
 import pandas as pd
@@ -50,7 +48,7 @@ def get_neighbors(file_h5):
 
     return neighbors_ordered
 
-def compute_pairwise_comparisons(model, graph, handles, contigs=None,
+def compute_pairwise_comparisons(model, graph, handles,
                                  neighbors=None, max_neighbors=100,
                                  n_frags=30, bin_id=-1):
     '''
@@ -62,67 +60,61 @@ def compute_pairwise_comparisons(model, graph, handles, contigs=None,
     ref_idx, other_idx = (np.repeat(np.arange(n_frags), n_frags),
                           np.tile(np.arange(n_frags), n_frags))
 
-    if contigs is None:
-        contigs = [v['name'] for v in graph.vs]
-
-    contig_iter = tqdm(enumerate(contigs), ncols=100, total=len(contigs))
+    contigs = np.array(graph.vs['name'])
+    contig_iter = enumerate(contigs[neighbors])
 
     if bin_id < 0:
-        contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar}"
-    else:
-        contig_iter.bar_format = "{desc:<40} {percentage:3.0f}%|{bar}"
+        contig_iter = tqdm(contig_iter, ncols=100, total=len(contigs))
+        contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar:20}"
+    elif len(neighbors) > 30:
+        contig_iter = tqdm(contig_iter, ncols=100, total=len(neighbors))
+        contig_iter.bar_format = "{desc:<40} {percentage:3.0f}%|{bar:20}"
         contig_iter.set_description(
-            "Refining bin #{} ({} contigs)".format(bin_id, len(contigs))
+            "Refining bin #{} ({} contigs)".format(bin_id, len(neighbors))
         )
 
-    edges = []
-    weights = []
+    edges = {}
 
     for k, ctg in contig_iter:
+
         # graph.neighbors() returns the index of the contigs that are connected to ctg
         if bin_id == -1:
-            processed = np.isin(neighbors[k], graph.neighbors(ctg))
-            new_neighbors_k = neighbors[k][~processed][:max_neighbors]
+            # Case 1: we are computing the pre-graph
+            # We limit the comparisons to the closest neighbors (precomputed)
+            neighb_idx = neighbors[k]
         else:
-            processed = np.isin(neighbors, graph.neighbors(ctg))
-            new_neighbors_k = np.arange(len(neighbors))[~processed][:max_neighbors]
+            # Case 2: we are computing all remaining comparisons among contigs in a given bin
+            neighb_idx = neighbors
 
-        if new_neighbors_k.size == 0:
+        processed = np.isin(neighb_idx, graph.neighbors(ctg))
+        neighb_k = contigs[neighb_idx][~processed][:max_neighbors]
+
+        if neighb_k.size == 0:
             continue
 
         if bin_id < 0:
             contig_iter.set_description(
                 "Contig #{} - Computing comparison with neighbors ({} contigs)"
-                .format(k, len(new_neighbors_k))
+                .format(k, len(neighb_k))
             )
 
-        x_ref = {}
-        for key, handle in handles.items():
-            x_npy = np.tile(
-                handle.get(ctg)[:][ref_idx],
-                (len(new_neighbors_k), 1)
-            )
-            x_ref[key] = torch.from_numpy(x_npy)
+        x_ref = {k: torch.from_numpy(handle.get(ctg)[:][ref_idx]) for k, handle in handles.items()}
 
-        x_other = {}
-        for key, handle in handles.items():
-            x_npy = np.vstack(
-                [handle.get(contigs[n_i])[:][other_idx]
-                 for n_i in new_neighbors_k]
-            )
-            x_other[key] = torch.from_numpy(x_npy)
+        # Compare the reference contig against all of its neighbors
+        for other_ctg in neighb_k:
+            if other_ctg == ctg or (other_ctg, ctg) in edges:
+                continue
 
-        probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
-        probs = np.convolve(probs, np.ones(n_frags**2), 'valid')[::n_frags**2]
+            x_other = {k: torch.from_numpy(handle.get(other_ctg)[:][other_idx])
+                       for k, handle in handles.items()}
 
-        for n_i, p_i in zip(new_neighbors_k, probs):
-            edges.append((ctg, contigs[n_i]))
-            weights.append(p_i)
+            probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
+            edges[(ctg, other_ctg)] = sum(probs)
 
     if edges:
         prev_weights = graph.es['weight']
-        graph.add_edges(edges)
-        graph.es['weight'] = prev_weights + weights
+        graph.add_edges(list(edges.keys()))
+        graph.es['weight'] = prev_weights + list(edges.values())
 
 @run_if_not_exists()
 def make_pregraph(model, latent_repr, output, **kw):
@@ -157,8 +149,8 @@ def make_pregraph(model, latent_repr, output, **kw):
 
 def get_communities(graph, threshold, gamma=0.5):
     '''
-    Cluster using with either Louvain or Leiden algorithm defined in config
-    Use the adjacency matrix previously filled
+    Cluster using with the Leiden algorithm with parameter gamma
+    Use the graph previously filled
     '''
 
     cluster_graph = graph.copy()
@@ -169,9 +161,10 @@ def get_communities(graph, threshold, gamma=0.5):
     partition = leidenalg.CPMVertexPartition(cluster_graph, resolution_parameter=gamma)
     optimiser.optimise_partition(partition)
 
-    communities = pd.Series(dict(enumerate(partition))).explode().sort_values()
+    communities = pd.Series(dict(enumerate(partition))).explode()
 
-    graph.vs['cluster'] = communities.index
+    # Set the "cluster" attribute
+    graph.vs['cluster'] = communities.sort_values().index
 
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
 def iterate_clustering(model, repr_file, pre_graph_file,
@@ -196,12 +189,6 @@ def iterate_clustering(model, repr_file, pre_graph_file,
     get_communities(pre_graph, edge_threshold, gamma=gamma1)
 
     clusters = pre_graph.vs['cluster']
-    ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
-    ignored['clusters'] = np.arange(len(ignored)) + max(clusters) + 1
-
-    if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size == 0:
-        pre_graph.add_vertices(ignored.index.values)
-        pre_graph.vs['cluster'] = clusters + ignored.clusters.tolist()
 
     mapping_id_ctg = pd.Series(pre_graph.vs.indices, index=pre_graph.vs['name'])
 
@@ -221,9 +208,11 @@ def iterate_clustering(model, repr_file, pre_graph_file,
             continue
 
         # Compute all comparisons in this cluster
-        compute_pairwise_comparisons(model, pre_graph, handles, contigs=np.array(contigs_c),
-                                     neighbors=mapping_id_ctg[contigs_c].values, max_neighbors=5000,
-                                     n_frags=n_frags, bin_id=cluster)
+        compute_pairwise_comparisons(model, pre_graph, handles,
+                                     neighbors=mapping_id_ctg[contigs_c].values,
+                                     max_neighbors=5000,
+                                     n_frags=n_frags,
+                                     bin_id=cluster)
         # Find the leiden communities
         sub_graph = pre_graph.subgraph(contigs_c)
         get_communities(sub_graph, edge_threshold, gamma=gamma2)
@@ -231,10 +220,27 @@ def iterate_clustering(model, repr_file, pre_graph_file,
         assignments += [x + last_cluster + 1 for x in sub_graph.vs['cluster']]
         last_cluster = max(assignments)
 
-    assignments = pd.Series(dict(zip(contigs, assignments)))
-    pre_graph.vs['cluster'] = assignments.loc[pre_graph.vs['name']].values
-    pre_graph.write_pickle(graph_file)
-    get_communities(pre_graph, edge_threshold, gamma=gamma2)
+    # get_communities(pre_graph, edge_threshold, gamma=gamma2)
+    # assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
+    # last_cluster = assignments.max()
 
+    assignments = pd.Series(dict(zip(contigs, assignments)))
+
+    # Add the rest of the contigs (singletons) set aside at the beginning
+    ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
+    ignored['clusters'] = np.arange(len(ignored)) + last_cluster + 1
+
+    if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size > 0:
+        sys.exit("Something went wrong: singleton contigs are already in the graph.")
+
+    pre_graph.add_vertices(ignored.index.values)
+
+    assignments = pd.concat([assignments, ignored.clusters]).loc[pre_graph.vs['name']]
+
+    # Update the graph
+    pre_graph.vs['cluster'] = assignments.tolist()
+    pre_graph.write_pickle(graph_file)
+
+    # Write the cluster in .csv format
     communities = pd.Series(pre_graph.vs['cluster'], index=pre_graph.vs['name'])
     communities.to_csv(assignments_file, header=False)
