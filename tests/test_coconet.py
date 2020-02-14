@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from coconet.coconet import main
+from coconet.parser import parse_args
 
 LOCAL_DIR = Path(__file__).parent
 TEST_DIR = "{}/tests/sim_data".format(Path(__file__).parent.parent)
@@ -29,9 +30,19 @@ PARAMS = {
 }
 
 @pytest.fixture
+def test_parser():
+    '''
+    Test parser
+    '''
+
+    args = parse_args()
+
+    assert isinstance(args.kmer, int)
+
+@pytest.fixture
 def test_all():
     '''
-    test parser and overall app
+    Test overall app
     '''
 
     fail = True
@@ -49,4 +60,5 @@ def test_all():
     assert not fail
 
 if __name__ == '__main__':
+    # test_parser()
     test_all()
