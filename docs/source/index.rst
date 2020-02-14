@@ -12,8 +12,6 @@
    self
    getting_started
    basic_usage
-   subcommands
-   examples
 
 Indices and tables
 ==================
