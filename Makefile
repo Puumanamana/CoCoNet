@@ -1,8 +1,8 @@
 test:
-	pytest tests/*.py
+	pytest
 
 coverage:
-	pytest --cov=coconet tests/*.py
+	pytest --cov=coconet
 
 publish:
 	pip install .

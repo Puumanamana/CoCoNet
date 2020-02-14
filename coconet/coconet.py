@@ -6,30 +6,18 @@ Inputs:
 Outputs:
 '''
 
-import click
 from Bio import SeqIO
 import numpy as np
 import torch
 
 from coconet.config import Configuration
-from coconet.parser_info import make_decorator, _HELP_MSG
+from coconet.parser import parse_args
 from coconet.preprocessing import format_assembly, bam_list_to_h5, filter_h5
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import initialize_model, load_model, train, save_repr_all
 from coconet.clustering import make_pregraph, iterate_clustering
 
-CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
-PASS_CONTEXT = click.make_pass_decorator(Configuration, ensure=True)
-
-class NaturalOrderGroup(click.Group):
-    '''
-    Needed to make order the subcommands in order of appearance in the script
-    '''
-    def list_commands(self, ctx):
-        return self.commands.keys()
-
-@click.group(cls=NaturalOrderGroup, context_settings=CONTEXT_SETTINGS)
-def main():
+def main(**kwargs):
     '''
     Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
     CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
@@ -41,16 +29,25 @@ def main():
     ############################################
     ''')
 
-@main.command(help=_HELP_MSG['preprocess'])
-@make_decorator('io', 'general', 'preproc')
-@PASS_CONTEXT
-def preprocess(cfg, **kwargs):
+    args = parse_args()
+    params = vars(args)
+
+    if kwargs:
+        params.update(kwargs)
+
+    cfg = Configuration()
+    cfg.init_config(mkdir=True, **params)
+    cfg.to_yaml()
+
+    preprocess(cfg)
+    make_train_test(cfg)
+    learn(cfg)
+    cluster(cfg)
+
+def preprocess(cfg):
     '''
     Preprocess assembly and coverage
     '''
-
-    cfg.init_config(mkdir=True, **kwargs)
-    cfg.to_yaml()
 
     print('Preprocessing fasta and {} files'.format(cfg.cov_type))
 
@@ -74,19 +71,13 @@ def preprocess(cfg, **kwargs):
                   singleton_file=cfg.io['singletons'],
                   min_length=cfg.min_ctg_len, min_prevalence=cfg.min_prevalence)
 
-@main.command(help=_HELP_MSG['make_train_test'])
-@make_decorator('io', 'general', 'frag')
-@PASS_CONTEXT
-def make_train_test(cfg, **kwargs):
+def make_train_test(cfg):
     '''
     - Split contigs into fragments
     - Make pairs of fragments such that we have:
        - n/2 positive examples (fragments from the same contig)
        - n/2 negative examples (fragments from different contigs)
     '''
-
-    cfg.init_config(mkdir=True, **kwargs)
-    cfg.to_yaml()
 
     print("Making train/test examples")
     assembly = [contig for contig in SeqIO.parse(cfg.io['filt_fasta'], 'fasta')]
@@ -105,16 +96,10 @@ def make_train_test(cfg, **kwargs):
                    output=pair_file,
                    n_examples=n_examples[mode])
 
-@main.command(help=_HELP_MSG['learn'])
-@make_decorator('io', 'general', 'dl')
-@PASS_CONTEXT
-def learn(cfg, **kwargs):
+def learn(cfg):
     '''
     Deep learning model
     '''
-
-    cfg.init_config(mkdir=True, **kwargs)
-    cfg.to_yaml()
 
     torch.set_num_threads(cfg.threads)
 
@@ -155,16 +140,10 @@ def learn(cfg, **kwargs):
                   wsize=cfg.wsize, wstep=cfg.wstep)
     return model
 
-@main.command(help=_HELP_MSG['cluster'])
-@make_decorator('io', 'general', 'cluster')
-@PASS_CONTEXT
-def cluster(cfg, **kwargs):
+def cluster(cfg):
     '''
     Make adjacency matrix and cluster contigs
     '''
-
-    cfg.init_config(mkdir=True, **kwargs)
-    cfg.to_yaml()
 
     torch.set_num_threads(cfg.threads)
 
@@ -186,19 +165,6 @@ def cluster(cfg, **kwargs):
         hits_threshold=cfg.hits_threshold,
         gamma1=cfg.gamma1, gamma2=cfg.gamma2
     )
-
-@main.command(help=_HELP_MSG['run'])
-@make_decorator('cluster', 'dl', 'frag', 'preproc', 'general', 'io')
-@click.pass_context
-def run(context, **_kwargs):
-    '''
-    Run complete pipeline
-    '''
-
-    context.forward(preprocess)
-    context.forward(make_train_test)
-    context.forward(learn)
-    context.forward(cluster)
 
 if __name__ == '__main__':
     main()
