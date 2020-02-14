@@ -2,6 +2,7 @@
 CoCoNet parser information and documentation
 '''
 
+import warnings
 from pathlib import Path
 import argparse
 
@@ -75,6 +76,12 @@ def parse_args():
     cluster_group.add_argument('--gamma1', type=int, default=0.1, help='CPM optimization value for the first run of the Leiden clustering')
     cluster_group.add_argument('--gamma2', type=int, default=0.75, help='CPM optimization value for the second run of the Leiden clustering')
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+
+    if unknown:
+        for key in unknown:
+            if key[0] == '-':
+                warnings.warn("{} is not a valid argument. It will be ignored".format(key),
+                              UserWarning)
 
     return args

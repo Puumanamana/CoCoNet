@@ -3,7 +3,6 @@ Tests for main algorithm
 '''
 
 from pathlib import Path
-import pytest
 
 from coconet.coconet import main
 from coconet.parser import parse_args
@@ -29,7 +28,6 @@ PARAMS = {
     'wstep': 2
 }
 
-@pytest.fixture
 def test_parser():
     '''
     Test parser
@@ -39,7 +37,6 @@ def test_parser():
 
     assert isinstance(args.kmer, int)
 
-@pytest.fixture
 def test_all():
     '''
     Test overall app
