@@ -167,7 +167,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
     predictions.update({'truth': y_test})
     pd.DataFrame(predictions).to_csv(nn_test_path, index=False)
 
-    print('Finished Training')
+    print('\nFinished Training')
 
 def run_test(model, x_test):
     '''

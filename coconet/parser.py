@@ -29,7 +29,7 @@ def parse_args():
     '''
     '''
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument('-n', '--name', type=str, default='ds', help='Dataset name')
     parser.add_argument('-fl', '--fragment-length', type=int, default=1024, help='Dataset name')
     parser.add_argument('-t', '--threads', type=int, default=20, help='Number of threads')

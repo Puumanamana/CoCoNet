@@ -148,6 +148,7 @@ def make_pregraph(model, latent_repr, output, **kw):
     compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, **kw)
     # Save pre-graph
     graph.write_pickle(output)
+    print("\nPreliminary graph computed")
 
 def get_communities(graph, threshold, gamma=0.5):
     '''
