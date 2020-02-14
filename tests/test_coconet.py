@@ -3,6 +3,8 @@ Tests for main algorithm
 '''
 
 from pathlib import Path
+import pytest
+
 from coconet.coconet import main
 
 LOCAL_DIR = Path(__file__).parent
@@ -26,6 +28,7 @@ PARAMS = {
     'wstep': 2
 }
 
+@pytest.fixture
 def test_all():
     '''
     test parser and overall app
