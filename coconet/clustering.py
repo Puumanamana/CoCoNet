@@ -61,17 +61,19 @@ def compute_pairwise_comparisons(model, graph, handles,
                           np.tile(np.arange(n_frags), n_frags))
 
     contigs = np.array(graph.vs['name'])
-    contig_iter = enumerate(contigs[neighbors])
 
     if bin_id < 0:
-        contig_iter = tqdm(contig_iter, ncols=100, total=len(contigs))
+        contig_iter = tqdm(enumerate(contigs), ncols=100, total=len(contigs))
         contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar:20}"
-    elif len(neighbors) > 30:
-        contig_iter = tqdm(contig_iter, ncols=100, total=len(neighbors))
-        contig_iter.bar_format = "{desc:<40} {percentage:3.0f}%|{bar:20}"
-        contig_iter.set_description(
-            "Refining bin #{} ({} contigs)".format(bin_id, len(neighbors))
-        )
+    else:
+        contig_iter = enumerate(contigs[neighbors])
+
+        if len(neighbors) > 30:
+            contig_iter = tqdm(contig_iter, ncols=100, total=len(neighbors))
+            contig_iter.bar_format = "{desc:<40} {percentage:3.0f}%|{bar:20}"
+            contig_iter.set_description(
+                "Refining bin #{} ({} contigs)".format(bin_id, len(neighbors))
+            )
 
     edges = {}
 

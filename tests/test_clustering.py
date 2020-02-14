@@ -120,7 +120,7 @@ def test_iterate_clustering():
                        n_frags=5)
 
     clustering = pd.read_csv(files[3], header=None, index_col=0)[1]
-    
+
     all_files = all(Path(f).is_file() for f in files)
 
     for f in files + list(h5_data.values()):
@@ -133,7 +133,7 @@ def test_iterate_clustering():
     assert len(clustering[clustering == clustering.loc['W0']]) == 1
 
 if __name__ == '__main__':
-    test_get_communities()
-    # test_pairwise_comparisons()
+    # test_get_communities()
+    test_pairwise_comparisons()
     # test_iterate_clustering()
     # test_make_pregraph()
