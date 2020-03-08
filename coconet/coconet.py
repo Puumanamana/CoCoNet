@@ -35,6 +35,11 @@ def main(**kwargs):
     if kwargs:
         params.update(kwargs)
 
+    if params['fasta'] is None:
+        raise ValueError("Could not find the .fasta file. Did you use the --fasta flag?")
+    if params['coverage'] is None:
+        raise ValueError("Could not find the .bam files. Did you use the --coverage flag?")
+
     cfg = Configuration()
     cfg.init_config(mkdir=True, **params)
     cfg.to_yaml()
