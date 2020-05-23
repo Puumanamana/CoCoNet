@@ -64,7 +64,7 @@ def filter_bam_aln(bam, threads, min_qual, flag, fl_range, outdir=None):
 
     if fl_range:
         cmds.append([
-            'awk', 
+            'awk',
             '($9>{} && $9<{}) || ($9<-{} && $9>-{}) || ($9=="")'
             .format(*(2*fl_range))])
 
