@@ -54,7 +54,6 @@ def test_filter_bam():
 
     bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))
     output = filter_bam_aln(bam_file, 5, 50, 3596, [0, 1000], outdir=LOCAL_DIR)
-
     assert output.is_file()
 
     output.unlink()
@@ -119,4 +118,4 @@ def test_filter_h5():
     assert len(h5_data_filt) == 2
 
 if __name__ == '__main__':
-    test_bamlist_to_h5()
+    test_filter_bam()

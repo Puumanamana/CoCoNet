@@ -29,7 +29,8 @@ def parse_args():
     '''
     '''
 
-    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser = argparse.ArgumentParser(allow_abbrev=False,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-n', '--name', type=str, default='ds', help='Dataset name')
     parser.add_argument('-fl', '--fragment-length', type=int, default=1024, help='Dataset name')
     parser.add_argument('-t', '--threads', type=int, default=20, help='Number of threads')
@@ -40,11 +41,11 @@ def parse_args():
     io_group.add_argument('--output', type=str, default='output', action=ToPathAction, help='Path to output directory')
 
     preproc_group = parser.add_argument_group(title='Preprocessing')
-    preproc_group.add_argument('--min-ctg-len', type=int, default=2048, help='Minimum contig length')
+    preproc_group.add_argument('--min-ctg-len', type=int, default=-1, help='Minimum contig length. Default (-1) is twice the fragment length')
     preproc_group.add_argument('--min-prevalence', type=int, default=2, help='Minimum contig prevalence for binning. Contig with less that value are filtered out.')
     preproc_group.add_argument('--min-mapping-quality', type=int, default=50, help='Minimum mapping quality for bam filtering')
-    preproc_group.add_argument('--flag', type=int, default=3852, help='am Flag for bam filtering')
-    preproc_group.add_argument('--fl-range', type=int, default=[200, 500], nargs=2, help='Only allow for paired alignments with spacing within this range')
+    preproc_group.add_argument('--flag', type=int, default=3596, help='am Flag for bam filtering')
+    preproc_group.add_argument('--fl-range', type=int, default=[], nargs=2, help='Only allow for paired alignments with spacing within this range')
     preproc_group.add_argument('--tmp-dir', type=str, default='./tmp42', help='Temporary directory for bam processing', action=ToPathAction)
 
     frag_group = parser.add_argument_group(title='Fragmentation')
@@ -72,7 +73,7 @@ def parse_args():
 
     cluster_group = parser.add_argument_group(title='Clustering')
     cluster_group.add_argument('--max-neighbors', type=int, default=100, help='Maximum number of neighbors to consider to compute the adjacency matrix.')
-    cluster_group.add_argument('--hits-threshold', type=float, default=0.8, help='Minimum percent of edges between two contigs to form an edge between them')
+    cluster_group.add_argument('--theta', type=float, default=0.8, help='Minimum percent of edges between two contigs to form an edge between them')
     cluster_group.add_argument('--gamma1', type=float, default=0.1, help='CPM optimization value for the first run of the Leiden clustering')
     cluster_group.add_argument('--gamma2', type=float, default=0.75, help='CPM optimization value for the second run of the Leiden clustering')
 

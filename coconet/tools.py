@@ -141,7 +141,7 @@ def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
 
     pairs = np.concatenate([pairs[:, 0], pairs[:, 1]])
     sorted_idx = np.argsort(pairs['sp'])
-
+    
     conv_shape = ceil((frag_len-window_size+1)/window_step)
 
     coverage_feature = np.zeros([2*n_pairs, n_samples, conv_shape],
@@ -149,18 +149,21 @@ def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
     seen = {}
 
     for i, (species, start, end) in enumerate(pairs[sorted_idx]):
-        cov_sp = seen.get((species, start), None)
+        try:
+            cov_sp = seen.get((species, start), None)
 
-        if cov_sp is None:
-            cov_sp = np.apply_along_axis(
-                lambda x: avg_window(x, window_size, window_step),
-                1,
-                coverage_data[species][:, start:end]
-            )
-            seen[(species, start)] = cov_sp
+            if cov_sp is None:
+                cov_sp = np.apply_along_axis(
+                    lambda x: avg_window(x, window_size, window_step),
+                    1,
+                    coverage_data[species][:, start:end]
+                )
+                seen[(species, start)] = cov_sp
 
-        coverage_feature[sorted_idx[i]] = cov_sp
-
+            coverage_feature[sorted_idx[i]] = cov_sp
+        except:
+            import ipdb;ipdb.set_trace()
+            
         if pbar is not None:
             pbar.update(0.5)
 

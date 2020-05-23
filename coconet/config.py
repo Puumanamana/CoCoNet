@@ -122,13 +122,13 @@ class Configuration:
                      'coverage': 'representation_cover.h5'}
         }
 
-        if 'hits_threshold' in self.__dict__:
+        if 'theta' in self.__dict__:
             output_files.update({
                 'pre_graph': 'pre_graph.pkl',
                 'graph': 'graph_{}-{}-{}.pkl'.format(
-                    self.hits_threshold, self.gamma1, self.gamma2),
+                    self.theta, self.gamma1, self.gamma2),
                 'assignments': 'bins_{}-{}-{}.csv'.format(
-                    self.hits_threshold, self.gamma1, self.gamma2)
+                    self.theta, self.gamma1, self.gamma2)
             })
 
         for name, filename in output_files.items():

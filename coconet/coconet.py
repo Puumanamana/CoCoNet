@@ -54,6 +54,9 @@ def preprocess(cfg):
     Preprocess assembly and coverage
     '''
 
+    if cfg.min_ctg_len < 0:
+        cfg.min_ctg_len = 2 * cfg.fragment_length
+
     print('Preprocessing fasta and {} files'.format(cfg.cov_type))
 
     if cfg.cov_type == '.bam':
@@ -167,7 +170,7 @@ def cluster(cfg):
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         n_frags=n_frags,
-        hits_threshold=cfg.hits_threshold,
+        theta=cfg.theta,
         gamma1=cfg.gamma1, gamma2=cfg.gamma2
     )
 

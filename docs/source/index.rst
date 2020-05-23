@@ -12,6 +12,7 @@
    self
    getting_started
    basic_usage
+   hyperparameters
 
 Indices and tables
 ==================

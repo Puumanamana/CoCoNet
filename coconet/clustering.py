@@ -175,7 +175,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
                        graph_file=None,
                        assignments_file=None,
                        n_frags=30,
-                       hits_threshold=0.9,
+                       theta=0.9,
                        gamma1=0.1, gamma2=0.75):
     '''
     - Go through all clusters
@@ -185,7 +185,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
 
     # Pre-clustering
     pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
-    edge_threshold = hits_threshold * n_frags**2
+    edge_threshold = theta * n_frags**2
 
     handles = {key: h5py.File(filename, 'r') for key, filename in repr_file.items()}
     contigs = np.array(list(handles['coverage'].keys()))

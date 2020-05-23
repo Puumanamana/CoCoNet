@@ -13,12 +13,12 @@ CoCoNet documentation
 Citation (Work in progress)
 ---------------------------
 Arisdakessian C., Nigro O., Steward G., Poisson G., Belcaid M.
-CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
+Binning viral metagenomes using a deep neural network
 
 Description
 -----------
 
-CoCoNet (Composition and Coverage Network) is a binning method for viral metagenomes. It leverages the flexibility and the effectiveness of deep learning models to learn the probability density function of co-occurrence of contigs in the same genome and therefore provides a rigorous probabilistic framework for binning contigs. The derived probability are then used to compute an adjacency matrix for a subset of strategically selected contigs, and infer homogenous clusters representing contigs of the same genome.
+CoCoNet (Composition and Coverage Network) is a binning method for viral metagenomes. It leverages deep learning to abstract the modeling of the k-mer composition and the coverage for binning contigs assembled form viral metagenomic data. Specifically, our method uses a neural network to learn from the metagenomic data a flexible function for predicting the probability that any pair of contigs originated from the same genome. These probabilities are subsequently combined to infer bins, or clusters representing the species present in the sequenced samples. Our approach was specifically designed for diverse viral metagenomes, such as those found in environmental samples (e.g., oceans, soil, etc.).
 
 Install
 -------
@@ -29,10 +29,10 @@ CoCoNet is available on PyPi and can be installed with pip:
 
    pip3 install coconet-binning --user
 
-Usage
------
+Basic usage
+-----------
 
-CoCoNet is available in the command line. For a list of all the options, open a terminal and run:
+CoCoNet is available as the command line program. For a list of all the options, open a terminal and run:
 
 .. code-block:: bash
 

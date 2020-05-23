@@ -1,5 +1,5 @@
-Basic Usage
------------
+Usage
+-----
 
 Inputs
 ^^^^^^
@@ -7,10 +7,18 @@ Inputs
 CoCoNet's main running mode bins contigs assembled using multiple samples. The minimum required is:
 
 #. The assembly in `fasta` format, generated from the raw reads with your favorite assembler (e.g. `metaspades <https://github.com/ablab/spades>`_, `megahit <https://github.com/voutcn/megahit>`_, `idb-ud <https://github.com/loneknightpy/idba>`_, `metavelvet <https://github.com/hacchy/MetaVelvet>`_, ...)
-#. The alignments in the `bam` format. These files can be generated from the raw `fastq` reads and the assembly using an aligner such as `bwa <https://github.com/lh3/bwa>`_ or `bowtie2 <https://github.   com/BenLangmead/bowtie2>`_. 
+#. The alignments in the `bam` format. These files can be generated from the raw `fastq` reads and the assembly using an aligner such as `bwa <https://github.com/lh3/bwa>`_ or `bowtie2 <https://github.com/BenLangmead/bowtie2>`_. 
 
 Running CoCoNet
 ^^^^^^^^^^^^^^^
+
+All of CoCoNet's steps are included in the software, and include:
+
+- *Assembly preprocessing*: Contigs are filtered based on the minimum contig length
+- *Coverage preprocessing*: Contigs go through another round of filtering based on the minimum prevalence.
+- *Train/Test data generation* for the neural network
+- *Deep learning phase*: The neural network is trained de novo for each new dataset to learn the coverage patterns and the k-mer distribution associated present in the data.
+- *Clustering phase*: Contigs are placed in bins using the similarity function learned on the previous phase
 
 To run CoCoNet with the default parameters, you simply need to provide the assembly and the bam coverage files:
 

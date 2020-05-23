@@ -50,16 +50,25 @@ def filter_bam_aln(bam, threads, min_qual, flag, fl_range, outdir=None):
     Run samtools view to filter quality
     '''
 
-    sorted_output = Path("{}/{}_q{}-F{}_fl{}-{}_sorted.bam"
-                         .format(outdir, bam.stem, min_qual, flag, *fl_range))
-
+    sorted_output = Path("{}/{}_q{}-F{}_fl{}_sorted.bam".format(
+        outdir, bam.stem, min_qual, flag, ''.join(map(str, fl_range)))
+    )
     if sorted_output.is_file():
         return sorted_output
 
-    cmds = [
-        ['samtools', 'view', '-h', bam.resolve(), '-@', str(threads)],
-        ['awk', '($9>{} && $9<{}) || ($9<-{} && $9>-{}) || ($9=="")'.format(*(2*fl_range))],
-        ['samtools', 'view', '-bh', '-@', str(threads), '-q', str(min_qual), '-F', str(flag)],
+    cmds = [['samtools', 'view', '-bh', bam.resolve(), '-@', str(threads)]]
+
+    if flag is not None:
+        cmds.append(['samtools', 'view', '-h', '-@', str(threads),
+                     '-q', str(min_qual), '-F', str(flag)])
+
+    if fl_range:
+        cmds.append([
+            'awk', 
+            '($9>{} && $9<{}) || ($9<-{} && $9>-{}) || ($9=="")'
+            .format(*(2*fl_range))])
+
+    cmds += [
         ['samtools', 'sort', '-@', str(threads), '-o', sorted_output],
         ['samtools', 'index', '-@', str(threads), sorted_output]
     ]
