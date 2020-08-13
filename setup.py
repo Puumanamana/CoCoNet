@@ -25,10 +25,10 @@ setup(name='coconet-binning',
           'h5py',
           'scikit-learn',
           'torch',
-          'pyyaml==5.1',
+          'pyyaml==5.1.0',
           'Biopython',
-          'python-igraph>=0.7.1.post6',
+          'python-igraph>=0.8',
           'leidenalg>=0.7.0',
           'tqdm>=4.40.0',
-          'argparse'
+          'argparse>=3.0'
       ])
