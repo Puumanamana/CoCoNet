@@ -6,6 +6,10 @@ import warnings
 from pathlib import Path
 import argparse
 
+def get_version():
+  from coconet import __version__
+  return 'CoCoNet v{version}'.format(version=__version__)
+
 class ToPathAction(argparse.Action):
     '''
     argparse action to convert string to Path objects
@@ -31,6 +35,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(allow_abbrev=False,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-v', '--version', action='version', version=get_version())
     parser.add_argument('-n', '--name', type=str, default='ds', help='Dataset name')
     parser.add_argument('-fl', '--fragment-length', type=int, default=1024, help='Dataset name')
     parser.add_argument('-t', '--threads', type=int, default=20, help='Number of threads')

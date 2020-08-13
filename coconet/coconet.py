@@ -23,12 +23,6 @@ def main(**kwargs):
     CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
     '''
 
-    print('''
-    ############################################
-    #### Starting CoCoNet binning algorithm ####
-    ############################################
-    ''')
-
     args = parse_args()
     params = vars(args)
 

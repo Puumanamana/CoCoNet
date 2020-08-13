@@ -27,7 +27,6 @@ setup(name='coconet-binning',
           'torch',
           'pyyaml==5.1',
           'Biopython',
-          'argparse',
           'python-igraph>=0.7.1.post6',
           'leidenalg>=0.7.0',
           'tqdm>=4.40.0'
