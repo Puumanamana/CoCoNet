@@ -90,7 +90,3 @@ def test_all_pairs(n_examples=50):
     assert 0.4 < np.mean(result.sp[:, 0] == result.sp[:, 1]) < 0.6
     assert np.array(result.tolist()).shape[1:] == (2, 3)
     assert len(result) >= n_examples
-
-if __name__ == '__main__':
-    test_negative_pairs()
-    test_negative_pairs_with_few_ctg()

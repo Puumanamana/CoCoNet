@@ -11,7 +11,7 @@ before_install:
 install:
   - pip install .
 script:
-  - pytest -v --cov-report=xml --cov=coconet
+  - pytest --cov-report=xml --cov=coconet
 after_success:
   - codecov
   

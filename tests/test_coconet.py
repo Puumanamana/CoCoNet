@@ -55,7 +55,3 @@ def test_all():
     PARAMS['output'].rmdir()
 
     assert not fail
-
-if __name__ == '__main__':
-    # test_parser()
-    test_all()

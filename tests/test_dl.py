@@ -272,6 +272,3 @@ def test_save_repr():
     for key, filename in output.items():
         handles[key].close()
         filename.unlink()
-
-if __name__ == '__main__':
-    test_coverage_model()

@@ -28,7 +28,7 @@ def test_pairwise_comparisons():
     h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
                for k in ['composition', 'coverage']}
 
-    handles = {k: h5py.File(v) for k, v in h5_data.items()}
+    handles = {k: h5py.File(v, 'r') for k, v in h5_data.items()}
     contigs = ['V0', 'V1', 'V2']
 
     graph = igraph.Graph()
@@ -131,9 +131,3 @@ def test_iterate_clustering():
     assert clustering.loc['V2'] == clustering.loc['V3']
     assert clustering.loc['V3'] == clustering.loc['V4']
     assert len(clustering[clustering == clustering.loc['W0']]) == 1
-
-if __name__ == '__main__':
-    # test_get_communities()
-    test_pairwise_comparisons()
-    # test_iterate_clustering()
-    # test_make_pregraph()
