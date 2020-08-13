@@ -5,7 +5,7 @@ Setup config for coconet-binning package
 from setuptools import setup
 
 setup(name='coconet-binning',
-      version='0.52',
+      version='0.53',
       description='A contig binning tool from viral metagenomes',
       long_description=open('README.rst').read(),
       keywords='binning metagenomics deep learning virus clustering',
@@ -20,15 +20,15 @@ setup(name='coconet-binning',
                      'pytest-cov'],
       python_requires='>=3.6',
       install_requires=[
-          'numpy',
-          'pandas',
-          'h5py',
-          'scikit-learn',
-          'torch',
+          'argparse',
           'pyyaml==5.1.0',
-          'Biopython',
-          'python-igraph>=0.8',
+          'numpy>=1.16',
+          'pandas>=1.0',
+          'h5py>=2.6',
+          'scikit-learn>=0.21',
+          'torch>=1.5',
+          'Biopython>=1.7',
+          'python-igraph>=0.7.1.post6',
           'leidenalg>=0.7.0',
           'tqdm>=4.40.0',
-          'argparse==1.4.0'
       ])

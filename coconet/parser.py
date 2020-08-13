@@ -36,8 +36,7 @@ def parse_args():
     parser = argparse.ArgumentParser(allow_abbrev=False,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', '--version', action='version', version=get_version())
-    parser.add_argument('-n', '--name', type=str, default='ds', help='Dataset name')
-    parser.add_argument('-fl', '--fragment-length', type=int, default=1024, help='Dataset name')
+    parser.add_argument('-fl', '--fragment-length', type=int, default=1024, help='Length of contig fragments in bp')
     parser.add_argument('-t', '--threads', type=int, default=20, help='Number of threads')
 
     io_group = parser.add_argument_group(title='io')
