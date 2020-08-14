@@ -83,10 +83,10 @@ def parse_args():
 
     args, unknown = parser.parse_known_args()
 
-    if unknown:
-        for key in unknown:
-            if key[0] == '-':
-                warnings.warn("{} is not a valid argument. It will be ignored".format(key),
-                              UserWarning)
+    # if unknown:
+    #     for key in unknown:
+    #         if key[0] == '-':
+    #             warnings.warn("{} is not a valid argument. It will be ignored".format(key),
+    #                           UserWarning)
 
     return args
