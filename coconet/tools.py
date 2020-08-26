@@ -7,6 +7,7 @@ Helpful routines for coconet
 '''
 
 import sys
+import os
 from pathlib import Path
 from math import ceil
 from textwrap import wrap
@@ -25,7 +26,15 @@ def run_if_not_exists(keys=('output',)):
     def run_if_not_exists_key(func):
 
         def wrapper(*args, **kwargs):
-            exists = True
+            if 'force' in kwargs and kwargs['force']:
+                exists = False
+            else:
+                exists = True
+
+            if func.__name__ in {'iterate_clustering', 'train'}:
+                logger = kwargs.get('logger', None)
+            else:
+                logger = kwargs.pop('logger', None)
 
             for key in keys:
                 if key not in kwargs:
@@ -40,8 +49,15 @@ def run_if_not_exists(keys=('output',)):
                     exists &= Path(kwargs[key]).is_file()
 
             if exists:
-                files = [str(kwargs[key]) for key in keys]
-                print('{} already exist. Skipping step'.format(files))
+                files = ', '.join([
+                    str(Path(kwargs[key]).relative_to(os.getcwd()))
+                    for key in keys])
+                msg = f'{func.__name__}: Existing {files} files found. Skipping step'
+
+                if logger is None:
+                    print(msg)
+                else:
+                    logger.info(msg)
                 return
 
             return func(*args, **kwargs)

@@ -4,96 +4,101 @@ Tests for preprocessing of fasta and coverage (.h5 or .bam)
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-import h5py
 from Bio import SeqIO
 
-from coconet.preprocessing import format_assembly, filter_h5, filter_bam_aln
-from coconet.preprocessing import bam_to_h5, bam_list_to_h5
+from coconet.core.feature import Feature
+from coconet.core.composition_feature import CompositionFeature
+from coconet.core.coverage_feature import CoverageFeature
 
 from .data import generate_fasta_file, generate_h5_file
 
 LOCAL_DIR = Path(__file__).parent
 
-def test_format_assembly():
-    '''
-    Test fasta filtering
-    '''
+def test_feature_obj_is_created():
+    f = Feature(ftype='x')
 
+    assert f.ftype == 'x'
+
+def test_composition_feature():
     fasta_raw = generate_fasta_file(20, 10, 15)
-    fasta_filt = format_assembly(fasta_raw, min_length=12)
+    
+    f = CompositionFeature(path=dict(fasta=fasta_raw))
+    f.filter_by_length('filtered.fasta', 12)
 
-    filtered_lengths = [len(seq.seq) for seq in SeqIO.parse(fasta_filt, 'fasta')]
-
+    filtered_lengths = [len(seq.seq) for seq in SeqIO.parse(f.path['filt_fasta'], 'fasta')]
     fasta_raw.unlink()
-    fasta_filt.unlink()
+    f.path['filt_fasta'].unlink()
 
     assert filtered_lengths == [20, 15]
 
-def test_format_assembly_when_exists():
+
+def test_bed_is_created():
     '''
-    Test fasta filtering is not performed if already exists
+    Test bed generation
     '''
 
     fasta_raw = generate_fasta_file(20, 10, 15)
-    fasta_filt = format_assembly(fasta_raw, min_length=12)
-    fasta_filt_twice = format_assembly(fasta_raw, output=fasta_filt, min_length=12)
+    f = CompositionFeature(path=dict(fasta=fasta_raw))
+    f.write_bed('regions.bed')
 
-    filtered_lengths = [len(seq.seq) for seq in SeqIO.parse(fasta_filt, 'fasta')]
+    bed_dims = pd.read_csv('regions.bed', sep='\t', header=None).shape
 
     fasta_raw.unlink()
-    fasta_filt.unlink()
+    Path('regions.bed').unlink()
 
-    assert filtered_lengths == [20, 15]
-    assert fasta_filt_twice is None
+    assert bed_dims == (3, 3)
 
 def test_filter_bam():
     '''
     Test if bam are filtered correctly
     '''
 
-    bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))
-    output = filter_bam_aln(bam_file, 5, 50, 3596, [0, 1000], outdir=LOCAL_DIR)
-    assert output.is_file()
+    bam_file = Path(LOCAL_DIR, 'sim_data', 'sample_1.bam')
+    bed_file = Path(LOCAL_DIR, 'sim_data', 'regions.bed')
 
-    output.unlink()
+    f = CoverageFeature(path=dict(bam=[bam_file]))
+    f.filter_bams(bed=bed_file, min_qual=50, flag=3596, fl_range=[0, 1000], outdir=LOCAL_DIR)
+
+    is_created = all(b.is_file() for b in f.path['filt_bam'])
+    for b in f.path['filt_bam']:
+        b.unlink()
+
+    assert is_created
 
 def test_bam_to_h5():
     '''
-    Test if depth from samtools can be converted to h5
+    Test if bamlist is converted to h5
     '''
 
-    bam_file = Path("{}/sim_data/sample_1.bam".format(LOCAL_DIR))
-    ctg_info = {seq.id: len(seq.seq) for seq in
-                SeqIO.parse("{}/sim_data/assembly.fasta".format(LOCAL_DIR), 'fasta')}
-    h5 = bam_to_h5(bam_file, '/tmp', ctg_info)
-
-    assert h5.is_file()
-
-    h5.unlink()
-
-def test_bamlist_to_h5():
-    '''
-    Test for wrapper
-    '''
-
-    fasta = Path("{}/sim_data/assembly.fasta".format(LOCAL_DIR))
-    bam_list = [Path("{}/sim_data/sample_{}.bam".format(LOCAL_DIR, i)) for i in [1, 2]]
+    fasta = Path(LOCAL_DIR, 'sim_data', 'assembly.fasta')
+    bam_list = [Path(LOCAL_DIR, 'sim_data', f'sample_{i}.bam') for i in [1, 2]]
+    tsv_out = Path('coverage.tsv')
     h5_out = Path('coverage.h5')
-    singleton_file = Path('singletons.txt')
 
-    fasta_filt = format_assembly(fasta, min_length=512)
-    bam_list_to_h5(fasta_filt, bam_list, output=h5_out, singleton_file=singleton_file,
-                   min_qual=50, flag=3596, fl_range=[0, 1000], rm_filt_bam=True)
+    valid_nucl = {
+        ctg.id: np.array([i for i, letter in enumerate(ctg.seq) if letter.upper() != 'N'])
+        for ctg in SeqIO.parse(fasta, 'fasta')
+    }
 
-    assert h5_out.is_file() and singleton_file.is_file()
+    f = CoverageFeature(path=dict(filt_bam=bam_list))
+    f.bam_to_tsv(output=tsv_out)
+    f.tsv_to_h5(valid_nucl, output=h5_out)
 
-    for f in [h5_out, singleton_file, fasta_filt]:
-        f.unlink()
+    tsv_is_created = tsv_out.is_file()
+    h5_is_created = h5_out.is_file()
 
-def test_filter_h5():
+    tsv_out.unlink()
+    h5_out.unlink()
+
+    assert tsv_is_created
+    assert h5_is_created
+
+
+def test_remove_singletons():
     '''
-    Test for filter directly when input is h5 formatted
+    Test if singletons are removed
     '''
 
     lengths = [60, 100, 80]
@@ -101,18 +106,23 @@ def test_filter_h5():
                                      baselines=[20, 40, 30],
                                      empty_samples=[[False]*3, [True, True, False], [False]*3])
     fasta = generate_fasta_file(*lengths)
-    filt = ['filt.fasta', 'filt.h5']
+    singleton_file = Path('singletons.txt')
 
-    filter_h5(fasta, h5_data, filt[0], filt[1], min_length=70, min_prevalence=2)
+    compo = CompositionFeature(path=dict(filt_fasta=fasta))
+    cover = CoverageFeature(path=dict(h5=h5_data))
+
+    cover.write_singletons(output=singleton_file, min_prevalence=2)
+    compo.filter_by_ids(output='filt.fasta', ids_file=singleton_file)
 
     singletons = pd.read_csv('singletons.txt', sep='\t').values
-    n_filt = sum(1 for _ in SeqIO.parse(filt[0], 'fasta'))
-    h5_filt_handle = h5py.File(filt[1], 'r')
-    h5_data_filt = {k: h5_filt_handle.get(k)[:] for k in h5_filt_handle}
+    n_filt = sum(1 for _ in SeqIO.parse('filt.fasta', 'fasta'))
 
-    for f in [h5_data, fasta, 'singletons.txt'] + filt:
+    for f in [fasta, h5_data, 'singletons.txt', 'filt.fasta']:
         Path(f).unlink()
 
     assert singletons.shape == (1, 2+3)
-    assert n_filt == 1
-    assert len(h5_data_filt) == 2
+    assert n_filt == 2
+        
+
+if __name__ == '__main__':
+    test_bam_to_h5()

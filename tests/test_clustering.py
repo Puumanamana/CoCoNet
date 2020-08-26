@@ -9,19 +9,13 @@ import numpy as np
 import pandas as pd
 import igraph
 
-from coconet.clustering import get_neighbors, compute_pairwise_comparisons, make_pregraph
+from coconet.core.composition_feature import CompositionFeature
+from coconet.core.coverage_feature import CoverageFeature
+from coconet.clustering import compute_pairwise_comparisons, make_pregraph
 from coconet.clustering import get_communities, iterate_clustering
 from .data import generate_h5_file, generate_rd_model
 
 LOCAL_DIR = Path(__file__).parent
-
-def test_get_neighbors():
-    h5_data = generate_h5_file(*[100]*4, n_samples=5, baselines=[10, 10, 50, 50])
-    neighbors = get_neighbors(h5_data)
-    h5_data.unlink()
-
-    assert set(neighbors[0]) == {0, 1}
-    assert set(neighbors[2]) == {2, 3}
 
 def test_pairwise_comparisons():
     model = generate_rd_model()
@@ -48,13 +42,20 @@ def test_pairwise_comparisons():
 def test_make_pregraph():
     output = Path('pregraph.pkl')
     model = generate_rd_model()
-    h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
-               for k in ['composition', 'coverage']}
 
-    make_pregraph(model, h5_data, output, n_frags=5)
+    features = {
+        'composition': CompositionFeature(path=dict(
+            latent=generate_h5_file(8, 8, 8, n_samples=5, filename='compo.h5')
+        )),
+        'coverage': CoverageFeature(path=dict(
+            latent=generate_h5_file(8, 8, 8, n_samples=5, filename='cover.h5'))
+        )
+    }
 
-    for v in h5_data.values():
-        v.unlink()
+    make_pregraph(model, features, output, n_frags=5)
+
+    features['composition'].path['latent'].unlink()
+    features['coverage'].path['latent'].unlink()
 
     assert output.is_file()
 
@@ -131,3 +132,7 @@ def test_iterate_clustering():
     assert clustering.loc['V2'] == clustering.loc['V3']
     assert clustering.loc['V3'] == clustering.loc['V4']
     assert len(clustering[clustering == clustering.loc['W0']]) == 1
+
+
+if __name__ == '__main__':
+    test_make_pregraph()

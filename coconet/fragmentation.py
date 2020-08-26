@@ -52,7 +52,6 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
             k += 1
 
     if k < fppc:
-        # print("WARNING: cannot make {} unique pairs with genome of {} fragments".format(fppc, contig_frags), end='\r')
         pairs.sp = np.tile(label, [fppc, 2])
         pairs.start = np.random.choice(contig_frags, [fppc, 2])
         pairs.end = pairs.start + frag_steps

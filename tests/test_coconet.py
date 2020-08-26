@@ -12,7 +12,7 @@ TEST_DIR = "{}/tests/sim_data".format(Path(__file__).parent.parent)
 
 PARAMS = {
     'fasta': Path("{}/assembly.fasta".format(TEST_DIR)),
-    'coverage': list(Path(TEST_DIR).glob("sample_*.bam")),
+    'bam': list(Path(TEST_DIR).glob("sample_*.bam")),
     'output': Path('./output_test'),
     'n_train': 64,
     'n_test': 8,
@@ -43,7 +43,6 @@ def test_all():
     '''
 
     fail = True
-
     try:
         main(**PARAMS)
         fail = False
@@ -55,3 +54,7 @@ def test_all():
     PARAMS['output'].rmdir()
 
     assert not fail
+
+if __name__ == '__main__':
+
+    test_all()

@@ -5,7 +5,7 @@ coverage:
 	pytest --cov=coconet
 
 publish:
-	pip install .
+	pip install --ignore-installed .
 	python setup.py sdist
 	twine upload dist/*
 

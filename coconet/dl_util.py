@@ -12,8 +12,8 @@ from Bio import SeqIO
 import torch.optim as optim
 import torch
 
-from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
-from coconet.generators import CompositionGenerator, CoverageGenerator
+from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
+from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 def initialize_model(model_type, input_shapes, architecture):
@@ -21,6 +21,7 @@ def initialize_model(model_type, input_shapes, architecture):
     Build neural network model: either
     composition only, coverage only or both
     '''
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if model_type == 'composition':
         model = CompositionModel(input_shapes, **architecture)
@@ -32,6 +33,8 @@ def initialize_model(model_type, input_shapes, architecture):
         compo_model = initialize_model("composition", input_shapes['composition'], architecture['composition'])
         cover_model = initialize_model("coverage", input_shapes['coverage'], architecture['coverage'])
         model = CoCoNet(compo_model, cover_model, **architecture['merge'])
+
+    model.to(device)
 
     return model
 
@@ -76,12 +79,12 @@ def get_npy_lines(filename):
             header = handle.readline().decode()
             n_lines = int(re.findall(r'\((\d+), \d+\)', header)[0])
         except IndexError:
-            print("Failed to parse header")
+            print("Failed to parse npy header")
             n_lines = np.load(filename).shape[0]
 
     return n_lines
 
-def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=None, **args):
+def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=None, **args):
     '''
     Return data generator by using the parameters
     in the config object
@@ -92,20 +95,20 @@ def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=No
 
     generators = []
 
-    if model_type != 'coverage':
+    if coverage is not None:
         generators.append(CompositionGenerator(pairs, fasta,
                                                batch_size=batch_size,
                                                kmer=args['kmer'],
                                                rc=args['rc'],
                                                norm=args['norm']))
-    if model_type != 'composition':
-        generators.append(CoverageGenerator(pairs, h5,
+    if fasta is not None:
+        generators.append(CoverageGenerator(pairs, coverage,
                                             batch_size=batch_size,
                                             load_batch=args['load_batch'],
                                             wsize=args['wsize'],
                                             wstep=args['wstep']))
 
-    if model_type not in ['composition', 'coverage']:
+    if len(generators) > 1:
         generators = zip(*generators)
 
     if mode == 'test':
@@ -114,7 +117,8 @@ def load_data(fasta, h5, pairs, mode='test', model_type='CoCoNet', batch_size=No
     return generators
 
 @run_if_not_exists()
-def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=None, **args):
+def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
+          output=None, batch_size=None, logger=None, **args):
     '''
     Train neural network:
     - Generate feature vectors (composition, coverage)
@@ -124,17 +128,22 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
     - Single epoch training
     '''
 
-    (x_test, x_train_gen) = (load_data(fasta, coverage, pairs[mode], mode=mode, batch_size=batch_size, **args)
-                             for mode in ['test', 'train'])
-    (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']).detach().numpy().astype(int)[:, 0])
+    (x_test, x_train_gen) = (
+        load_data(fasta=fasta, coverage=coverage, pairs=pairs[mode],
+                  mode=mode, batch_size=batch_size, **args)
+        for mode in ['test', 'train']
+    )
+    (y_train, y_test) = (
+        get_labels(pairs['train']), get_labels(pairs['test']
+        ).detach().numpy().astype(int)[:, 0])
 
     optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'])
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
     losses_buffer = deque(maxlen=500)
 
-    pbar_scores = tqdm(total=n_examples, position=1, ncols=100,
-                       bar_format="{percentage:3.0f}%|{bar:20} {postfix}")
+    pbar_scores = tqdm(total=n_examples, position=1,
+                       bar_format="{percentage:3.0f}%|{bar:10} {postfix}")
     test_msg = ''
 
     for i, batch_x in enumerate(x_train_gen, 1):
@@ -150,12 +159,15 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
             predictions = run_test(model, x_test)
             scores = get_test_scores(predictions, y_test)
 
-            test_msg = "- test accuracy: {}<{:.1%}> {}<{:.1%}> {}<{:.1%}>".format(
+            test_msg = "Test: {}<{:.1%}> {}<{:.1%}> {}<{:.1%}>".format(
                 *chain(*[[k, v['acc']] for k, v in scores.items()])
             )
 
+            if logger is not None:
+                logger.debug(f'Batch #{i:,}/{n_batches:,} - {test_msg}')
+
         pbar_scores.set_postfix_str(
-            "Running loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
+            "Loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
         )
         pbar_scores.update(batch_size)
 
@@ -165,9 +177,7 @@ def train(model, fasta, coverage, pairs, nn_test_path, output=None, batch_size=N
 
     # Save last test performance to file
     predictions.update({'truth': y_test})
-    pd.DataFrame(predictions).to_csv(nn_test_path, index=False)
-
-    print('\nFinished Training')
+    pd.DataFrame(predictions).to_csv(test_output, index=False)
 
 def run_test(model, x_test):
     '''
@@ -204,41 +214,53 @@ def get_test_scores(preds, truth):
 
     return scores
 
-@run_if_not_exists()
-def save_repr_all(model, fasta, coverage, n_frags=30, frag_len=1024,
-                  output=None, rc=True, kmer=4, wsize=64, wstep=32):
+@run_if_not_exists(keys=('latent_composition', 'latent_coverage'))
+def save_repr_all(model, fasta=None, coverage=None,
+                  latent_composition=None, latent_coverage=None,
+                  n_frags=30, frag_len=1024,
+                  rc=True, kmer=4, wsize=64, wstep=32,
+                  force=False):
     '''
     - Calculate intermediate representation for all fragments of all contigs
     - Save it in a .h5 file
     '''
 
-    print('Computing intermediate representation of composition and coverage features')
-
-    cov_h5 = h5py.File(coverage, 'r')
-
-    repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
+    if coverage is not None:
+        cov_h5 = h5py.File(coverage, 'r')
+    
+    repr_h5 = {key: h5py.File(filename, 'w') for key, filename in
+               [('composition', latent_composition),
+                ('coverage', latent_coverage)]}
 
     for contig in SeqIO.parse(fasta, "fasta"):
         step = int((len(contig)-frag_len) / n_frags)
 
         fragment_boundaries = [(step*i, step*i+frag_len) for i in range(n_frags)]
 
-        x_composition = torch.from_numpy(np.stack([
-            get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
-            for (start, stop) in fragment_boundaries
-        ]).astype(np.float32)) # Shape = (n_frags, 4**k)
+        feature_arrays = []
+        
+        if fasta is not None:
+            x_composition = torch.from_numpy(np.stack([
+                get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
+                for (start, stop) in fragment_boundaries
+            ]).astype(np.float32)) # Shape = (n_frags, 4**k)
+            
+            feature_arrays.append(x_composition)
 
-        fragment_slices = np.array([np.arange(start, stop)
-                                    for (start, stop) in fragment_boundaries])
-        coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:, fragment_slices]
-        coverage_genome = np.swapaxes(coverage_genome, 1, 0)
+        if coverage is not None:
+            fragment_slices = np.array([np.arange(start, stop)
+                                        for (start, stop) in fragment_boundaries])
+            coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:, fragment_slices]
+            coverage_genome = np.swapaxes(coverage_genome, 1, 0)
 
-        x_coverage = torch.from_numpy(
-            np.apply_along_axis(
-                lambda x: avg_window(x, wsize, wstep), 2, coverage_genome
-            ).astype(np.float32))
+            x_coverage = torch.from_numpy(
+                np.apply_along_axis(
+                    lambda x: avg_window(x, wsize, wstep), 2, coverage_genome
+                ).astype(np.float32))
 
-        x_repr = model.compute_repr(x_composition, x_coverage)
+            feature_arrays.append(x_coverage)
+            
+        x_repr = model.compute_repr(*feature_arrays)
 
         for key, handle in repr_h5.items():
             handle.create_dataset(contig.id, data=x_repr[key].detach().numpy(), dtype=np.float32)

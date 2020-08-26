@@ -5,20 +5,25 @@ Configuration object to handle CLI, loading/resuming runs
 import sys
 from pathlib import Path
 from math import ceil
+import logging
 
 import yaml
 import h5py
 
 from coconet.tools import kmer_count
+from coconet.core.composition_feature import CompositionFeature
+from coconet.core.coverage_feature import CoverageFeature
+
 
 class Configuration:
     """
     Configuration object to handle command line arguments
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, features=['coverage', 'composition'], **kwargs):
         self.io = {}
         self.cov_type = '.bam'
+        self.features = features
 
         if kwargs:
             for item in kwargs.items():
@@ -56,7 +61,7 @@ class Configuration:
         Check inputs are well formatted before setting them
         '''
 
-        if name not in {'fasta', 'coverage', 'tmp_dir', 'output'}:
+        if name not in {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}:
             setattr(self, name, val)
             return
 
@@ -65,23 +70,24 @@ class Configuration:
             if filepath.suffix not in ['.fa', '.fasta', '.fna']:
                 sys.exit('This assembly file extension is not supported ({})'.format(filepath.suffix))
 
-        if name == 'coverage':
+        if name == 'bam':
+            if not val:
+                return
             filepath = [Path(cov) for cov in val]
-            if len(filepath) == 1:
-                filepath = filepath[0]
-                self.cov_type = '.h5'
-                name = 'coverage_h5'
-            else:
-                suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
-                if not suffixes:
-                    sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
-                name = 'coverage_bam'
+            suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
+            if not suffixes:
+                sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
+                
+        if name == 'h5':
+            if val is None:
+                return
+            filepath = Path(val)
+            self.cov_type = '.h5'
 
         if name in ['tmp_dir', 'output']:
             filepath = Path(val).resolve()
 
         self.io[name] = filepath
-
 
     def to_yaml(self):
         '''
@@ -97,7 +103,11 @@ class Configuration:
         else:
             complete_conf = {key: val for (key, val) in self.__dict__.items()}
 
-        io_to_keep = {k: v for (k, v) in self.io.items() if k in ['fasta', 'coverage', 'tmp_dir', 'output']}
+        if 'logger' in complete_conf:
+            del complete_conf['logger']
+            
+        io_to_keep = {k: v for (k, v) in self.io.items() if k in
+                      {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
         complete_conf['io'] = io_to_keep
 
         with open(config_file, 'w') as handle:
@@ -113,14 +123,27 @@ class Configuration:
 
         output_files = {
             'filt_fasta': 'assembly_filtered.fasta',
-            'filt_h5': 'coverage_filtered.h5',
+            'bed': 'assembly_filtered.bed',
+            'tsv': 'coverage.tsv',            
+            'h5': 'coverage.h5',
             'singletons': 'singletons.txt',
-            'pairs': {'test': 'pairs_test.npy', 'train': 'pairs_train.npy'},
+            'pairs': {'test': 'pairs_test.npy',
+                      'train': 'pairs_train.npy'},
             'model': 'CoCoNet.pth',
             'nn_test': 'CoCoNet_test.csv',
-            'repr': {'composition': 'representation_compo.h5',
-                     'coverage': 'representation_cover.h5'}
+            'repr': {feature: f'latent_{feature}.h5'
+                     for feature in self.features}
         }
+        
+        # if coverage_h5 already exists, symlink it to the output folder
+        if 'h5' in self.io:
+            link = Path(self.io['output'], output_files['h5']).resolve()
+            if not link.is_file():
+                link.symlink_to(self.io['h5'].resolve())
+
+        if 'bam' in self.io:
+            self.io['filt_bam'] = [f'{bam.stem}_filtered.bam' for
+                                   bam in self.io['bam']]
 
         if 'theta' in self.__dict__:
             output_files.update({
@@ -133,19 +156,43 @@ class Configuration:
 
         for name, filename in output_files.items():
             if isinstance(filename, str):
-                output_files[name] = Path('{}/{}'.format(self.io['output'], filename))
+                output_files[name] = Path(self.io['output'], filename)
             if isinstance(filename, dict):
                 for key, val in filename.items():
                     output_files[name][key] = Path('{}/{}'.format(self.io['output'], val))
 
         self.io.update(output_files)
 
+    def set_logging(self):
+        self.logger = logging.getLogger('CoCoNet')
+        self.logger.setLevel('DEBUG')
+
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s : %(message)s',
+            '%Y-%m-%d %H:%M:%S'
+        )
+
+        self.logger.propagate = False
+        self.logger.setLevel('DEBUG')
+
+        if not self.logger.handlers:
+            stream_hdl = logging.StreamHandler()
+            stream_hdl.setFormatter(formatter)
+            stream_hdl.setLevel(self.verbosity)
+
+            file_hdl = logging.FileHandler(f'{self.io["output"]}/coconet.log')
+            file_hdl.setFormatter(formatter)
+
+            self.logger.addHandler(stream_hdl)
+            self.logger.addHandler(file_hdl)
+        
+
     def get_input_shapes(self):
         '''
         Return input shapes for neural network
         '''
 
-        with h5py.File(self.io['filt_h5'], 'r') as handle:
+        with h5py.File(self.io['h5'], 'r') as handle:
             n_samples = handle.get(list(handle.keys())[0]).shape[0]
 
         input_shapes = {
@@ -170,3 +217,29 @@ class Configuration:
         }
 
         return architecture
+
+    def get_composition_feature(self):
+        return CompositionFeature(
+            path=dict(fasta=self.io['fasta'],
+                      filt_fasta=self.io['filt_fasta'],
+                      latent=self.io['repr']['composition'])
+            )
+            
+    def get_coverage_feature(self):
+        return CoverageFeature(
+            path=dict(bam=self.io['bam'],
+                      filt_bam=self.io['filt_bam'],
+                      h5=self.io['h5'],
+                      latent=self.io['repr']['coverage'])
+        )
+    
+    def get_features(self):
+        features = {}
+        
+        if 'coverage' in self.features:
+            features['coverage'] = self.get_coverage_feature()
+        if 'composition' in self.features:
+            features['composition'] = self.get_composition_feature()
+
+        return features
+        

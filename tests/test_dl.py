@@ -10,12 +10,12 @@ from Bio import SeqIO
 import numpy as np
 import h5py
 
-from coconet.config import Configuration
+from coconet.core.config import Configuration
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import initialize_model, load_model, train, save_repr_all
 from coconet.dl_util import get_npy_lines, get_labels, get_test_scores
-from coconet.torch_models import CompositionModel, CoverageModel, CoCoNet
-from coconet.generators import CompositionGenerator, CoverageGenerator
+from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
+from coconet.core.generators import CompositionGenerator, CoverageGenerator
 
 from .data import generate_fasta_file, generate_h5_file, generate_pair_file
 from .data import FL, STEP, WSIZE, WSTEP
@@ -225,7 +225,7 @@ def test_load_model():
 
     cfg = Configuration()
     cfg.init_config(output='.', **args)
-    cfg.io['filt_h5'] = generate_h5_file(FL)
+    cfg.io['h5'] = generate_h5_file(FL)
 
     model = initialize_model('CoCoNet', cfg.get_input_shapes(), cfg.get_architecture())
     model_path = Path('CoCoNet.pth')
@@ -237,7 +237,7 @@ def test_load_model():
     loaded_model = load_model(cfg)
 
     model_path.unlink()
-    cfg.io['filt_h5'].unlink()
+    cfg.io['h5'].unlink()
 
     assert isinstance(loaded_model, CoCoNet)
 
@@ -250,9 +250,10 @@ def test_save_repr():
     fasta = generate_fasta_file(*TEST_CTG_LENGTHS)
     coverage = generate_h5_file(*TEST_CTG_LENGTHS)
 
-    output = {k: Path('repr_{}.h5'.format(k)) for k in ['composition', 'coverage']}
+    output = {f'latent_{k}': Path('repr_{}.h5'.format(k))
+              for k in ['composition', 'coverage']}
 
-    save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, output=output,
+    save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, **output,
                   wsize=WSIZE, wstep=WSTEP)
 
     assert all(out.is_file() for out in output.values())
@@ -264,8 +265,8 @@ def test_save_repr():
     latent_dim = (TEST_ARCHITECTURE['composition']['neurons'][-1]
                   + TEST_ARCHITECTURE['coverage']['neurons'][-1])
 
-    assert firsts['composition'] == (5, latent_dim)
-    assert firsts['coverage'] == (5, latent_dim)
+    assert firsts['latent_composition'] == (5, latent_dim)
+    assert firsts['latent_coverage'] == (5, latent_dim)
 
     fasta.unlink()
     coverage.unlink()

@@ -4,7 +4,7 @@ Unittest for Configuration object
 
 from pathlib import Path
 
-from coconet.config import Configuration
+from coconet.core.config import Configuration
 
 from .data import generate_h5_file
 
@@ -41,7 +41,7 @@ def test_load_save():
     Test saving / loading configs
     '''
 
-    kwargs = {'coverage': ['xyz.h5'],
+    kwargs = {'h5': 'xyz.h5',
               'fasta': '/a/b/c.fasta',
               'output': 'output'}
 
@@ -59,6 +59,8 @@ def test_load_save():
                if not isinstance(v, dict))
 
     config_file.unlink()
+    Path('xyz.h5').unlink()
+    cfg.io['h5'].unlink()
     cfg.io['output'].rmdir()
 
 def test_input_sizes():
@@ -67,15 +69,17 @@ def test_input_sizes():
     '''
 
     cfg = Configuration()
-    cfg.init_config(output='test123', kmer=4, no_rc=False, fragment_length=10, wsize=4, wstep=2)
-    cfg.io['filt_h5'] = generate_h5_file(10)
+    cfg.init_config(mkdir=True, output='test123', kmer=4, no_rc=False,
+                    fragment_length=10, wsize=4, wstep=2)
+    cfg.io['h5'] = generate_h5_file(10)
 
     input_shapes = {'composition': 136,
                     'coverage': (4, 2)}
 
     auto_shapes = cfg.get_input_shapes()
 
-    cfg.io['filt_h5'].unlink()
+    cfg.io['h5'].unlink()
+    cfg.io['output'].rmdir()
 
     assert input_shapes == auto_shapes
 
@@ -104,3 +108,7 @@ def test_architecture():
     }
 
     assert architecture == cfg.get_architecture()
+
+if __name__ == '__main__':
+
+    test_input_sizes()
