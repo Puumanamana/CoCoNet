@@ -127,7 +127,8 @@ def filter_bam_aln(bam, bed=None, min_qual=0, flag=0, fl_range=None, output=None
     ]
 
     if fl_range:
-        cmd = ['awk', '($9=="") | ({} < sqrt($9^2) < {})'.format(*fl_range)]
+        awk_cond = '($9=="") | ({} < sqrt($9^2) < {})'.format(*fl_range)
+        cmd = ['awk', f"'{awk_cond}'"]
         cmds.insert(1, cmd)
 
     processes = []
