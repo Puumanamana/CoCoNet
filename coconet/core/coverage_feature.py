@@ -1,9 +1,8 @@
-import subprocess
 from pathlib import Path
-import csv
 
 import numpy as np
 import h5py
+import pysam
 
 from coconet.core.feature import Feature
 from coconet.tools import run_if_not_exists
@@ -30,69 +29,24 @@ class CoverageFeature(Feature):
         
         return n_samples
 
-    def filter_bams(self, outdir=None, **kwargs):
+    @run_if_not_exists()
+    def to_h5(self, valid_nucleotides, output=None):
         if 'bam' not in self.path:
             return
 
-        self.path['filt_bam'] = []
-        for bam in self.path['bam']:
-            output = Path(outdir, f'{bam.stem}_filtered.bam')
-            filter_bam_aln(bam, output=output, **kwargs)
-            self.path['filt_bam'].append(output)
-    
-    @run_if_not_exists()
-    def bam_to_tsv(self, output=None):
-        if 'filt_bam' not in self.path:
-            return
+        iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
+        handle = h5py.File(str(output), 'w')
 
-        cmd = (['samtools', 'depth', '-d', '20000']
-               + [bam.resolve() for bam in self.path['filt_bam']])
-
-        with open(str(output), 'w') as outfile:
-            subprocess.call(cmd, stdout=outfile)
-
-        self.path['tsv'] = Path(output)
-    
-    @run_if_not_exists()
-    def tsv_to_h5(self, valid_nucl_pos, output=None):
-        if 'tsv' not in self.path:
-            return
+        for contig, positions in valid_nucleotides.items():
+            coverages = np.zeros((len(iterators), len(positions)), dtype='uint32')
+            contig_length = 1 + positions[-1]
         
-        writer = h5py.File(output, 'w')
+            for i, bam_it in enumerate(iterators):
+                it = bam_it.fetch(contig, 1, contig_length)
+                coverages[i] = get_contig_coverage(it, length=contig_length)[positions]
+            handle.create_dataset(contig, data=coverages)
 
-        # Save the coverage of each contig in a separate file
-        current_ctg = None
-        depth_buffer = None
-
-        with open(self.path['tsv'], 'r') as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter='\t')
-
-            for entry in csv_reader:
-                (ctg, pos) = entry[:2]
-            
-                # 1st case: contig is not in the assembly (filtered out in previous step)
-                ctg_len = 1 + valid_nucl_pos.get(ctg, [-1])[-1]
-
-                if ctg_len == 0:
-                    continue
-
-                # 2nd case: it's a new contig in the depth file
-                if ctg != current_ctg:
-                    # If it's not the first one, we save it
-                    if current_ctg is not None:
-                        pos_subset = valid_nucl_pos[current_ctg]
-                        writer.create_dataset(current_ctg, data=depth_buffer[:, pos_subset])
-                    # Update current contigs
-                    current_ctg = ctg
-                    depth_buffer = np.zeros((len(entry)-2, ctg_len), dtype=np.uint32)
-
-                # Fill the contig with depth info
-                depth_buffer[:, int(pos)-1] = [int(x) for x in entry[2:]]
-
-        pos_subset = valid_nucl_pos[current_ctg]
-        writer.create_dataset(current_ctg, data=depth_buffer[:, pos_subset])
-        writer.close()
-
+        handle.close()
         self.path['h5'] = Path(output)
 
     def write_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
@@ -112,37 +66,39 @@ class CoverageFeature(Feature):
                     writer.write('\n{}'.format('\t'.join(info)))
 
             h5_handle.close()
-                    
-@run_if_not_exists()
-def filter_bam_aln(bam, bed=None, min_qual=0, flag=0, fl_range=None, output=None, threads=1):
-    '''
-    Run samtools view to filter quality
-    '''
 
-    cmds = [
-        ['samtools', 'view', '-h', '-L', bed.resolve(), '-@', str(threads),
-         '-q', str(min_qual), '-F', str(flag), bam.resolve()],
-        ['samtools', 'sort', '-@', str(threads), '-o', output],
-        ['samtools', 'index', '-@', str(threads), output]
-    ]
 
-    if fl_range:
-        awk_cond = '($9=="") | ({} < sqrt($9^2) < {})'.format(*fl_range)
-        cmd = ['awk', f"'{awk_cond}'"]
-        cmds.insert(1, cmd)
+#============ Useful functions for coverage estimation ============#
 
-    processes = []
-    for i, cmd in enumerate(cmds[:-1]):
-        stdin = None
-        stdout = None
+def get_contig_coverage(iterator, length):
+    coverage = np.zeros(length, dtype='uint32')
+    
+    for read in filter(pass_filter, iterator):
+        # Need to handle overlap between forward and reverse read
+        # bam files coordinates are 1-based --> offset
+        coverage[read.reference_start-1:read.reference_end] += 1
 
-        if 0 < i < len(cmds)-1:
-            stdin = processes[-1].stdout
-        if i < len(cmds)-1:
-            stdout = subprocess.PIPE
+    return coverage
 
-        process = subprocess.Popen(cmd, stdout=stdout, stdin=stdin)
-        processes.append(process)
-
-    processes[-2].wait()
-    processes[-1].wait()
+def pass_filter(s, min_mapq=30, min_tlen=None, max_tlen=None, min_coverage=0.5):
+    if s.mapping_quality < min_mapq:
+        return False
+    if s.is_unmapped:
+        return False
+    if not s.is_paired:
+        return False
+    if s.is_duplicate:
+        return False
+    if s.is_qcfail:
+        return False
+    if s.is_secondary:
+        return False
+    if s.is_supplementary:
+        return False
+    if s.query_alignment_length / s.query_length < min_coverage:
+        return False
+    if min_tlen is not None and abs(s.template_length) < min_tlen:
+        return False
+    if max_tlen is not None and abs(s.template_length) > max_tlen:
+        return False
+    return True

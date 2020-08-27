@@ -40,7 +40,7 @@ def test_bed_is_created():
     '''
 
     fasta_raw = generate_fasta_file(20, 10, 15)
-    f = CompositionFeature(path=dict(fasta=fasta_raw))
+    f = CompositionFeature(path=dict(fasta=fasta_raw, filt_fasta=fasta_raw))
     f.write_bed('regions.bed')
 
     bed_dims = pd.read_csv('regions.bed', sep='\t', header=None).shape
@@ -50,23 +50,6 @@ def test_bed_is_created():
 
     assert bed_dims == (3, 3)
 
-def test_filter_bam():
-    '''
-    Test if bam are filtered correctly
-    '''
-
-    bam_file = Path(LOCAL_DIR, 'sim_data', 'sample_1.bam')
-    bed_file = Path(LOCAL_DIR, 'sim_data', 'regions.bed')
-
-    f = CoverageFeature(path=dict(bam=[bam_file]))
-    f.filter_bams(bed=bed_file, min_qual=50, flag=3596, fl_range=[0, 1000], outdir=LOCAL_DIR)
-
-    is_created = all(b.is_file() for b in f.path['filt_bam'])
-    for b in f.path['filt_bam']:
-        b.unlink()
-
-    assert is_created
-
 def test_bam_to_h5():
     '''
     Test if bamlist is converted to h5
@@ -74,7 +57,6 @@ def test_bam_to_h5():
 
     fasta = Path(LOCAL_DIR, 'sim_data', 'assembly.fasta')
     bam_list = [Path(LOCAL_DIR, 'sim_data', f'sample_{i}.bam') for i in [1, 2]]
-    tsv_out = Path('coverage.tsv')
     h5_out = Path('coverage.h5')
 
     valid_nucl = {
@@ -82,17 +64,12 @@ def test_bam_to_h5():
         for ctg in SeqIO.parse(fasta, 'fasta')
     }
 
-    f = CoverageFeature(path=dict(filt_bam=bam_list))
-    f.bam_to_tsv(output=tsv_out)
-    f.tsv_to_h5(valid_nucl, output=h5_out)
+    f = CoverageFeature(path=dict(bam=bam_list))
+    f.to_h5(valid_nucl, output=h5_out)
 
-    tsv_is_created = tsv_out.is_file()
     h5_is_created = h5_out.is_file()
-
-    tsv_out.unlink()
     h5_out.unlink()
 
-    assert tsv_is_created
     assert h5_is_created
 
 

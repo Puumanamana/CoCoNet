@@ -36,9 +36,12 @@ class CompositionFeature(Feature):
         return np.array(contigs)
 
     def write_bed(self, output=None):
+        filt_ids = set(self.get_contigs('filt_fasta'))
+                       
         with open(str(output), 'w') as writer:
-            for (ctg_id, seq) in self.get_iterator():
-                writer.write('\t'.join([ctg_id, '1', str(1+len(seq))]) + '\n')
+            for (ctg_id, seq) in self.get_iterator('fasta'):
+                if ctg_id in filt_ids:
+                       writer.write('\t'.join([ctg_id, '1', str(1+len(seq))]) + '\n')
 
     @run_if_not_exists()
     def filter_by_length(self, output=None, min_length=None):
@@ -82,9 +85,12 @@ class CompositionFeature(Feature):
         Return position of ACGT only in fasta 
         (useful to clean coverage data since N are discarded from the fasta)
         '''
+        filt_ids = set(self.get_contigs('fasta'))
+        
         valid_nucl = {
-            ctg_id: np.array([i for i, letter in enumerate(seq) if letter.upper() != 'N'])
+            ctg_id: np.array([i for i, letter in enumerate(seq) if letter.upper() in 'ACGT'])
             for (ctg_id, seq) in self.get_iterator('fasta')
+            if ctg_id in filt_ids
         }
 
         return valid_nucl

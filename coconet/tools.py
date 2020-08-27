@@ -50,7 +50,7 @@ def run_if_not_exists(keys=('output',)):
 
             if exists:
                 files = ', '.join([
-                    str(Path(kwargs[key]).relative_to(os.getcwd()))
+                    str(Path(kwargs[key]).resolve().relative_to(os.getcwd()))
                     for key in keys])
                 msg = f'{func.__name__}: Existing {files} files found. Skipping step'
 

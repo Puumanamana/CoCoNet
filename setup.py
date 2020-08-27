@@ -31,4 +31,5 @@ setup(name='coconet-binning',
           'python-igraph>=0.7.1.post6',
           'leidenalg>=0.7.0',
           'tqdm>=4.40.0',
+          'pysam>=0.16'
       ])

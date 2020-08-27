@@ -124,7 +124,6 @@ class Configuration:
         output_files = {
             'filt_fasta': 'assembly_filtered.fasta',
             'bed': 'assembly_filtered.bed',
-            'tsv': 'coverage.tsv',            
             'h5': 'coverage.h5',
             'singletons': 'singletons.txt',
             'pairs': {'test': 'pairs_test.npy',
@@ -140,10 +139,6 @@ class Configuration:
             link = Path(self.io['output'], output_files['h5']).resolve()
             if not link.is_file():
                 link.symlink_to(self.io['h5'].resolve())
-
-        if 'bam' in self.io:
-            self.io['filt_bam'] = [f'{bam.stem}_filtered.bam' for
-                                   bam in self.io['bam']]
 
         if 'theta' in self.__dict__:
             output_files.update({
@@ -228,7 +223,6 @@ class Configuration:
     def get_coverage_feature(self):
         return CoverageFeature(
             path=dict(bam=self.io['bam'],
-                      filt_bam=self.io['filt_bam'],
                       h5=self.io['h5'],
                       latent=self.io['repr']['coverage'])
         )
