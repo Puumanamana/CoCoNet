@@ -222,8 +222,8 @@ class Configuration:
 
     def get_coverage_feature(self):
         return CoverageFeature(
-            path=dict(bam=self.io['bam'],
-                      h5=self.io['h5'],
+            path=dict(bam=self.io.get('bam', None),
+                      h5=self.io.get('h5', None),
                       latent=self.io['repr']['coverage'])
         )
 

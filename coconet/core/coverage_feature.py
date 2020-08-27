@@ -30,8 +30,8 @@ class CoverageFeature(Feature):
         return n_samples
 
     @run_if_not_exists()
-    def to_h5(self, valid_nucleotides, output=None):
-        if 'bam' not in self.path:
+    def to_h5(self, valid_nucleotides, output=None, logger=None):
+        if self.path.get('bam', None) is None:
             return
 
         iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
@@ -46,6 +46,10 @@ class CoverageFeature(Feature):
                 coverages[i] = get_contig_coverage(it, length=contig_length)[positions]
             handle.create_dataset(contig, data=coverages)
 
+            if logger is not None and i % 1000 == 0:
+                progress = i / len(valid_nucleotides)
+                logger.info(f'Coverage: {progress:.2%} done')
+
         handle.close()
         self.path['h5'] = Path(output)
 
@@ -55,7 +59,7 @@ class CoverageFeature(Feature):
             header = ['contigs', 'length'] + [f'sample_{i}' for i in range(self.n_samples())]
             writer.write('\t'.join(header))
             h5_handle = self.get_handle()
-            
+
             for ctg, data in h5_handle.items():
                 ctg_coverage = data[:].mean(axis=1)
                 prevalence = sum(ctg_coverage > noise_level)
@@ -72,7 +76,7 @@ class CoverageFeature(Feature):
 
 def get_contig_coverage(iterator, length):
     coverage = np.zeros(length, dtype='uint32')
-    
+
     for read in filter(pass_filter, iterator):
         # Need to handle overlap between forward and reverse read
         # bam files coordinates are 1-based --> offset

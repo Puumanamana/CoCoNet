@@ -18,7 +18,7 @@ from coconet.tools import run_if_not_exists
 
 def compute_pairwise_comparisons(model, graph, handles,
                                  neighbors=None, max_neighbors=100,
-                                 n_frags=30, bin_id=-1):
+                                 n_frags=30, bin_id=-1, pbar=False):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
@@ -30,16 +30,19 @@ def compute_pairwise_comparisons(model, graph, handles,
 
     contigs = np.array(graph.vs['name'])
 
-    if bin_id < 0:
-        contig_iter = tqdm(enumerate(contigs), total=len(contigs))
-        contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar:20}"
-    else:
-        contig_iter = enumerate(contigs[neighbors])
+    if pbar:
+        if bin_id < 0:
+            contig_iter = tqdm(enumerate(contigs), total=len(contigs))
+            contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar:20}"
+        else:
+            contig_iter = enumerate(contigs[neighbors])
 
-        if len(neighbors) > 100:
-            contig_iter = tqdm(contig_iter, total=len(neighbors))
-            contig_iter.bar_format = "{desc:<30} {percentage:3.0f}%|{bar:10}"
-            contig_iter.set_description(f'Refining bin #{bin_id} ({len(neighbors)} contigs)')
+            if len(neighbors) > 100:
+                contig_iter = tqdm(contig_iter, total=len(neighbors))
+                contig_iter.bar_format = "{desc:<30} {percentage:3.0f}%|{bar:10}"
+                contig_iter.set_description(f'Refining bin #{bin_id} ({len(neighbors)} contigs)')
+    else:
+        contig_iter = enumerate(contigs)
 
     edges = {}
 
@@ -61,7 +64,7 @@ def compute_pairwise_comparisons(model, graph, handles,
         if neighb_k.size == 0:
             continue
 
-        if bin_id < 0:
+        if pbar and bin_id < 0:
             contig_iter.set_description(f'Contig #{k} - {len(neighb_k)} neighbors')
 
         x_ref = {k: torch.from_numpy(handle.get(ctg)[:][ref_idx]) for k, handle in handles.items()}

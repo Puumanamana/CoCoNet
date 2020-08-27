@@ -62,7 +62,7 @@ def preprocess(cfg):
     cfg.logger.info('Converting bam coverage to hdf5')
     coverage = cfg.get_coverage_feature()
     # TO DO: take parameters into account with flags and such
-    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'])
+    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'], logger=cfg.logger)
     coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
 
     if not coverage.path['h5'].is_file():

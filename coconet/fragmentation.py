@@ -97,7 +97,7 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     return pairs
 
 @run_if_not_exists()
-def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
+def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6, logger=None):
     """
     Extract positive and negative pairs for [contigs]
     """

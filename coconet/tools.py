@@ -31,7 +31,7 @@ def run_if_not_exists(keys=('output',)):
             else:
                 exists = True
 
-            if func.__name__ in {'iterate_clustering', 'train'}:
+            if func.__name__ in {'iterate_clustering', 'train', 'to_h5'}:
                 logger = kwargs.get('logger', None)
             else:
                 logger = kwargs.pop('logger', None)
