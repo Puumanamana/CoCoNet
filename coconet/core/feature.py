@@ -46,5 +46,5 @@ class Feature:
                              for i, wr in enumerate(within_range)]
 
         handle.close()
-        
+
         return neighbors_ordered

@@ -113,7 +113,7 @@ def make_pregraph(model, features, output, force=False, **kw):
 
     for handle in handles.values():
         handle.close()
-    
+
     # Save pre-graph
     graph.write_pickle(output)
 
@@ -174,9 +174,9 @@ def iterate_clustering(model, repr_file, pre_graph_file,
     msg = f'Refining graph ({len(clusters)} clusters)'
     if logger is None: print(msg)
     else: logger.info(msg)
-    
+
     for i, cluster in enumerate(clusters):
-        
+
         if i > 0 and i // len(clusters) == 10:
             logger.debug(f'{i:,} clusters processed')
 

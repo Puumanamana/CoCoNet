@@ -133,7 +133,7 @@ class Configuration:
             'repr': {feature: f'latent_{feature}.h5'
                      for feature in self.features}
         }
-        
+
         # if coverage_h5 already exists, symlink it to the output folder
         if 'h5' in self.io:
             link = Path(self.io['output'], output_files['h5']).resolve()
@@ -180,7 +180,7 @@ class Configuration:
 
             self.logger.addHandler(stream_hdl)
             self.logger.addHandler(file_hdl)
-        
+
 
     def get_input_shapes(self):
         '''
@@ -219,21 +219,19 @@ class Configuration:
                       filt_fasta=self.io['filt_fasta'],
                       latent=self.io['repr']['composition'])
             )
-            
+
     def get_coverage_feature(self):
         return CoverageFeature(
             path=dict(bam=self.io['bam'],
                       h5=self.io['h5'],
                       latent=self.io['repr']['coverage'])
         )
-    
+
     def get_features(self):
         features = {}
-        
         if 'coverage' in self.features:
             features['coverage'] = self.get_coverage_feature()
         if 'composition' in self.features:
             features['composition'] = self.get_composition_feature()
 
         return features
-        

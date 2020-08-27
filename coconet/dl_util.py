@@ -238,13 +238,13 @@ def save_repr_all(model, fasta=None, coverage=None,
         fragment_boundaries = [(step*i, step*i+frag_len) for i in range(n_frags)]
 
         feature_arrays = []
-        
+
         if fasta is not None:
             x_composition = torch.from_numpy(np.stack([
                 get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
                 for (start, stop) in fragment_boundaries
             ]).astype(np.float32)) # Shape = (n_frags, 4**k)
-            
+
             feature_arrays.append(x_composition)
 
         if coverage is not None:
@@ -259,7 +259,7 @@ def save_repr_all(model, fasta=None, coverage=None,
                 ).astype(np.float32))
 
             feature_arrays.append(x_coverage)
-            
+
         x_repr = model.compute_repr(*feature_arrays)
 
         for key, handle in repr_h5.items():

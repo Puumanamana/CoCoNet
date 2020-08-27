@@ -37,7 +37,7 @@ class CompositionFeature(Feature):
 
     def write_bed(self, output=None):
         filt_ids = set(self.get_contigs('filt_fasta'))
-                       
+
         with open(str(output), 'w') as writer:
             for (ctg_id, seq) in self.get_iterator('fasta'):
                 if ctg_id in filt_ids:
@@ -45,7 +45,6 @@ class CompositionFeature(Feature):
 
     @run_if_not_exists()
     def filter_by_length(self, output=None, min_length=None):
-        
         with open(str(output), 'w') as writer:
             for (ctg_id, seq) in self.get_iterator('fasta'):
                 ctg_no_n = seq.upper().replace('N', '')
@@ -74,10 +73,10 @@ class CompositionFeature(Feature):
         n_before = sum(1 for _ in self.get_iterator('fasta'))
         n_after = sum(1 for _ in self.get_iterator('filt_fasta'))
         n_singletons = -1
-        
+
         if singletons is not None and Path(singletons).is_file():
             n_singletons = sum(1 for _ in open(singletons))
-    
+
         return f'before: {n_before:,}, after: {n_after:,}, singletons: {n_singletons:,}'
 
     def get_valid_nucl_pos(self):
@@ -86,11 +85,9 @@ class CompositionFeature(Feature):
         (useful to clean coverage data since N are discarded from the fasta)
         '''
         filt_ids = set(self.get_contigs('fasta'))
-        
         valid_nucl = {
             ctg_id: np.array([i for i, letter in enumerate(seq) if letter.upper() in 'ACGT'])
             for (ctg_id, seq) in self.get_iterator('fasta')
             if ctg_id in filt_ids
         }
-
         return valid_nucl
