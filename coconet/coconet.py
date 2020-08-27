@@ -121,7 +121,7 @@ def learn(cfg):
         inputs['fasta'] = cfg.io['filt_fasta']
     if 'coverage' in cfg.features:
         inputs['coverage'] = cfg.io['h5']
-    
+
     train(
         model, **inputs,
         pairs=cfg.io['pairs'],

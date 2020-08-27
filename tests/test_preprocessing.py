@@ -50,6 +50,16 @@ def test_bed_is_created():
 
     assert bed_dims == (3, 3)
 
+def test_coverage_feature():
+    h5 = generate_h5_file(10, 20)
+    f = CoverageFeature(path={'h5': h5})
+    ctg = f.get_contigs()
+
+    found_2_ctg = len(ctg) == 2
+    h5.unlink()
+    
+    assert found_2_ctg
+    
 def test_bam_to_h5():
     '''
     Test if bamlist is converted to h5

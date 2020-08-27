@@ -105,7 +105,7 @@ def make_pregraph(model, features, output, force=False, **kw):
     graph = igraph.Graph()
     graph.add_vertices(contigs)
     graph.es['weight'] = []
-    
+
     # Compute edges
     handles = {name: feature.get_handle('latent')
                for (name, feature) in features.items()}

@@ -105,7 +105,7 @@ class Configuration:
 
         if 'logger' in complete_conf:
             del complete_conf['logger']
-            
+
         io_to_keep = {k: v for (k, v) in self.io.items() if k in
                       {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
         complete_conf['io'] = io_to_keep

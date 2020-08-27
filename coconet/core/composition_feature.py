@@ -26,7 +26,7 @@ class CompositionFeature(Feature):
                 key = 'fasta'
             else:
                 raise ValueError("No contig information found")
-        
+
         if 'fasta' in key:
             contigs =  [title.split()[0] for (title, _) in self.get_iterator(key=key)]
         elif key == 'latent':

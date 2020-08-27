@@ -22,7 +22,7 @@ class Feature:
     def get_neighbors(self):
         if not 'latent' in self.path:
             return
-        
+
         handle = self.get_handle('latent')
 
         # data.shape = ( n_contigs, n_frags, latent_dim )

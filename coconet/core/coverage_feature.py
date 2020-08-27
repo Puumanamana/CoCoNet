@@ -40,7 +40,7 @@ class CoverageFeature(Feature):
         for contig, positions in valid_nucleotides.items():
             coverages = np.zeros((len(iterators), len(positions)), dtype='uint32')
             contig_length = 1 + positions[-1]
-        
+
             for i, bam_it in enumerate(iterators):
                 it = bam_it.fetch(contig, 1, contig_length)
                 coverages[i] = get_contig_coverage(it, length=contig_length)[positions]
@@ -81,24 +81,16 @@ def get_contig_coverage(iterator, length):
     return coverage
 
 def pass_filter(s, min_mapq=30, min_tlen=None, max_tlen=None, min_coverage=0.5):
-    if s.mapping_quality < min_mapq:
-        return False
-    if s.is_unmapped:
-        return False
-    if not s.is_paired:
-        return False
-    if s.is_duplicate:
-        return False
-    if s.is_qcfail:
-        return False
-    if s.is_secondary:
-        return False
-    if s.is_supplementary:
-        return False
-    if s.query_alignment_length / s.query_length < min_coverage:
-        return False
-    if min_tlen is not None and abs(s.template_length) < min_tlen:
-        return False
-    if max_tlen is not None and abs(s.template_length) > max_tlen:
+    if (
+            s.mapping_quality < min_mapq
+            or s.is_unmapped
+            or s.is_duplicate
+            or s.is_qcfail
+            or s.is_secondary
+            or s.is_supplementary
+            or s.query_alignment_length / s.query_length < min_coverage
+            or (min_tlen is not None and abs(s.template_length) < min_tlen)
+            or (max_tlen is not None and abs(s.template_length) > max_tlen)
+    ):
         return False
     return True
