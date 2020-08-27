@@ -52,7 +52,7 @@ def format_assembly(fasta, bed_output='regions.bed', output=None, min_length=204
     # Contig information in bed file for bam subsetting
     with open(bed_output, 'w') as bedfile:
         bedfile.writelines(bed_data)
-    
+
     return Path(output)
 
 def filter_bam_aln(bam, bed, threads=1, min_qual=0, flag=0, fl_range=None, outdir=None):
@@ -100,7 +100,7 @@ def bam_to_h5(bam_list, valid_nucl_pos, tmp_dir='/tmp', output='coverage.h5'):
     - Read the output and save the result in a h5 file with keys as contigs
     '''
 
-    # Compute 
+    # Compute
     coverage_tsv = Path(tmp_dir, 'coverage.tsv')
 
     cmd = (['samtools', 'depth', '-d', '20000']
@@ -211,7 +211,7 @@ def remove_singletons(coverage_h5, fasta,
 
         if prevalence < min_prevalence:
             info = map(str, [ctg_id, handle[ctg_id].shape[1]] + ctg_coverage.astype(str).tolist())
-            singletons_handle.write('\n{}'.format('\t'.join(info)))        
+            singletons_handle.write('\n{}'.format('\t'.join(info)))
             contigs.pop(ctg_id)
 
     SeqIO.write(list(contigs.values()), fasta, 'fasta')

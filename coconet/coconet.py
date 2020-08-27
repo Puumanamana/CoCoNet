@@ -68,7 +68,6 @@ def preprocess(cfg):
     if not coverage.path['h5'].is_file():
         cfg.logger.warning('Could not get coverage table. Is your input "bam" formatted?')
 
-    
     composition.filter_by_ids(output=cfg.io['filt_fasta'],
                               ids_file=cfg.io['singletons'])
 
@@ -148,7 +147,7 @@ def learn(cfg):
     cfg.logger.info('Computing intermediate representation of composition and coverage features')
     save_repr_all(model, fasta=cfg.io['filt_fasta'], coverage=cfg.io['h5'],
                   latent_composition=cfg.io['repr']['composition'],
-                  latent_coverage=cfg.io['repr']['coverage'],                  
+                  latent_coverage=cfg.io['repr']['coverage'],
                   n_frags=cfg.n_frags,
                   frag_len=cfg.fragment_length,
                   rc=not cfg.no_rc,

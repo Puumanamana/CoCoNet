@@ -20,10 +20,10 @@ class Configuration:
     Configuration object to handle command line arguments
     """
 
-    def __init__(self, features=['coverage', 'composition'], **kwargs):
+    def __init__(self, **kwargs):
         self.io = {}
         self.cov_type = '.bam'
-        self.features = features
+        self.features = ['coverage', 'composition']
 
         if kwargs:
             for item in kwargs.items():
@@ -77,7 +77,7 @@ class Configuration:
             suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
             if not suffixes:
                 sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
-                
+
         if name == 'h5':
             if val is None:
                 return

@@ -26,7 +26,7 @@ class CoverageFeature(Feature):
         first_elt = list(handle.keys())[0]
         n_samples = handle[first_elt].shape[0]
         handle.close()
-        
+
         return n_samples
 
     @run_if_not_exists()

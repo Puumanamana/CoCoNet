@@ -15,7 +15,7 @@ class CompositionFeature(Feature):
     def get_iterator(self, key='fasta'):
         iterator = SimpleFastaParser(open(str(self.path[key]), 'r'))
         iterator = map(lambda x: [x[0].split()[0], x[1]], iterator)
-        
+
         return iterator
 
     def get_contigs(self, key=None):
@@ -72,7 +72,7 @@ class CompositionFeature(Feature):
 
     def summarize_filtering(self, singletons=None):
         n_before = sum(1 for _ in self.get_iterator('fasta'))
-        n_after = sum(1 for _ in self.get_iterator('filt_fasta'))        
+        n_after = sum(1 for _ in self.get_iterator('filt_fasta'))
         n_singletons = -1
         
         if singletons is not None and Path(singletons).is_file():
@@ -82,7 +82,7 @@ class CompositionFeature(Feature):
 
     def get_valid_nucl_pos(self):
         '''
-        Return position of ACGT only in fasta 
+        Return position of ACGT only in fasta
         (useful to clean coverage data since N are discarded from the fasta)
         '''
         filt_ids = set(self.get_contigs('fasta'))

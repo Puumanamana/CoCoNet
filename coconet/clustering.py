@@ -96,7 +96,7 @@ def make_pregraph(model, features, output, force=False, **kw):
     # Intersect neighbors for all features
     neighbors_each = {name: feature.get_neighbors() for (name, feature) in features.items()}
     neighbors = []
-    
+
     for (n1, n2) in zip(*neighbors_each.values()):
         common_neighbors = n1[np.isin(n1, n2)]
         neighbors.append(common_neighbors)

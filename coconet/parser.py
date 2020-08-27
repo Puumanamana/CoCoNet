@@ -122,7 +122,7 @@ def parse_args():
     cluster_group.add_argument('--gamma2', type=float, default=0.75,
                                help='CPM optimization value for the second run of the Leiden clustering')
 
-    args, unknown = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     # if unknown:
     #     for key in unknown:

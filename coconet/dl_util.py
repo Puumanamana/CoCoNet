@@ -227,7 +227,7 @@ def save_repr_all(model, fasta=None, coverage=None,
 
     if coverage is not None:
         cov_h5 = h5py.File(coverage, 'r')
-    
+
     repr_h5 = {key: h5py.File(filename, 'w') for key, filename in
                [('composition', latent_composition),
                 ('coverage', latent_coverage)]}

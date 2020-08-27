@@ -15,7 +15,7 @@ class Feature:
         '''
         self.ftype = ftype
         self.path = path
-        
+
     def get_handle(self, key='h5'):
         return h5py.File(self.path[key], 'r')
 
