@@ -58,9 +58,9 @@ def preprocess(cfg):
 
     cfg.logger.info('Converting bam coverage to hdf5')
     coverage = cfg.get_coverage_feature()
-    # TO DO: take parameters into account the flag 
+    # TO DO: take parameters into account the flag
     coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'], logger=cfg.logger,
-                   tlen_range=cfg.fl_range, 
+                   tlen_range=cfg.fl_range,
                    min_mapq=cfg.min_mapping_quality,
                    min_coverage=cfg.min_aln_coverage)
     coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)

@@ -56,7 +56,7 @@ class Configuration:
             self.io['output'].mkdir(exist_ok=True)
 
         if self.logger is None:
-            self.set_logging()        
+            self.set_logging()
 
         self.set_outputs()
 
@@ -142,7 +142,7 @@ class Configuration:
                 if 'bam' not in self.io:
                     self.logger.error(f'Could not find any bam file in the inputs. Aborting')
                     sys.exit()
-                
+
             elif not dest.is_file():
                 dest.symlink_to(src)
 
@@ -166,7 +166,6 @@ class Configuration:
 
     def set_logging(self):
         self.io['log'] = Path(self.io['output'], 'coconet.log')
-        
         self.logger = logging.getLogger('CoCoNet')
         self.logger.setLevel('DEBUG')
 
