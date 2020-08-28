@@ -14,11 +14,8 @@ def test_init():
     '''
 
     cfg1 = Configuration()
-    cfg2 = Configuration(a=1, output='abc')
 
     assert hasattr(cfg1, 'io')
-    assert cfg2.a == 1
-    assert cfg2.io['output'] == Path('abc').resolve()
 
 def test_init_config():
     '''
@@ -34,6 +31,8 @@ def test_init_config():
     assert cfg.io['fasta'] == Path(kwargs['fasta'])
     assert cfg.io['output'].is_dir()
 
+    if cfg.io['log'].is_file():
+        cfg.io['log'].unlink()
     cfg.io['output'].rmdir()
 
 def test_load_save():
@@ -41,15 +40,17 @@ def test_load_save():
     Test saving / loading configs
     '''
 
-    kwargs = {'h5': 'xyz.h5',
-              'fasta': '/a/b/c.fasta',
-              'output': 'output'}
+    kwargs = {'h5': Path('xyz.h5'),
+              'fasta': Path('/a/b/c.fasta'),
+              'output': Path('output')}
+
+    kwargs['h5'].touch()
 
     cfg = Configuration()
     cfg.init_config(mkdir=True, **kwargs)
     cfg.to_yaml()
 
-    config_file = Path('{}/config.yaml'.format(cfg.io['output']))
+    config_file = Path(cfg.io['output'], 'config.yaml')
 
     cfg_loaded = Configuration.from_yaml(config_file)
 
@@ -59,7 +60,7 @@ def test_load_save():
                if not isinstance(v, dict))
 
     config_file.unlink()
-    Path('xyz.h5').unlink()
+    kwargs['h5'].unlink()
     cfg.io['h5'].unlink()
     cfg.io['output'].rmdir()
 
@@ -110,5 +111,4 @@ def test_architecture():
     assert architecture == cfg.get_architecture()
 
 if __name__ == '__main__':
-
-    test_input_sizes()
+    test_load_save()

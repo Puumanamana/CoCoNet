@@ -20,15 +20,12 @@ class Configuration:
     Configuration object to handle command line arguments
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.io = {}
         self.cov_type = '.bam'
         self.features = ['coverage', 'composition']
         self.logger = None
-
-        if kwargs:
-            for item in kwargs.items():
-                self.set_input(*item)
+        self.verbosity = 'INFO'
 
     @classmethod
     def from_yaml(cls, filepath):
@@ -55,10 +52,13 @@ class Configuration:
         for item in kwargs.items():
             self.set_input(*item)
 
+        if mkdir:
+            self.io['output'].mkdir(exist_ok=True)
+
         if self.logger is None:
-            self.set_logging()
-        
-        self.set_outputs(mkdir)
+            self.set_logging()        
+
+        self.set_outputs()
 
     def set_input(self, name, val):
         '''
@@ -117,31 +117,26 @@ class Configuration:
         with open(config_file, 'w') as handle:
             yaml.dump(complete_conf, handle)
 
-    def set_outputs(self, mkdir=False):
+    def set_outputs(self):
         '''
         Define output file path for all steps
         '''
 
-        if mkdir:
-            self.io['output'].mkdir(exist_ok=True)
-
-        output_files = {
-            'filt_fasta': 'assembly_filtered.fasta',
-            'h5': 'coverage.h5',
-            'singletons': 'singletons.txt',
-            'pairs': {'test': 'pairs_test.npy',
-                      'train': 'pairs_train.npy'},
-            'model': 'CoCoNet.pth',
-            'nn_test': 'CoCoNet_test.csv',
-            'repr': {feature: f'latent_{feature}.h5'
-                     for feature in self.features}
-        }
+        output_files = dict(
+            filt_fasta='assembly_filtered.fasta',
+            h5='coverage.h5',
+            singletons='singletons.txt',
+            pairs={'test': 'pairs_test.npy', 'train': 'pairs_train.npy'},
+            model='CoCoNet.pth',
+            nn_test='CoCoNet_test.csv',
+            repr={feature: f'latent_{feature}.h5' for feature in self.features}
+        )
 
         # if coverage_h5 already exists, symlink it to the output folder
         if 'h5' in self.io:
-            src = self.io['h5']
+            src = self.io['h5'].resolve()
             dest = Path(self.io['output'], output_files['h5']).resolve()
-            
+
             if not src.is_file():
                 self.logger.warning(f'h5 was set as input but the file does not exist')
                 if 'bam' not in self.io:
@@ -151,7 +146,7 @@ class Configuration:
             elif not dest.is_file():
                 dest.symlink_to(src)
 
-        if 'theta' in self.__dict__:
+        if hasattr(self, 'theta'):
             output_files.update({
                 'pre_graph': 'pre_graph.pkl',
                 'graph': 'graph_{}-{}-{}.pkl'.format(
@@ -170,6 +165,8 @@ class Configuration:
         self.io.update(output_files)
 
     def set_logging(self):
+        self.io['log'] = Path(self.io['output'], 'coconet.log')
+        
         self.logger = logging.getLogger('CoCoNet')
         self.logger.setLevel('DEBUG')
 
@@ -186,7 +183,7 @@ class Configuration:
             stream_hdl.setFormatter(formatter)
             stream_hdl.setLevel(self.verbosity)
 
-            file_hdl = logging.FileHandler(f'{self.io["output"]}/coconet.log')
+            file_hdl = logging.FileHandler(str(self.io['log']))
             file_hdl.setFormatter(formatter)
 
             self.logger.addHandler(stream_hdl)

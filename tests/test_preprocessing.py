@@ -4,7 +4,6 @@ Tests for preprocessing of fasta and coverage (.h5 or .bam)
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from Bio import SeqIO
 
@@ -66,16 +65,14 @@ def test_bam_to_h5():
     '''
 
     fasta = Path(LOCAL_DIR, 'sim_data', 'assembly.fasta')
+    compo = CompositionFeature(path=dict(fasta=fasta, filt_fasta=fasta))
+    
     bam_list = [Path(LOCAL_DIR, 'sim_data', f'sample_{i}.bam') for i in [1, 2]]
     h5_out = Path('coverage.h5')
 
-    valid_nucl = {
-        ctg.id: np.array([i for i, letter in enumerate(ctg.seq) if letter.upper() != 'N'])
-        for ctg in SeqIO.parse(fasta, 'fasta')
-    }
 
     f = CoverageFeature(path=dict(bam=bam_list))
-    f.to_h5(valid_nucl, output=h5_out)
+    f.to_h5(compo.get_valid_nucl_pos(), output=h5_out)
 
     h5_is_created = h5_out.is_file()
     h5_out.unlink()
