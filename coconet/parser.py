@@ -61,11 +61,13 @@ def parse_args():
                                help='Minimum contig length. Default (-1) is twice the fragment length')
     preproc_group.add_argument('--min-prevalence', type=int, default=2,
                                help='Minimum contig prevalence for binning. Contig with less that value are filtered out.')
-    preproc_group.add_argument('--min-mapping-quality', type=int, default=50,
-                               help='Minimum mapping quality for bam filtering')
-    preproc_group.add_argument('--flag', type=int, default=3596,
-                               help='am Flag for bam filtering')
-    preproc_group.add_argument('--fl-range', type=int, default=[], nargs=2,
+    preproc_group.add_argument('--min-mapping-quality', type=int, default=30,
+                               help='Minimum alignment quality')
+    preproc_group.add_argument('--min-aln-coverage', type=float, default=0.5,
+                               help='Discard alignments with less than [0.5]% aligned nucleotides')
+    preproc_group.add_argument('--flag', type=int, default=1796,
+                               help='SAM flag for filtering (same as samtools "-F" option)')
+    preproc_group.add_argument('--fl-range', type=int, nargs=2,
                                help='Only allow for paired alignments with spacing within this range')
     preproc_group.add_argument('--tmp-dir', type=str, default='./tmp42',
                                help='Temporary directory for bam processing', action=ToPathAction)

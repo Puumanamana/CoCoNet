@@ -24,6 +24,7 @@ class Configuration:
         self.io = {}
         self.cov_type = '.bam'
         self.features = ['coverage', 'composition']
+        self.logger = None
 
         if kwargs:
             for item in kwargs.items():
@@ -54,6 +55,9 @@ class Configuration:
         for item in kwargs.items():
             self.set_input(*item)
 
+        if self.logger is None:
+            self.set_logging()
+        
         self.set_outputs(mkdir)
 
     def set_input(self, name, val):
@@ -123,7 +127,6 @@ class Configuration:
 
         output_files = {
             'filt_fasta': 'assembly_filtered.fasta',
-            'bed': 'assembly_filtered.bed',
             'h5': 'coverage.h5',
             'singletons': 'singletons.txt',
             'pairs': {'test': 'pairs_test.npy',
@@ -136,9 +139,17 @@ class Configuration:
 
         # if coverage_h5 already exists, symlink it to the output folder
         if 'h5' in self.io:
-            link = Path(self.io['output'], output_files['h5']).resolve()
-            if not link.is_file():
-                link.symlink_to(self.io['h5'].resolve())
+            src = self.io['h5']
+            dest = Path(self.io['output'], output_files['h5']).resolve()
+            
+            if not src.is_file():
+                self.logger.warning(f'h5 was set as input but the file does not exist')
+                if 'bam' not in self.io:
+                    self.logger.error(f'Could not find any bam file in the inputs. Aborting')
+                    sys.exit()
+                
+            elif not dest.is_file():
+                dest.symlink_to(src)
 
         if 'theta' in self.__dict__:
             output_files.update({
@@ -163,7 +174,7 @@ class Configuration:
         self.logger.setLevel('DEBUG')
 
         formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s : %(message)s',
+            '%(asctime)s - %(levelname)-8s : %(message)s',
             '%Y-%m-%d %H:%M:%S'
         )
 

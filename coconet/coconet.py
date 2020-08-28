@@ -36,7 +36,6 @@ def main(**kwargs):
     cfg = Configuration()
     cfg.init_config(mkdir=True, **params)
     cfg.to_yaml()
-    cfg.set_logging()
 
     preprocess(cfg)
     make_train_test(cfg)
@@ -52,28 +51,29 @@ def preprocess(cfg):
         cfg.min_ctg_len = 2 * cfg.fragment_length
 
     cfg.logger.info(f'Preprocessing fasta and {cfg.cov_type} files')
-
     composition = cfg.get_composition_feature()
     composition.filter_by_length(output=cfg.io['filt_fasta'],
                                  min_length=cfg.min_ctg_len,
                                  logger=cfg.logger)
-    composition.write_bed(output=cfg.io['bed'])
 
     cfg.logger.info('Converting bam coverage to hdf5')
     coverage = cfg.get_coverage_feature()
-    # TO DO: take parameters into account with flags and such
-    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'], logger=cfg.logger)
+    # TO DO: take parameters into account the flag 
+    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'], logger=cfg.logger,
+                   tlen_range=cfg.fl_range, 
+                   min_mapq=cfg.min_mapping_quality,
+                   min_coverage=cfg.min_aln_coverage)
     coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
 
     if not coverage.path['h5'].is_file():
         cfg.logger.warning('Could not get coverage table. Is your input "bam" formatted?')
 
-    composition.filter_by_ids(output=cfg.io['filt_fasta'],
-                              ids_file=cfg.io['singletons'])
+    composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'],
+                              logger=cfg.logger)
 
     summary = composition.summarize_filtering(singletons=cfg.io['singletons'])
 
-    cfg.logger.info(f'Contig filtering: {summary}')
+    cfg.logger.info(f'Contig filtering - {summary}')
 
 def make_train_test(cfg):
     '''

@@ -55,7 +55,7 @@ class CompositionFeature(Feature):
         self.path['filt_fasta'] = Path(output)
 
     @run_if_not_exists()
-    def filter_by_ids(self, output=None, ids_file=None):
+    def filter_by_ids(self, output=None, ids_file=None, **kw):
 
         # Cannot stream if output is the same as the input
         filtered_fasta = []
@@ -84,10 +84,9 @@ class CompositionFeature(Feature):
         Return position of ACGT only in fasta
         (useful to clean coverage data since N are discarded from the fasta)
         '''
-        filt_ids = set(self.get_contigs('fasta'))
-        valid_nucl = {
-            ctg_id: np.array([i for i, letter in enumerate(seq) if letter.upper() in 'ACGT'])
-            for (ctg_id, seq) in self.get_iterator('fasta')
-            if ctg_id in filt_ids
-        }
-        return valid_nucl
+        filt_ids = set(self.get_contigs('filt_fasta'))
+
+        for (ctg_id, seq) in self.get_iterator('fasta'):
+            if ctg_id in filt_ids:
+                positions = np.fromiter(seq, (np.unicode,1)) != 'N'
+                yield (ctg_id, positions)

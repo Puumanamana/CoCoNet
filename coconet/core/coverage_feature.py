@@ -1,4 +1,5 @@
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import h5py
@@ -30,25 +31,25 @@ class CoverageFeature(Feature):
         return n_samples
 
     @run_if_not_exists()
-    def to_h5(self, valid_nucleotides, output=None, logger=None):
+    def to_h5(self, valid_nucleotides, output=None, logger=None, **filtering):
         if self.path.get('bam', None) is None:
             return
 
         iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
         handle = h5py.File(str(output), 'w')
 
-        for contig, positions in valid_nucleotides.items():
-            coverages = np.zeros((len(iterators), len(positions)), dtype='uint32')
-            contig_length = 1 + positions[-1]
+        for k, (contig, positions) in enumerate(valid_nucleotides):
+            size = dict(raw=len(positions), filt=sum(positions))
+            coverages = np.zeros((len(iterators), size['filt']), dtype='uint32')
 
             for i, bam_it in enumerate(iterators):
-                it = bam_it.fetch(contig, 1, contig_length)
-                coverages[i] = get_contig_coverage(it, length=contig_length)[positions]
+                it = bam_it.fetch(contig, 1, size['raw'])
+                coverages[i] = get_contig_coverage(it, length=size['raw'], **filtering)[positions]
             handle.create_dataset(contig, data=coverages)
 
-            if logger is not None and i % 1000 == 0:
-                progress = i / len(valid_nucleotides)
-                logger.info(f'Coverage: {progress:.2%} done')
+            # Report progress
+            if logger is not None and k % 1000 == 0 and k > 0:
+                logger.debug(f'Coverage: {k:,} contigs processed')
 
         handle.close()
         self.path['h5'] = Path(output)
@@ -74,27 +75,28 @@ class CoverageFeature(Feature):
 
 #============ Useful functions for coverage estimation ============#
 
-def get_contig_coverage(iterator, length):
+def get_contig_coverage(iterator, length, **filtering):
     coverage = np.zeros(length, dtype='uint32')
 
-    for read in filter(pass_filter, iterator):
+    for read in filter(partial(pass_filter, **filtering), iterator):
         # Need to handle overlap between forward and reverse read
         # bam files coordinates are 1-based --> offset
         coverage[read.reference_start-1:read.reference_end] += 1
 
     return coverage
 
-def pass_filter(s, min_mapq=30, min_tlen=None, max_tlen=None, min_coverage=0.5):
+def pass_filter(s, min_mapq=30, tlen_range=None, min_coverage=0.5, flag=1796):
     if (
             s.mapping_quality < min_mapq
-            or s.is_unmapped
-            or s.is_duplicate
-            or s.is_qcfail
-            or s.is_secondary
-            or s.is_supplementary
+            or s.flag & flag != 0
+            # or s.is_unmapped
+            # or s.is_duplicate
+            # or s.is_qcfail
+            # or s.is_secondary
+            # or s.is_supplementary
             or s.query_alignment_length / s.query_length < min_coverage
-            or (min_tlen is not None and abs(s.template_length) < min_tlen)
-            or (max_tlen is not None and abs(s.template_length) > max_tlen)
+            or (tlen_range is not None
+                and not (tlen_range[0] < abs(s.template_length) < tlen_range[1]))
     ):
         return False
     return True
