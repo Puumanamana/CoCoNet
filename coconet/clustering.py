@@ -67,14 +67,14 @@ def compute_pairwise_comparisons(model, graph, handles,
         if pbar and bin_id < 0:
             contig_iter.set_description(f'Contig #{k} - {len(neighb_k)} neighbors')
 
-        x_ref = {k: torch.from_numpy(handle.get(ctg)[:][ref_idx]) for k, handle in handles.items()}
+        x_ref = {k: torch.from_numpy(handle[ctg][:][ref_idx]) for k, handle in handles.items()}
 
         # Compare the reference contig against all of its neighbors
         for other_ctg in neighb_k:
             if other_ctg == ctg or (other_ctg, ctg) in edges:
                 continue
 
-            x_other = {k: torch.from_numpy(handle.get(other_ctg)[:][other_idx])
+            x_other = {k: torch.from_numpy(handle[other_ctg][:][other_idx])
                        for k, handle in handles.items()}
 
             probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]

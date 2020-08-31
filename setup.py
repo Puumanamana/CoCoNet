@@ -2,7 +2,7 @@
 Setup config for coconet-binning package
 '''
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='coconet-binning',
       version='0.54',
@@ -14,7 +14,7 @@ setup(name='coconet-binning',
       author='Arisdakessian Cedric',
       author_email='carisdak@hawaii.edu',
       zip_safe=False,
-      packages=['coconet'],
+      packages=find_packages(),
       entry_points={'console_scripts': ['coconet=coconet.coconet:main']},
       test_requires=['pytest',
                      'pytest-cov'],

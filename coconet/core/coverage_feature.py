@@ -85,15 +85,10 @@ def get_contig_coverage(iterator, length, **filtering):
 
     return coverage
 
-def pass_filter(s, min_mapq=30, tlen_range=None, min_coverage=0.5, flag=1796):
+def pass_filter(s, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
     if (
             s.mapping_quality < min_mapq
             or s.flag & flag != 0
-            # or s.is_unmapped
-            # or s.is_duplicate
-            # or s.is_qcfail
-            # or s.is_secondary
-            # or s.is_supplementary
             or s.query_alignment_length / s.query_length < min_coverage
             or (tlen_range is not None
                 and not (tlen_range[0] < abs(s.template_length) < tlen_range[1]))

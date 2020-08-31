@@ -89,7 +89,9 @@ class CoverageGenerator:
         '''
 
         pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
-        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.wsize, self.wstep, pbar=self.pbar)
+
+        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.wsize, self.wstep,
+                                        pbar=self.pbar)
 
     def __next__(self):
         if self.i < self.n_batches:

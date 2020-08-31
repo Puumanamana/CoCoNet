@@ -6,8 +6,7 @@ Helpful routines for coconet
 - smoothing window
 '''
 
-import sys
-import os
+import logging
 from pathlib import Path
 from math import ceil
 from textwrap import wrap
@@ -16,7 +15,9 @@ from functools import lru_cache
 import h5py
 import numpy as np
 
+
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
+logger = logging.getLogger('CoCoNet')
 
 def run_if_not_exists(keys=('output',)):
     '''
@@ -31,11 +32,6 @@ def run_if_not_exists(keys=('output',)):
             else:
                 exists = True
 
-            if func.__name__ in {'iterate_clustering', 'train', 'to_h5'}:
-                logger = kwargs.get('logger', None)
-            else:
-                logger = kwargs.pop('logger', None)
-
             for key in keys:
                 if key not in kwargs:
                     exists = False
@@ -49,9 +45,7 @@ def run_if_not_exists(keys=('output',)):
                     exists &= Path(kwargs[key]).is_file()
 
             if exists:
-                files = ', '.join([
-                    str(Path(kwargs[key]).resolve().relative_to(os.getcwd()))
-                    for key in keys])
+                files = ', '.join(map(str, keys))
                 msg = f'{func.__name__}: Existing {files} files found. Skipping step'
 
                 if logger is None:
@@ -139,17 +133,19 @@ def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
     h5data = h5py.File(coverage_h5, 'r')
     contigs = np.unique(pairs['sp'].flatten())
 
+    
     try:
         coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
     except TypeError:
         diff = set(contigs).difference(set(h5data.keys()))
         if diff:
-            print('''
-            Error: {} contigs are in the fasta sequences but not in the coverage.
-            For example, {} generates an error.
-            '''.format(len(diff), diff[0]))
+            logger.error((f'{len(diff)} contigs are in the fasta sequences '
+                          'but not in the coverage data. '
+                          f'For example, {diff.pop()} generates an error.'))
+            raise KeyError
         else:
-            sys.exit('One contig seem to have a null coverage across all samples')
+            logger.error('One contig seem to have a null coverage across all samples')
+            raise RuntimeError
 
     n_pairs = len(pairs)
     n_samples, _ = np.array(list(coverage_data.values())[0]).shape

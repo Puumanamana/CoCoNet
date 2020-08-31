@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 '''
 Root script to run CoCoNet
-
-Inputs:
-Outputs:
 '''
 
+from pathlib import Path
 from Bio import SeqIO
 import numpy as np
 import torch
 
+from coconet.log import setup_logger
 from coconet.core.config import Configuration
 from coconet.parser import parse_args
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import initialize_model, load_model, train, save_repr_all
 from coconet.clustering import make_pregraph, iterate_clustering
+
+
 
 def main(**kwargs):
     '''
@@ -24,14 +25,18 @@ def main(**kwargs):
 
     args = parse_args()
     params = vars(args)
+    
+    logger = setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
 
     if kwargs:
         params.update(kwargs)
 
     if params['fasta'] is None and 'composition' in params['features']:
-        raise ValueError("Could not find the .fasta file. Did you use the --fasta flag?")
+        logger.error('Could not find the .fasta file. Did you use the --fasta flag?')
+        raise FileNotFoundError
     if (params['bam'] is None and params['h5'] is None) and 'coverage' in params['features']:
-        raise ValueError("Could not find the .bam files. Did you use the --coverage flag?")
+        logger.error('Could not find the coverage. Did you use the --bam flag?')
+        raise FileNotFoundError
 
     cfg = Configuration()
     cfg.init_config(mkdir=True, **params)
@@ -47,33 +52,33 @@ def preprocess(cfg):
     Preprocess assembly and coverage
     '''
 
+    logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
+
     if cfg.min_ctg_len < 0:
         cfg.min_ctg_len = 2 * cfg.fragment_length
 
-    cfg.logger.info(f'Preprocessing fasta and {cfg.cov_type} files')
+    logger.info(f'Preprocessing fasta and {cfg.cov_type} files')
     composition = cfg.get_composition_feature()
     composition.filter_by_length(output=cfg.io['filt_fasta'],
-                                 min_length=cfg.min_ctg_len,
-                                 logger=cfg.logger)
+                                 min_length=cfg.min_ctg_len)
 
-    cfg.logger.info('Converting bam coverage to hdf5')
+    logger.info('Converting bam coverage to hdf5')
     coverage = cfg.get_coverage_feature()
     # TO DO: take parameters into account the flag
-    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'], logger=cfg.logger,
+    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
                    tlen_range=cfg.fl_range,
                    min_mapq=cfg.min_mapping_quality,
                    min_coverage=cfg.min_aln_coverage)
     coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
 
     if not coverage.path['h5'].is_file():
-        cfg.logger.warning('Could not get coverage table. Is your input "bam" formatted?')
+        logger.warning('Could not get coverage table. Is your input "bam" formatted?')
 
-    composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'],
-                              logger=cfg.logger)
+    composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
 
     summary = composition.summarize_filtering(singletons=cfg.io['singletons'])
 
-    cfg.logger.info(f'Contig filtering - {summary}')
+    logger.info(f'Contig filtering - {summary}')
 
 def make_train_test(cfg):
     '''
@@ -83,7 +88,9 @@ def make_train_test(cfg):
        - n/2 negative examples (fragments from different contigs)
     '''
 
-    cfg.logger.info("Making train/test examples")
+    logger = setup_logger('fragmentation', cfg.io['log'], cfg.loglvl)
+
+    logger.info("Making train/test examples")
     assembly = [contig for contig in SeqIO.parse(cfg.io['filt_fasta'], 'fasta')]
 
     n_ctg_for_test = max(2, int(cfg.test_ratio*len(assembly)))
@@ -99,13 +106,15 @@ def make_train_test(cfg):
                    cfg.fragment_length,
                    output=pair_file,
                    n_examples=n_examples[mode],
-                   logger=cfg.logger)
+                   logger=logger)
 
 def learn(cfg):
     '''
     Deep learning model
     '''
 
+    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
+    
     torch.set_num_threads(cfg.threads)
 
     input_shapes = cfg.get_input_shapes()
@@ -113,8 +122,8 @@ def learn(cfg):
 
     model = initialize_model('-'.join(cfg.features), input_shapes, architecture)
     device = list({p.device.type for p in model.parameters()})
-    cfg.logger.info(f'Neural network training on {" and ".join(device)}')
-    cfg.logger.debug(str(model))
+    logger.info(f'Neural network training on {" and ".join(device)}')
+    logger.debug(str(model))
 
     inputs = {}
     if 'composition' in cfg.features:
@@ -134,17 +143,16 @@ def learn(cfg):
         norm=cfg.norm,
         load_batch=cfg.load_batch,
         wsize=cfg.wsize,
-        wstep=cfg.wstep,
-        logger=cfg.logger
+        wstep=cfg.wstep
     )
 
-    cfg.logger.info('Training finished')
+    logger.info('Training finished')
 
     checkpoint = torch.load(cfg.io['model'])
     model.load_state_dict(checkpoint['state'])
     model.eval()
 
-    cfg.logger.info('Computing intermediate representation of composition and coverage features')
+    logger.info('Computing intermediate representation of composition and coverage features')
     save_repr_all(model, fasta=cfg.io['filt_fasta'], coverage=cfg.io['h5'],
                   latent_composition=cfg.io['repr']['composition'],
                   latent_coverage=cfg.io['repr']['coverage'],
@@ -159,17 +167,19 @@ def cluster(cfg, force=False):
     Make adjacency matrix and cluster contigs
     '''
 
+    logger = setup_logger('clustering', cfg.io['log'], cfg.loglvl)
+
     torch.set_num_threads(cfg.threads)
 
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg)
     n_frags = full_cfg.n_frags
 
-    cfg.logger.info('Pre-clustering contigs')
+    logger.info('Pre-clustering contigs')
     make_pregraph(model, cfg.get_features(), output=cfg.io['pre_graph'],
                   n_frags=n_frags, max_neighbors=cfg.max_neighbors, force=force)
 
-    cfg.logger.info('Refining graph')
+    logger.info('Refining graph')
     iterate_clustering(
         model, cfg.io['repr'], cfg.io['pre_graph'],
         singletons_file=cfg.io['singletons'],

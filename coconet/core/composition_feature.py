@@ -54,9 +54,7 @@ class CompositionFeature(Feature):
 
         self.path['filt_fasta'] = Path(output)
 
-    @run_if_not_exists()
-    def filter_by_ids(self, output=None, ids_file=None, **kw):
-
+    def filter_by_ids(self, output=None, ids_file=None):
         # Cannot stream if output is the same as the input
         filtered_fasta = []
         ids = {x.strip().split()[0] for x in open(ids_file)}
@@ -75,9 +73,9 @@ class CompositionFeature(Feature):
         n_singletons = -1
 
         if singletons is not None and Path(singletons).is_file():
-            n_singletons = sum(1 for _ in open(singletons))
+            n_singletons = sum(1 for _ in open(singletons)) - 1
 
-        return f'before: {n_before:,}, after: {n_after:,}, singletons: {n_singletons:,}'
+        return f'before: {n_before:,}, after: {n_after:,} (#singletons={n_singletons:,})'
 
     def get_valid_nucl_pos(self):
         '''

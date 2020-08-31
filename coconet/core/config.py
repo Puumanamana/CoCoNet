@@ -15,6 +15,8 @@ from coconet.core.composition_feature import CompositionFeature
 from coconet.core.coverage_feature import CoverageFeature
 
 
+logger = logging.getLogger('CoCoNet')
+
 class Configuration:
     """
     Configuration object to handle command line arguments
@@ -24,7 +26,6 @@ class Configuration:
         self.io = {}
         self.cov_type = '.bam'
         self.features = ['coverage', 'composition']
-        self.logger = None
         self.verbosity = 'INFO'
 
     @classmethod
@@ -54,9 +55,6 @@ class Configuration:
 
         if mkdir:
             self.io['output'].mkdir(exist_ok=True)
-
-        if self.logger is None:
-            self.set_logging()
 
         self.set_outputs()
 
@@ -107,9 +105,6 @@ class Configuration:
         else:
             complete_conf = {key: val for (key, val) in self.__dict__.items()}
 
-        if 'logger' in complete_conf:
-            del complete_conf['logger']
-
         io_to_keep = {k: v for (k, v) in self.io.items() if k in
                       {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
         complete_conf['io'] = io_to_keep
@@ -123,6 +118,7 @@ class Configuration:
         '''
 
         output_files = dict(
+            log='CoCoNet.log',
             filt_fasta='assembly_filtered.fasta',
             h5='coverage.h5',
             singletons='singletons.txt',
@@ -138,9 +134,9 @@ class Configuration:
             dest = Path(self.io['output'], output_files['h5']).resolve()
 
             if not src.is_file():
-                self.logger.warning(f'h5 was set as input but the file does not exist')
+                logger.warning(f'h5 was set as input but the file does not exist')
                 if 'bam' not in self.io:
-                    self.logger.error(f'Could not find any bam file in the inputs. Aborting')
+                    logger.error(f'Could not find any bam file in the inputs. Aborting')
                     sys.exit()
 
             elif not dest.is_file():
@@ -163,31 +159,6 @@ class Configuration:
                     output_files[name][key] = Path('{}/{}'.format(self.io['output'], val))
 
         self.io.update(output_files)
-
-    def set_logging(self):
-        self.io['log'] = Path(self.io['output'], 'coconet.log')
-        self.logger = logging.getLogger('CoCoNet')
-        self.logger.setLevel('DEBUG')
-
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)-8s : %(message)s',
-            '%Y-%m-%d %H:%M:%S'
-        )
-
-        self.logger.propagate = False
-        self.logger.setLevel('DEBUG')
-
-        if not self.logger.handlers:
-            stream_hdl = logging.StreamHandler()
-            stream_hdl.setFormatter(formatter)
-            stream_hdl.setLevel(self.verbosity)
-
-            file_hdl = logging.FileHandler(str(self.io['log']))
-            file_hdl.setFormatter(formatter)
-
-            self.logger.addHandler(stream_hdl)
-            self.logger.addHandler(file_hdl)
-
 
     def get_input_shapes(self):
         '''

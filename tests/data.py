@@ -4,6 +4,7 @@ Functions to generate test data
 
 from math import ceil
 from pathlib import Path
+from tempfile import mkdtemp
 
 import h5py
 import numpy as np
@@ -13,7 +14,7 @@ from Bio.SeqRecord import SeqRecord
 
 from coconet.dl_util import initialize_model
 
-LOCAL_DIR = Path(__file__).resolve().parent
+TMP_DIR = mkdtemp()
 
 FL = 20
 STEP = 2
@@ -47,7 +48,7 @@ def generate_h5_file(*lengths, n_samples=2, filename='coverage.h5',
     if baselines is None:
         baselines = [10] * len(lengths)
 
-    filepath = '{}/{}'.format(LOCAL_DIR, filename)
+    filepath = '{}/{}'.format(TMP_DIR, filename)
 
     coverage = {}
 
@@ -71,7 +72,7 @@ def generate_fasta_file(*lengths, filename='sequences.fasta', save=True):
     - Saves it locally
     '''
 
-    filepath = '{}/{}'.format(LOCAL_DIR, filename)
+    filepath = '{}/{}'.format(TMP_DIR, filename)
 
     contigs = []
     for i, length in enumerate(lengths):
@@ -92,7 +93,7 @@ def generate_pair_file(filename='pairs.npy', save=True):
     - Saves it locally or not
     '''
 
-    filepath = '{}/{}'.format(LOCAL_DIR, filename)
+    filepath = '{}/{}'.format(TMP_DIR, filename)
 
     pairs = np.recarray([2, 2], dtype=[('sp', '<U10'), ('start', 'uint32'), ('end', 'uint32')])
     pairs['sp'] = [["V0", "V0"], ["V0", "V1"]]
