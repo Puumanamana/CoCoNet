@@ -39,7 +39,7 @@ def parse_args():
       allow_abbrev=False,
       formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
+
     parser.add_argument(
       '--version', action='version', version=get_version()
     )
@@ -86,7 +86,7 @@ def parse_args():
     io_group.add_argument(
       '--silent', action="store_const", dest="loglvl", const=logging.ERROR,
       help="Only error messages"
-    )    
+    )
 
     preproc_group = parser.add_argument_group(title='Preprocessing')
     preproc_group.add_argument(

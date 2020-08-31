@@ -25,7 +25,7 @@ def main(**kwargs):
 
     args = parse_args()
     params = vars(args)
-    
+
     logger = setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
 
     if kwargs:
@@ -114,7 +114,7 @@ def learn(cfg):
     '''
 
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
-    
+
     torch.set_num_threads(cfg.threads)
 
     input_shapes = cfg.get_input_shapes()

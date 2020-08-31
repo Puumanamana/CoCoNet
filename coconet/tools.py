@@ -133,7 +133,6 @@ def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
     h5data = h5py.File(coverage_h5, 'r')
     contigs = np.unique(pairs['sp'].flatten())
 
-    
     try:
         coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
     except TypeError:

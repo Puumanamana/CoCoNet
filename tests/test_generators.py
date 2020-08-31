@@ -102,7 +102,11 @@ def test_get_coverage_with_unmatched_ctg(window_size=4):
     pairs = generate_pair_file(save=False)
     data_h5 = generate_h5_file(30)
 
-    with pytest.raises(TypeError):
+    with pytest.raises(KeyError):
         assert get_coverage(pairs, data_h5, window_size, window_size // 2)
 
     data_h5.unlink()
+
+
+if __name__ == '__main__':
+    test_get_coverage()

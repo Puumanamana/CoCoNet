@@ -3,6 +3,7 @@ Unittest for Configuration object
 '''
 
 from pathlib import Path
+import shutil
 
 from coconet.core.config import Configuration
 
@@ -31,9 +32,7 @@ def test_init_config():
     assert cfg.io['fasta'] == Path(kwargs['fasta'])
     assert cfg.io['output'].is_dir()
 
-    if cfg.io['log'].is_file():
-        cfg.io['log'].unlink()
-    cfg.io['output'].rmdir()
+    shutil.rmtree(cfg.io['output'])
 
 def test_load_save():
     '''
@@ -54,15 +53,15 @@ def test_load_save():
 
     cfg_loaded = Configuration.from_yaml(config_file)
 
-    assert config_file.is_file()
-    assert all(getattr(cfg_loaded, k) == getattr(cfg, k)
-               for k, v in cfg_loaded.__dict__.items()
-               if not isinstance(v, dict))
+    cfg_is_created = config_file.is_file()
+    attrs_exist = all(getattr(cfg_loaded, k) == getattr(cfg, k)
+                      for k, v in cfg_loaded.__dict__.items()
+                      if not isinstance(v, dict))
+    
+    shutil.rmtree(cfg.io['output'])
 
-    config_file.unlink()
-    kwargs['h5'].unlink()
-    cfg.io['h5'].unlink()
-    cfg.io['output'].rmdir()
+    assert cfg_is_created
+    assert attrs_exist
 
 def test_input_sizes():
     '''
@@ -79,9 +78,8 @@ def test_input_sizes():
 
     auto_shapes = cfg.get_input_shapes()
 
-    cfg.io['h5'].unlink()
-    cfg.io['output'].rmdir()
-
+    shutil.rmtree(cfg.io['output'])
+    
     assert input_shapes == auto_shapes
 
 def test_architecture():
