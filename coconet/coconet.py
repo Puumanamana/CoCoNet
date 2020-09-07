@@ -4,7 +4,6 @@ Root script to run CoCoNet
 '''
 
 from pathlib import Path
-from Bio import SeqIO
 import numpy as np
 import torch
 
@@ -12,7 +11,7 @@ from coconet.log import setup_logger
 from coconet.core.config import Configuration
 from coconet.parser import parse_args
 from coconet.fragmentation import make_pairs
-from coconet.dl_util import initialize_model, load_model, train, save_repr_all
+from coconet.dl_util import load_model, train, save_repr_all
 from coconet.clustering import make_pregraph, iterate_clustering
 
 
@@ -26,26 +25,28 @@ def main(**kwargs):
     args = parse_args()
     params = vars(args)
 
-    logger = setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
-
     if kwargs:
         params.update(kwargs)
 
-    if params['fasta'] is None and 'composition' in params['features']:
-        logger.error('Could not find the .fasta file. Did you use the --fasta flag?')
-        raise FileNotFoundError
-    if (params['bam'] is None and params['h5'] is None) and 'coverage' in params['features']:
-        logger.error('Could not find the coverage. Did you use the --bam flag?')
-        raise FileNotFoundError
+    setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
+    action = params.pop('action')
 
     cfg = Configuration()
     cfg.init_config(mkdir=True, **params)
     cfg.to_yaml()
 
-    preprocess(cfg)
-    make_train_test(cfg)
-    learn(cfg)
-    cluster(cfg)
+    if action == 'preprocess':
+        preprocess(cfg)
+    elif action == 'learn':
+        make_train_test(cfg)
+        learn(cfg)
+    elif action == 'cluster':
+        cluster(cfg)
+    else:
+        preprocess(cfg)
+        make_train_test(cfg)
+        learn(cfg)
+        cluster(cfg)
 
 def preprocess(cfg):
     '''
@@ -57,28 +58,26 @@ def preprocess(cfg):
     if cfg.min_ctg_len < 0:
         cfg.min_ctg_len = 2 * cfg.fragment_length
 
-    logger.info(f'Preprocessing fasta and {cfg.cov_type} files')
+    logger.info(f'Filtering fasta')
     composition = cfg.get_composition_feature()
-    composition.filter_by_length(output=cfg.io['filt_fasta'],
-                                 min_length=cfg.min_ctg_len)
+    composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
 
-    logger.info('Converting bam coverage to hdf5')
-    coverage = cfg.get_coverage_feature()
-    # TO DO: take parameters into account the flag
-    coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
-                   tlen_range=cfg.fl_range,
-                   min_mapq=cfg.min_mapping_quality,
-                   min_coverage=cfg.min_aln_coverage)
-    coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
+    if 'bam' in cfg.io:
+        logger.info('Converting bam coverage to hdf5')
+        coverage = cfg.get_coverage_feature()
+        # TO DO: take parameters into account the flag
+        coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
+                       tlen_range=cfg.fl_range,
+                       min_mapq=cfg.min_mapping_quality,
+                       min_coverage=cfg.min_aln_coverage)
 
-    if not coverage.path['h5'].is_file():
-        logger.warning('Could not get coverage table. Is your input "bam" formatted?')
-
-    composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
+    if cfg.io['h5'].is_file():
+        coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
+        composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
 
     summary = composition.summarize_filtering(singletons=cfg.io['singletons'])
-
     logger.info(f'Contig filtering - {summary}')
+
 
 def make_train_test(cfg):
     '''
@@ -88,15 +87,21 @@ def make_train_test(cfg):
        - n/2 negative examples (fragments from different contigs)
     '''
 
-    logger = setup_logger('fragmentation', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
+    if not cfg.io['filt_fasta'].is_file():
+        logger.warning('Input fasta file was not preprocessed. Using raw fasta instead.')
+        cfg.io['filt_fasta'] = cfg.io['fasta']
 
     logger.info("Making train/test examples")
-    assembly = [contig for contig in SeqIO.parse(cfg.io['filt_fasta'], 'fasta')]
+    composition = cfg.get_composition_feature()
 
-    n_ctg_for_test = max(2, int(cfg.test_ratio*len(assembly)))
+    assembly = [x for x in composition.get_iterator('filt_fasta')]
+    n_ctg = len(assembly)
 
-    assembly_idx = {'test': np.random.choice(len(assembly), n_ctg_for_test)}
-    assembly_idx['train'] = np.setdiff1d(range(len(assembly)), assembly_idx['test'])
+    n_ctg_for_test = max(2, int(cfg.test_ratio*n_ctg))
+
+    assembly_idx = {'test': np.random.choice(n_ctg, n_ctg_for_test)}
+    assembly_idx['train'] = np.setdiff1d(range(n_ctg), assembly_idx['test'])
 
     n_examples = {'train': cfg.n_train, 'test': cfg.n_test}
 
@@ -117,10 +122,8 @@ def learn(cfg):
 
     torch.set_num_threads(cfg.threads)
 
-    input_shapes = cfg.get_input_shapes()
-    architecture = cfg.get_architecture()
+    model = load_model(cfg)
 
-    model = initialize_model('-'.join(cfg.features), input_shapes, architecture)
     device = list({p.device.type for p in model.parameters()})
     logger.info(f'Neural network training on {" and ".join(device)}')
     logger.debug(str(model))
@@ -131,7 +134,22 @@ def learn(cfg):
     if 'coverage' in cfg.features:
         inputs['coverage'] = cfg.io['h5']
 
-    train(
+    for (key, path) in inputs.items():
+        if not path.is_file():
+            logger.critical(
+                (f'{key} file not found at {path}. '
+                 'Did you run the preprocessing step with the {key} file?')
+            )
+            raise FileNotFoundError
+
+    if not all(f.is_file() for f in cfg.io['pairs'].values()):
+        logger.critical(
+            (f'Train/test sets not found at {path}.'
+             'Did you delete the pair files?')
+        )
+        raise FileNotFoundError
+
+    model = train(
         model, **inputs,
         pairs=cfg.io['pairs'],
         test_output=cfg.io['nn_test'],
@@ -145,12 +163,7 @@ def learn(cfg):
         wsize=cfg.wsize,
         wstep=cfg.wstep
     )
-
     logger.info('Training finished')
-
-    checkpoint = torch.load(cfg.io['model'])
-    model.load_state_dict(checkpoint['state'])
-    model.eval()
 
     logger.info('Computing intermediate representation of composition and coverage features')
     save_repr_all(model, fasta=cfg.io['filt_fasta'], coverage=cfg.io['h5'],
@@ -175,8 +188,16 @@ def cluster(cfg, force=False):
     model = load_model(full_cfg)
     n_frags = full_cfg.n_frags
 
+    if not all(x.is_file() for x in cfg.io['repr'].values()):
+        logger.critical(
+            (f'Could not find the latent representations in {cfg.io["output"]}. '
+             'Did you run coconet learn before?')
+        )
+
+    features = cfg.get_features()
+
     logger.info('Pre-clustering contigs')
-    make_pregraph(model, cfg.get_features(), output=cfg.io['pre_graph'],
+    make_pregraph(model, features, output=cfg.io['pre_graph'],
                   n_frags=n_frags, max_neighbors=cfg.max_neighbors, force=force)
 
     logger.info('Refining graph')

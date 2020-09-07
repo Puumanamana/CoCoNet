@@ -84,10 +84,10 @@ def test_load_data_compo():
     '''
 
     fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS)
-    fasta = list(SeqIO.parse(fasta_file, 'fasta'))
+    contigs = [(ctg.id, str(ctg.seq)) for ctg in SeqIO.parse(fasta_file, 'fasta')]
     pairs_file = Path('pairs.npy').resolve()
 
-    make_pairs(fasta, STEP, FL, output=pairs_file, n_examples=50)
+    make_pairs(contigs, STEP, FL, output=pairs_file, n_examples=50)
 
     gen = CompositionGenerator(pairs_file, fasta_file,
                                batch_size=TEST_LEARN_PRMS['batch_size'],
@@ -108,11 +108,12 @@ def test_load_data_cover():
     Test coverage generator
     '''
 
-    fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=False)
+    contigs = generate_fasta_file(*TEST_CTG_LENGTHS, save=False)
     coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
     pairs_file = Path('pairs.npy').resolve()
 
-    make_pairs(fasta_file, STEP, FL, output=pairs_file, n_examples=50)
+    contigs = [(seq.id, str(seq.seq)) for seq in contigs]
+    make_pairs(contigs, STEP, FL, output=pairs_file, n_examples=50)
 
     gen = CoverageGenerator(pairs_file, coverage_file,
                             batch_size=TEST_LEARN_PRMS['batch_size'],
@@ -194,7 +195,7 @@ def test_learn_save_load_model():
     coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
     fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=True)
 
-    fasta = list(SeqIO.parse(fasta_file, 'fasta'))
+    fasta = [(seq.id, str(seq.seq)) for seq in SeqIO.parse(fasta_file, 'fasta')]
 
     make_pairs(fasta, STEP, FL, output=pair_files['train'], n_examples=50)
     make_pairs(fasta, STEP, FL, output=pair_files['test'], n_examples=5)

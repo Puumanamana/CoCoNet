@@ -3,7 +3,6 @@ Tools to split contigs into smaller fragment
 to train the neural network
 '''
 
-import sys
 from math import ceil
 from itertools import combinations
 import numpy as np
@@ -79,7 +78,7 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     pair_idx = np.unique(pair_idx[cond], axis=0)[:n_examples, :]
 
     if pair_idx.size == 0:
-        sys.exit("No contigs found in data. Aborting")
+        raise RuntimeError("No contigs found in data. Aborting")
 
     if len(pair_idx) < n_examples:
         pair_idx = np.vstack(np.triu_indices(len(n_frags_all), k=1)).T
@@ -102,10 +101,10 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6, logger=None
     Extract positive and negative pairs for [contigs]
     """
 
-    contig_frags = np.array([(1+len(ctg.seq)-frag_len)//step
-                             for ctg in contigs])
+    contig_frags = np.array([(1+len(ctg)-frag_len)//step
+                             for (name, ctg) in contigs])
 
-    max_encoding = np.max([len(ctg.id) for ctg in contigs])
+    max_encoding = np.max([len(name) for (name, _) in contigs])
 
     pairs_per_ctg = ceil(n_examples / 2 / len(contig_frags))
     frag_steps = frag_len // step
@@ -122,7 +121,7 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6, logger=None
 
     np.random.shuffle(all_pairs)
 
-    contig_names = np.array([ctg.id for ctg in contigs])
+    contig_names = np.array([name for (name, ctg) in contigs])
     all_pairs['sp'] = contig_names[all_pairs['sp'].astype(int)]
     all_pairs['start'] *= step
     all_pairs['end'] *= step

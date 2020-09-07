@@ -16,6 +16,14 @@ class Feature:
         self.ftype = ftype
         self.path = path
 
+    def check_paths(self):
+        for p in self.path.values():
+            if isinstance(p, list):
+                if all(pi.is_file() for pi in p):
+                    return True
+            if p.is_file():
+                return True
+
     def get_handle(self, key='h5'):
         return h5py.File(self.path[key], 'r')
 

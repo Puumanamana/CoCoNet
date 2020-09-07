@@ -25,7 +25,7 @@ PARAMS = {
     'cover_neurons': [8, 4],
     'cover_kernel': 2,
     'wsize': 2,
-    'wstep': 2
+    'wstep': 2,
 }
 
 def test_parser():
@@ -35,7 +35,7 @@ def test_parser():
 
     args = parse_args()
 
-    assert isinstance(args.kmer, int)
+    assert hasattr(args, 'action')
 
 def test_all():
     '''
@@ -44,7 +44,7 @@ def test_all():
 
     fail = True
     try:
-        main(**PARAMS)
+        main(loglvl='DEBUG', **PARAMS)
         fail = False
     except Exception as error:
         print(error)

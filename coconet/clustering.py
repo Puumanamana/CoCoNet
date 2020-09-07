@@ -2,8 +2,6 @@
 Groups all the functions required to run the clustering steps
 '''
 
-import sys
-
 import numpy as np
 import pandas as pd
 import h5py
@@ -215,7 +213,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
 
     if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size > 0:
         logger.error('Something went wrong: singleton contigs are already in the graph.')
-        sys.exit()
+        raise RuntimeError
 
     pre_graph.add_vertices(ignored.index.values)
 

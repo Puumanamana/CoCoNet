@@ -7,6 +7,8 @@ import argparse
 import logging
 
 
+SUB_COMMANDS = ['preprocess', 'learn', 'cluster']
+
 def get_version():
   from coconet import __version__
   return 'CoCoNet v{version}'.format(version=__version__)
@@ -39,185 +41,244 @@ def parse_args():
       allow_abbrev=False,
       formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-
     parser.add_argument(
       '--version', action='version', version=get_version()
     )
-    parser.add_argument(
-      '-fl', '--fragment-length', type=int, default=1024,
-      help='Length of contig fragments in bp'
+
+    #========================================================#
+    #=========== Common arguments for any program ===========#
+    #========================================================#
+    
+    main_parser = argparse.ArgumentParser(add_help=False)
+    main_parser.add_argument(
+      '--output', type=str, default='output', action=ToPathAction,
+      help='Path to output directory'
     )
-    parser.add_argument(
+    main_parser.add_argument(
       '-t', '--threads', type=int, default=20,
       help='Number of threads'
     )
-    parser.add_argument(
+    main_parser.add_argument(
+      '--debug', action='store_const', dest='loglvl', const=logging.DEBUG, default=logging.INFO,
+      help='Print debugging statements'
+    )
+    main_parser.add_argument(
+      '--quiet', action='store_const', dest='loglvl', const=logging.WARNING,
+      help='Less verbose'
+    )
+    main_parser.add_argument(
+      '--silent', action='store_const', dest='loglvl', const=logging.ERROR,
+      help='Only error messages'
+    )
+
+    #========================================================#
+    #================== Path to input data ==================#
+    #========================================================#
+
+    input_parser = argparse.ArgumentParser(add_help=False)
+    input_parser.add_argument(
+      '--fasta', type=str, action=ToPathAction,
+      help='Path to your assembly file (fasta formatted)'
+    )
+    input_parser.add_argument(
+      '--h5', type=str, action=ToPathAction,
+      help=('Experimental: coverage in hdf5 format '
+            '(keys are contigs, values are (sample, contig_len) ndarrays')
+    )
+
+    #========================================================#    
+    #============ Generic parameters for CoCoNet ============#
+    #========================================================#
+        
+    global_parser = argparse.ArgumentParser(add_help=False)
+    global_parser.add_argument(
+      '--fragment-length', type=int, default=1024,
+      help='Length of contig fragments in bp'
+    )
+    global_parser.add_argument(
       '--features', type=str, default=['coverage', 'composition'],
       choices=['composition', 'coverage'], nargs='+',
       help='Features for binning (composition, coverage, or both)'
     )
 
-    io_group = parser.add_argument_group(title='io')
-    io_group.add_argument(
-      '--fasta', type=str, action=ToPathAction, required=True,
-      help='Path to your assembly file (fasta formatted)'
-    )
-    io_group.add_argument(
-      '--bam', type=str, nargs='+', action=ToPathAction, required=True,
+    #========================================================#
+    #================= Preprocessing parser =================#
+    #========================================================#
+    
+    preproc_parser = argparse.ArgumentParser(add_help=False)
+    preproc_parser.add_argument(
+      '--bam', type=str, nargs='+', action=ToPathAction,
       help='List of paths to your coverage files (bam formatted)'
     )
-    io_group.add_argument(
-      '--h5', type=str, action=ToPathAction, required=True,
-      help=('Experimental: coverage in hdf5 format '
-            '(keys are contigs, values are (sample, contig_len) arrays')
-    )
-    io_group.add_argument(
-      '--output', type=str, default='output', action=ToPathAction,
-      help='Path to output directory'
-    )
-    io_group.add_argument(
-      '--debug', action="store_const", dest="loglvl", const=logging.DEBUG, default=logging.INFO,
-      help="Print debugging statements"
-    )
-    io_group.add_argument(
-      '--quiet', action="store_const", dest="loglvl", const=logging.WARNING,
-      help="Less verbose"
-    )
-    io_group.add_argument(
-      '--silent', action="store_const", dest="loglvl", const=logging.ERROR,
-      help="Only error messages"
-    )
 
-    preproc_group = parser.add_argument_group(title='Preprocessing')
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--min-ctg-len', type=int, default=-1,
       help='Minimum contig length. Default (-1) is twice the fragment length'
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--min-prevalence', type=int, default=2,
       help=('Minimum contig prevalence for binning. '
             'Contig with less that value are filtered out.')
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--min-mapping-quality', type=int, default=30,
       help='Minimum alignment quality'
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--min-aln-coverage', type=float, default=0.5,
       help='Discard alignments with less than [0.5]% aligned nucleotides'
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--flag', type=int, default=1796,
       help='SAM flag for filtering (same as samtools "-F" option)'
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--fl-range', type=int, nargs=2,
       help='Only allow for paired alignments with spacing within this range'
     )
-    preproc_group.add_argument(
+    preproc_parser.add_argument(
       '--tmp-dir', type=str, default='./tmp42',
       help='Temporary directory for bam processing', action=ToPathAction
     )
 
-    frag_group = parser.add_argument_group(title='Fragmentation')
-    frag_group.add_argument(
+    #========================================================#
+    #=============== Subparser: deep learning ===============#
+    #========================================================#
+    
+    dl_parser = argparse.ArgumentParser(add_help=False)
+    
+    dl_parser.add_argument(
       '--fragment-step', type=int, default=128,
       help='Fragments spacing'
     )
-    frag_group.add_argument(
+    dl_parser.add_argument(
       '--test-ratio', type=float, default=0.1,
       help='Ratio for train / test split'
     )
-    frag_group.add_argument(
+    dl_parser.add_argument(
       '--n-train', type=int, default=int(1e6),
       help='Number of training examples'
     )
-    frag_group.add_argument(
+    dl_parser.add_argument(
       '--n-test', type=int, default=int(1e4),
       help='Number of test examples'
     )
-
-    dl_group = parser.add_argument_group(title='Neural network')
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--batch-size', type=int, default=256,
       help='Batch size for training'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--learning-rate', type=float, default=1e-4,
       help='Learning rate for gradient descent'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--load-batch', type=int, default=200,
       help=('Number of coverage batch to load in memory. '
             'Consider lowering this value if your RAM is limited.')
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--compo-neurons', type=int, default=[64, 32], nargs=2,
       help='Number of neurons for the composition dense layers (x2)'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--cover-neurons', type=int, default=[64, 32], nargs=2,
       help='Number of neurons for the coverage dense layers (x2)'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--cover-filters', type=int, default=32,
       help='Number of filters for convolution layer of coverage network.'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--cover-kernel', type=int, default=7,
       help='Kernel size for convolution layer of coverage network.'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--cover-stride', type=int, default=3,
       help='Convolution stride for convolution layer of coverage network.'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--merge-neurons', type=int, default=32,
       help='Number of neurons for the merging layer (x1)'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--norm', action='store_true', default=False,
       help='Normalize the k-mer occurrences to frequencies'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '-k', '--kmer', type=int, default=4,
       help='k-mer size for composition vector'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--no-rc', action='store_true', default=False,
       help='Do not add the reverse complement k-mer occurrences to the composition vector.'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--wsize', type=int, default=64,
       help='Smoothing window size for coverage vector'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--wstep', type=int, default=32,
       help='Subsampling step for coverage vector'
     )
-    dl_group.add_argument(
+    dl_parser.add_argument(
       '--n-frags', type=int, default=30,
       help='Number of fragments to split the contigs for the clustering phase'
     )
 
-    cluster_group = parser.add_argument_group(title='Clustering')
-    cluster_group.add_argument(
+    #========================================================#
+    #====================== Clustering ======================#
+    #========================================================#
+    
+    cluster_parser = argparse.ArgumentParser(add_help=False)
+    
+    cluster_parser.add_argument(
       '--max-neighbors', type=int, default=100,
       help='Maximum number of neighbors to consider to compute the adjacency matrix.'
     )
-    cluster_group.add_argument(
+    cluster_parser.add_argument(
       '--theta', type=float, default=0.8,
       help='Minimum percent of edges between two contigs to form an edge between them'
     )
-    cluster_group.add_argument(
+    cluster_parser.add_argument(
       '--gamma1', type=float, default=0.1,
       help='CPM optimization value for the first run of the Leiden clustering'
     )
-    cluster_group.add_argument(
+    cluster_parser.add_argument(
       '--gamma2', type=float, default=0.75,
       help='CPM optimization value for the second run of the Leiden clustering'
-      )
+    )
+
+    
+    #========================================================#
+    #====================== Subparsers ======================#
+    #========================================================#
+
+    subparsers = parser.add_subparsers(title='action', dest='action')
+    subparsers.add_parser(
+      'preprocess', parents=[input_parser, main_parser, preproc_parser],
+      help='Preprocess data'
+    )
+
+    subparsers.add_parser(
+      'learn', parents=[input_parser, main_parser, global_parser, dl_parser],
+      help='Train neural network on input data'
+    )
+
+    subparsers.add_parser(
+      'cluster', parents=[main_parser, global_parser, cluster_parser],
+      help='Bin contigs using neural network'
+    )
+    
+    subparsers.add_parser(
+      'run',
+      parents=[input_parser, main_parser, preproc_parser,
+               dl_parser, cluster_parser, global_parser],
+      help='Run complete workflow (recommended)'
+    )
 
     args, _ = parser.parse_known_args()
+  
+    if args.action is None:
+        return parser.parse_known_args(['run'])[0]
 
     return args

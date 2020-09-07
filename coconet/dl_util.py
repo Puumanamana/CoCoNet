@@ -1,6 +1,7 @@
 from collections import deque
 from itertools import chain
 import re
+import logging
 
 from tqdm import tqdm
 import h5py
@@ -15,6 +16,9 @@ import torch
 from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
+
+
+logger = logging.getLogger('learning')
 
 def initialize_model(model_type, input_shapes, architecture):
     '''
@@ -38,7 +42,7 @@ def initialize_model(model_type, input_shapes, architecture):
 
     return model
 
-def load_model(config):
+def load_model(config, from_checkpoint=False):
     '''
     Load model:
     - initiliaze model with parameters in config
@@ -47,11 +51,20 @@ def load_model(config):
 
     input_shapes = config.get_input_shapes()
     architecture = config.get_architecture()
-    model = initialize_model('CoCoNet', input_shapes, architecture)
+    model = initialize_model('-'.join(config.features), input_shapes, architecture)
 
-    checkpoint = torch.load(config.io['model'])
-    model.load_state_dict(checkpoint['state'])
-    model.eval()
+    if from_checkpoint:
+        try:
+            checkpoint = torch.load(config.io['model'])
+            model.load_state_dict(checkpoint['state'])
+            model.eval()
+        except:
+            logger.critical(
+                ('Could not load network model. '
+                 'Is the file corrupted??')
+            )
+        raise RuntimeError
+
 
     return model
 
@@ -178,6 +191,8 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     # Save last test performance to file
     predictions.update({'truth': y_test})
     pd.DataFrame(predictions).to_csv(test_output, index=False)
+
+    return model
 
 def run_test(model, x_test):
     '''

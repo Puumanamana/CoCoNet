@@ -12,6 +12,9 @@ class CompositionFeature(Feature):
         Feature.__init__(self, **kwargs)
         self.ftype = 'composition'
 
+    def count(self, key='fasta'):
+        return sum(1 for line in open(self.path[key]) if line.startswith('>'))
+
     def get_iterator(self, key='fasta'):
         iterator = SimpleFastaParser(open(str(self.path[key]), 'r'))
         iterator = map(lambda x: [x[0].split()[0], x[1]], iterator)

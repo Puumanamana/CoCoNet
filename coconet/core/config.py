@@ -2,7 +2,6 @@
 Configuration object to handle CLI, loading/resuming runs
 '''
 
-import sys
 from pathlib import Path
 from math import ceil
 import logging
@@ -50,8 +49,11 @@ class Configuration:
         Make configuration from CLI
         '''
 
-        for item in kwargs.items():
-            self.set_input(*item)
+        for (name, value) in kwargs.items():
+            if name not in {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}:
+                setattr(self, name, value)
+            else:
+                self.set_input(name, value)
 
         if mkdir:
             self.io['output'].mkdir(exist_ok=True)
@@ -63,14 +65,10 @@ class Configuration:
         Check inputs are well formatted before setting them
         '''
 
-        if name not in {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}:
-            setattr(self, name, val)
-            return
-
         if name == 'fasta':
             filepath = Path(val)
             if filepath.suffix not in ['.fa', '.fasta', '.fna']:
-                sys.exit('This assembly file extension is not supported ({})'.format(filepath.suffix))
+                raise NotImplementedError(f'Unknown file extension: {filepath.suffix}')
 
         if name == 'bam':
             if not val:
@@ -78,7 +76,7 @@ class Configuration:
             filepath = [Path(cov) for cov in val]
             suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
             if not suffixes:
-                sys.exit('This coverage file extension is not supported ({})'.format(suffixes))
+                raise NotImplementedError(f'Unknown file extension: {suffixes}')
 
         if name == 'h5':
             if val is None:
@@ -90,27 +88,6 @@ class Configuration:
             filepath = Path(val).resolve()
 
         self.io[name] = filepath
-
-    def to_yaml(self):
-        '''
-        Save configuration to YAML file
-        '''
-
-        to_save = self.__dict__
-        config_file = Path('{}/config.yaml'.format(self.io['output']))
-
-        if config_file.is_file() and config_file.stat().st_size > 0:
-            complete_conf = Configuration.from_yaml(config_file).__dict__
-            complete_conf.update(to_save)
-        else:
-            complete_conf = {key: val for (key, val) in self.__dict__.items()}
-
-        io_to_keep = {k: v for (k, v) in self.io.items() if k in
-                      {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
-        complete_conf['io'] = io_to_keep
-
-        with open(config_file, 'w') as handle:
-            yaml.dump(complete_conf, handle)
 
     def set_outputs(self):
         '''
@@ -136,8 +113,8 @@ class Configuration:
             if not src.is_file():
                 logger.warning(f'h5 was set as input but the file does not exist')
                 if 'bam' not in self.io:
-                    logger.error(f'Could not find any bam file in the inputs. Aborting')
-                    sys.exit()
+                    logger.critical(f'Could not find any bam file in the inputs. Aborting')
+                    raise FileNotFoundError
 
             elif not dest.is_file():
                 dest.symlink_to(src)
@@ -159,6 +136,27 @@ class Configuration:
                     output_files[name][key] = Path('{}/{}'.format(self.io['output'], val))
 
         self.io.update(output_files)
+
+    def to_yaml(self):
+        '''
+        Save configuration to YAML file
+        '''
+
+        to_save = self.__dict__
+        config_file = Path('{}/config.yaml'.format(self.io['output']))
+
+        if config_file.is_file() and config_file.stat().st_size > 0:
+            complete_conf = Configuration.from_yaml(config_file).__dict__
+            complete_conf.update(to_save)
+        else:
+            complete_conf = {key: val for (key, val) in self.__dict__.items()}
+
+        io_to_keep = {k: v for (k, v) in self.io.items() if k in
+                      {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
+        complete_conf['io'] = io_to_keep
+
+        with open(config_file, 'w') as handle:
+            yaml.dump(complete_conf, handle)
 
     def get_input_shapes(self):
         '''
@@ -192,18 +190,33 @@ class Configuration:
         return architecture
 
     def get_composition_feature(self):
-        return CompositionFeature(
+        composition = CompositionFeature(
             path=dict(fasta=self.io['fasta'],
                       filt_fasta=self.io['filt_fasta'],
                       latent=self.io['repr']['composition'])
+        )
+        if not composition.check_paths():
+            logger.critical(
+                ('Could not find the .fasta file. '
+                 'Did you run coconet preprocess with the --fasta flag?')
             )
+            raise FileNotFoundError
+
+        return composition
 
     def get_coverage_feature(self):
-        return CoverageFeature(
+        coverage = CoverageFeature(
             path=dict(bam=self.io.get('bam', None),
                       h5=self.io.get('h5', None),
                       latent=self.io['repr']['coverage'])
         )
+        if not coverage.check_paths():
+            logger.critical(
+                ('Could not find the coverage information. '
+                 'Did you run coconet preprocess with the --bam flag?')
+            )
+            raise FileNotFoundError
+        return coverage
 
     def get_features(self):
         features = {}

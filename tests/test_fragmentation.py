@@ -81,6 +81,7 @@ def test_all_pairs(n_examples=50):
     '''
 
     contigs = generate_fasta_file(10, 20, save=False)
+    contigs = [(ctg.id, str(ctg.seq)) for ctg in contigs]
 
     step = 2
     frag_len = 3
