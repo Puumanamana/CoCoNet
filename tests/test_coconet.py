@@ -14,6 +14,8 @@ PARAMS = {
     'fasta': Path("{}/assembly.fasta".format(TEST_DIR)),
     'bam': list(Path(TEST_DIR).glob("sample_*.bam")),
     'output': Path('./output_test'),
+    'min_ctg_len': 2048,
+    'fragment_length': 1024,
     'n_train': 64,
     'n_test': 8,
     'batch_size': 2,

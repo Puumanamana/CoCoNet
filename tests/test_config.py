@@ -57,7 +57,8 @@ def test_load_save():
     attrs_exist = all(getattr(cfg_loaded, k) == getattr(cfg, k)
                       for k, v in cfg_loaded.__dict__.items()
                       if not isinstance(v, dict))
-    
+
+    kwargs['h5'].unlink()
     shutil.rmtree(cfg.io['output'])
 
     assert cfg_is_created

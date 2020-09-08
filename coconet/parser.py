@@ -287,7 +287,7 @@ def parse_args():
 
     if hasattr(args, 'fragment_length') and args.fragment_length <= 0:
         if hasattr(args, 'min_ctg_len'):
-            args.fragment_length = args.fragment_length // 2
+            args.fragment_length = args.min_ctg_len // 2
         else:
             raise ValueError('Unknow minimum contig length. Please set --min-ctg-len')
 

@@ -7,5 +7,3 @@ RUN git clone https://github.com/Puumanamana/CoCoNet.git \
     && cd CoCoNet \
     && pip install . \
     && rm -rf CoCoNet
-
-
