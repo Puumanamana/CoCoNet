@@ -89,7 +89,7 @@ def pass_filter(s, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
     if (
             s.mapping_quality < min_mapq
             or s.flag & flag != 0
-            or s.query_alignment_length / s.query_length < min_coverage
+            or s.query_alignment_length / s.query_length < min_coverage / 100
             or (tlen_range is not None
                 and not (tlen_range[0] < abs(s.template_length) < tlen_range[1]))
     ):

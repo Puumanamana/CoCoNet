@@ -55,16 +55,15 @@ def preprocess(cfg):
 
     logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
 
-    if cfg.min_ctg_len < 0:
-        cfg.min_ctg_len = 2 * cfg.fragment_length
-
     logger.info(f'Filtering fasta')
     composition = cfg.get_composition_feature()
     composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
 
+    if 'bam' in cfg.io or cfg.io['h5'].is_file():
+        coverage = cfg.get_coverage_feature()
+
     if 'bam' in cfg.io:
         logger.info('Converting bam coverage to hdf5')
-        coverage = cfg.get_coverage_feature()
         # TO DO: take parameters into account the flag
         coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
                        tlen_range=cfg.fl_range,

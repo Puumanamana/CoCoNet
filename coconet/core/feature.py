@@ -21,7 +21,7 @@ class Feature:
             if isinstance(p, list):
                 if all(pi.is_file() for pi in p):
                     return True
-            if p.is_file():
+            if p is not None and p.is_file():
                 return True
 
     def get_handle(self, key='h5'):

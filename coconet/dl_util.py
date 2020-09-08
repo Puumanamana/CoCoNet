@@ -58,13 +58,16 @@ def load_model(config, from_checkpoint=False):
             checkpoint = torch.load(config.io['model'])
             model.load_state_dict(checkpoint['state'])
             model.eval()
-        except:
+        except RuntimeError:
             logger.critical(
                 ('Could not load network model. '
-                 'Is the file corrupted??')
+                 'Is the model checkpoint corrupted?')
             )
-        raise RuntimeError
-
+        except FileNotFoundError:
+            logger.critical(
+                ('Could not load network model. '
+                 f'File {config.io["model"]} not found')
+            )
 
     return model
 

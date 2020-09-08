@@ -48,7 +48,7 @@ def parse_args():
     #========================================================#
     #=========== Common arguments for any program ===========#
     #========================================================#
-    
+
     main_parser = argparse.ArgumentParser(add_help=False)
     main_parser.add_argument(
       '--output', type=str, default='output', action=ToPathAction,
@@ -86,14 +86,15 @@ def parse_args():
             '(keys are contigs, values are (sample, contig_len) ndarrays')
     )
 
-    #========================================================#    
+    #========================================================#
     #============ Generic parameters for CoCoNet ============#
     #========================================================#
-        
+
     global_parser = argparse.ArgumentParser(add_help=False)
     global_parser.add_argument(
-      '--fragment-length', type=int, default=1024,
-      help='Length of contig fragments in bp'
+      '--fragment-length', type=int, default=-1,
+      help=('Length of contig fragments in bp. '
+            'Default is twice the half the minimum contig length.')
     )
     global_parser.add_argument(
       '--features', type=str, default=['coverage', 'composition'],
@@ -104,7 +105,7 @@ def parse_args():
     #========================================================#
     #================= Preprocessing parser =================#
     #========================================================#
-    
+
     preproc_parser = argparse.ArgumentParser(add_help=False)
     preproc_parser.add_argument(
       '--bam', type=str, nargs='+', action=ToPathAction,
@@ -112,8 +113,8 @@ def parse_args():
     )
 
     preproc_parser.add_argument(
-      '--min-ctg-len', type=int, default=-1,
-      help='Minimum contig length. Default (-1) is twice the fragment length'
+      '--min-ctg-len', type=int, default=-2048,
+      help='Minimum contig length. Default is twice the fragment length'
     )
     preproc_parser.add_argument(
       '--min-prevalence', type=int, default=2,
@@ -125,8 +126,8 @@ def parse_args():
       help='Minimum alignment quality'
     )
     preproc_parser.add_argument(
-      '--min-aln-coverage', type=float, default=0.5,
-      help='Discard alignments with less than [0.5]% aligned nucleotides'
+      '--min-aln-coverage', type=float, default=50,
+      help='Discard alignments with less than %(default)s%% aligned nucleotides'
     )
     preproc_parser.add_argument(
       '--flag', type=int, default=1796,
@@ -144,9 +145,9 @@ def parse_args():
     #========================================================#
     #=============== Subparser: deep learning ===============#
     #========================================================#
-    
+
     dl_parser = argparse.ArgumentParser(add_help=False)
-    
+
     dl_parser.add_argument(
       '--fragment-step', type=int, default=128,
       help='Fragments spacing'
@@ -228,9 +229,9 @@ def parse_args():
     #========================================================#
     #====================== Clustering ======================#
     #========================================================#
-    
+
     cluster_parser = argparse.ArgumentParser(add_help=False)
-    
+
     cluster_parser.add_argument(
       '--max-neighbors', type=int, default=100,
       help='Maximum number of neighbors to consider to compute the adjacency matrix.'
@@ -248,7 +249,6 @@ def parse_args():
       help='CPM optimization value for the second run of the Leiden clustering'
     )
 
-    
     #========================================================#
     #====================== Subparsers ======================#
     #========================================================#
@@ -256,29 +256,39 @@ def parse_args():
     subparsers = parser.add_subparsers(title='action', dest='action')
     subparsers.add_parser(
       'preprocess', parents=[input_parser, main_parser, preproc_parser],
-      help='Preprocess data'
+      help='Preprocess data',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     subparsers.add_parser(
       'learn', parents=[input_parser, main_parser, global_parser, dl_parser],
-      help='Train neural network on input data'
+      help='Train neural network on input data',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     subparsers.add_parser(
       'cluster', parents=[main_parser, global_parser, cluster_parser],
-      help='Bin contigs using neural network'
+      help='Bin contigs using neural network',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
+
     subparsers.add_parser(
       'run',
       parents=[input_parser, main_parser, preproc_parser,
                dl_parser, cluster_parser, global_parser],
-      help='Run complete workflow (recommended)'
+      help='Run complete workflow (recommended)',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     args, _ = parser.parse_known_args()
-  
+
     if args.action is None:
         return parser.parse_known_args(['run'])[0]
+
+    if hasattr(args, 'fragment_length') and args.fragment_length <= 0:
+        if hasattr(args, 'min_ctg_len'):
+            args.fragment_length = args.fragment_length // 2
+        else:
+            raise ValueError('Unknow minimum contig length. Please set --min-ctg-len')
 
     return args

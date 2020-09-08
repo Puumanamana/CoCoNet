@@ -210,6 +210,7 @@ class Configuration:
                       h5=self.io.get('h5', None),
                       latent=self.io['repr']['coverage'])
         )
+
         if not coverage.check_paths():
             logger.critical(
                 ('Could not find the coverage information. '
