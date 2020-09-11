@@ -15,6 +15,7 @@ import leidenalg
 from coconet.tools import run_if_not_exists
 
 def compute_pairwise_comparisons(model, graph, handles,
+                                 vote_threshold=None,
                                  neighbors=None, max_neighbors=100,
                                  n_frags=30, bin_id=-1, pbar=False):
     '''
@@ -76,7 +77,12 @@ def compute_pairwise_comparisons(model, graph, handles,
                        for k, handle in handles.items()}
 
             probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
-            edges[(ctg, other_ctg)] = sum(probs)
+
+            if vote_threshold is not None:
+                score = sum(probs > vote_threshold)
+            else:
+                score = sum(probs)
+            edges[(ctg, other_ctg)] = score
 
     if edges:
         prev_weights = graph.es['weight']
@@ -144,6 +150,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
                        assignments_file=None,
                        n_frags=30,
                        theta=0.9,
+                       vote_threshold=None,
                        gamma1=0.1, gamma2=0.75,
                        force=False,
                        logger=None):
@@ -193,6 +200,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
                                      neighbors=mapping_id_ctg[contigs_c].values,
                                      max_neighbors=5000,
                                      n_frags=n_frags,
+                                     vote_threshold=vote_threshold,
                                      bin_id=cluster)
         # Find the leiden communities
         sub_graph = pre_graph.subgraph(contigs_c)

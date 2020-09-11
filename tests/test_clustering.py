@@ -53,6 +53,7 @@ def test_make_pregraph():
     }
 
     make_pregraph(model, features, output, n_frags=5)
+    make_pregraph(model, features, output, n_frags=5, vote_threshold=0.5)
 
     features['composition'].path['latent'].unlink()
     features['coverage'].path['latent'].unlink()

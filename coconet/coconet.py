@@ -55,27 +55,33 @@ def preprocess(cfg):
 
     logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
 
-    logger.info(f'Filtering fasta')
     composition = cfg.get_composition_feature()
     composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
+    logger.info(f'Minimum length filter (>{cfg.min_ctg_len} bp): {composition.count("filt_fasta")} contigs discarded')
 
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
 
     if 'bam' in cfg.io:
-        logger.info('Converting bam coverage to hdf5')
-        # TO DO: take parameters into account the flag
-        coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
-                       tlen_range=cfg.fl_range,
-                       min_mapq=cfg.min_mapping_quality,
-                       min_coverage=cfg.min_aln_coverage)
+        logger.info('Filtering alignments and converting to h5 format')
+        logger.info(f'Minimum mapping quality: {cfg.min_mapping_quality}')
+        logger.info(f'Minimum read coverage: {cfg.min_aln_coverage}')
+        logger.info(f'SAM flag (-F): {cfg.flag}')
+        if cfg.tlen_range is not None: logger.info('{} < tlen < {}'.format(*cfg.tlen_range))
+        
+        (n_reads, n_pass) = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
+                                           tlen_range=cfg.tlen_range,
+                                           min_mapq=cfg.min_mapping_quality,
+                                           min_coverage=cfg.min_aln_coverage,
+                                           flag=cfg.flag)
+
+        n_discarded = n_reads - n_pass
+        logger.info(f'Alignments filter: {n_discarded//1000:,}k reads discarded ({n_discarded/n_reads:.2%})')
 
     if cfg.io['h5'].is_file():
         coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
         composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
-
-    summary = composition.summarize_filtering(singletons=cfg.io['singletons'])
-    logger.info(f'Contig filtering - {summary}')
+        logger.info(f'Prevalence filter (prevalence > {cfg.min_prevalence}): {composition.count("filt_fasta")} contigs discarded')
 
 
 def make_train_test(cfg):
@@ -197,6 +203,7 @@ def cluster(cfg, force=False):
 
     logger.info('Pre-clustering contigs')
     make_pregraph(model, features, output=cfg.io['pre_graph'],
+                  vote_threshold=cfg.vote_threshold,
                   n_frags=n_frags, max_neighbors=cfg.max_neighbors, force=force)
 
     logger.info('Refining graph')
@@ -205,6 +212,7 @@ def cluster(cfg, force=False):
         singletons_file=cfg.io['singletons'],
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
+        vote_threshold=cfg.vote_threshold,
         n_frags=n_frags,
         theta=cfg.theta,
         gamma1=cfg.gamma1, gamma2=cfg.gamma2,

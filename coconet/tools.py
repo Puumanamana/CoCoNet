@@ -73,7 +73,7 @@ def kmer_count(k, rc=False):
 @lru_cache(maxsize=None)
 def kmer_rc_idx(k=4):
     '''
-    Get the non redundant kmer indexes when reverse complements is on
+    Get the non redundant kmer indexes when reverse complement is on
     '''
 
     mapping = []

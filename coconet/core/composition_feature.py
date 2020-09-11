@@ -13,7 +13,8 @@ class CompositionFeature(Feature):
         self.ftype = 'composition'
 
     def count(self, key='fasta'):
-        return sum(1 for line in open(self.path[key]) if line.startswith('>'))
+        new_count = sum(1 for line in open(self.path[key]) if line.startswith('>'))
+        return new_count
 
     def get_iterator(self, key='fasta'):
         iterator = SimpleFastaParser(open(str(self.path[key]), 'r'))
@@ -70,16 +71,6 @@ class CompositionFeature(Feature):
             for (ctg_id, seq) in filtered_fasta:
                 writer.write(f'>{ctg_id}\n{seq}\n')
 
-    def summarize_filtering(self, singletons=None):
-        n_before = sum(1 for _ in self.get_iterator('fasta'))
-        n_after = sum(1 for _ in self.get_iterator('filt_fasta'))
-        n_singletons = -1
-
-        if singletons is not None and Path(singletons).is_file():
-            n_singletons = sum(1 for _ in open(singletons)) - 1
-
-        return f'before: {n_before:,}, after: {n_after:,} (#singletons={n_singletons:,})'
-
     def get_valid_nucl_pos(self):
         '''
         Return position of ACGT only in fasta
@@ -89,5 +80,6 @@ class CompositionFeature(Feature):
 
         for (ctg_id, seq) in self.get_iterator('fasta'):
             if ctg_id in filt_ids:
-                positions = np.fromiter(seq, (np.unicode,1)) != 'N'
+                positions = np.fromiter(seq, (np.unicode, 1)) != 'N'
                 yield (ctg_id, positions)
+

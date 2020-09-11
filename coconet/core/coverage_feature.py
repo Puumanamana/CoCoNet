@@ -1,5 +1,4 @@
 from pathlib import Path
-from functools import partial
 
 import numpy as np
 import h5py
@@ -22,6 +21,17 @@ class CoverageFeature(Feature):
 
         return np.array(contigs)
 
+    def count(self, key='bam'):
+        if key == 'bam':
+            return [pysam.AlignmentFile(bam).count() for bam in self.path['bam']]
+        
+        handle = self.get_handle()
+        count = sum(x[:].sum(axis=1) for x in handle.values())
+        handle.close()
+        
+        return list(count)
+            
+
     def n_samples(self):
         handle = self.get_handle()
         first_elt = list(handle.keys())[0]
@@ -35,6 +45,9 @@ class CoverageFeature(Feature):
         if self.path.get('bam', None) is None:
             return
 
+        n_reads = 0
+        n_pass = 0
+        
         iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
         handle = h5py.File(str(output), 'w')
 
@@ -44,7 +57,12 @@ class CoverageFeature(Feature):
 
             for i, bam_it in enumerate(iterators):
                 it = bam_it.fetch(contig, 1, size['raw'])
-                coverages[i] = get_contig_coverage(it, length=size['raw'], **filtering)[positions]
+                
+                (cov_i, (n_reads_i, n_pass_i)) = get_contig_coverage(it, length=size['raw'], **filtering)
+                coverages[i] = cov_i[positions]
+                n_reads += n_reads_i
+                n_pass += n_pass_i
+                
             handle.create_dataset(contig, data=coverages)
 
             # Report progress
@@ -53,6 +71,8 @@ class CoverageFeature(Feature):
 
         handle.close()
         self.path['h5'] = Path(output)
+
+        return (n_reads, n_pass)
 
     def write_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
 
@@ -78,12 +98,16 @@ class CoverageFeature(Feature):
 def get_contig_coverage(iterator, length, **filtering):
     coverage = np.zeros(length, dtype='uint32')
 
-    for read in filter(partial(pass_filter, **filtering), iterator):
-        # Need to handle overlap between forward and reverse read
-        # bam files coordinates are 1-based --> offset
-        coverage[read.reference_start-1:read.reference_end] += 1
+    (n_reads, n_pass) = (0, 0)
+    for read in iterator:
+        n_reads += 1
+        if pass_filter(read, **filtering):
+            n_pass += 1
+            # Need to handle overlap between forward and reverse read
+            # bam files coordinates are 1-based --> offset
+            coverage[read.reference_start-1:read.reference_end] += 1
 
-    return coverage
+    return (coverage, (n_reads, n_pass))
 
 def pass_filter(s, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
     if (

@@ -134,7 +134,7 @@ def parse_args():
       help='SAM flag for filtering (same as samtools "-F" option)'
     )
     preproc_parser.add_argument(
-      '--fl-range', type=int, nargs=2,
+      '--tlen-range', type=int, nargs=2,
       help='Only allow for paired alignments with spacing within this range'
     )
     preproc_parser.add_argument(
@@ -235,6 +235,13 @@ def parse_args():
     cluster_parser.add_argument(
       '--max-neighbors', type=int, default=100,
       help='Maximum number of neighbors to consider to compute the adjacency matrix.'
+    )
+    cluster_parser.add_argument(
+      '--vote-threshold', type=float, default=None,
+      help=('When this parameter is not set, contig-contig edges are computed '
+            'by summing the probability between all pairwise fragments between them.'
+            'Otherwise, adopt a voting strategy and sets a hard-threshold on the probability'
+            'from each pairwise comparison.')
     )
     cluster_parser.add_argument(
       '--theta', type=float, default=0.8,
