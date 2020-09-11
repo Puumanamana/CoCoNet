@@ -34,7 +34,7 @@ class CoverageFeature(Feature):
         if self.path.get('bam', None) is None:
             return
         
-        counts = np.zeros(6)
+        counts = np.zeros(7)
         
         iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
         handle = h5py.File(str(output), 'w')
@@ -86,12 +86,14 @@ class CoverageFeature(Feature):
 def get_contig_coverage(iterator, length, **filtering):
     coverage = np.zeros(length, dtype='uint32')
 
-    counts = np.zeros(6)
+    counts = np.zeros(7)
     for read in iterator:
         conditions = filter_aln(read, **filtering)
-        counts += conditions
+        counts[0] += 1
+        counts[1] += not read.is_secondary
+        counts[2:] += conditions
         
-        if all(conditions):
+        if all(conditions[2:]):
             # Need to handle overlap between forward and reverse read
             # bam files coordinates are 1-based --> offset
             coverage[read.reference_start-1:read.reference_end] += 1
@@ -102,8 +104,7 @@ def filter_aln(aln, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
     rlen = aln.query_length if aln.query_length > 0 else aln.infer_query_length()
     
     return np.array([
-        True, # for total read count
-        not aln.is_unmapped, # for total read mapped
+        not aln.is_unmapped,
         aln.mapping_quality >= min_mapq,
         aln.query_alignment_length / rlen >= min_coverage / 100,
         aln.flag & flag == 0,

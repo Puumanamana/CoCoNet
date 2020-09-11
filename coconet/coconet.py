@@ -84,15 +84,16 @@ def preprocess(cfg):
             bam_filtering_info = [
                 'Coverage filtering summary:',
                 f'{indent}- {counts[0]:,.0f} total reads',
-                f'{indent}- {counts[1]:.1%} reads mapped',
-                f'{indent}- {counts[2]:.1%} reads with mapq > {cfg.min_mapping_quality}',
-                f'{indent}- {counts[3]:.1%} reads with coverage > {cfg.min_aln_coverage}%',
-                f'{indent}- {counts[4]:.1%} reads with flag & {cfg.flag} == 0',
+                f'{indent}- {counts[2]:.1%} reads mapped',
+                f'{indent}- {counts[1]:.1%} reads on primary alignments',
+                f'{indent}- {counts[3]:.1%} reads with mapq > {cfg.min_mapping_quality}',
+                f'{indent}- {counts[4]:.1%} reads with coverage > {cfg.min_aln_coverage/100:.0%}',
+                f'{indent}- {counts[5]:.1%} reads with flag & {cfg.flag} == 0',
             ]
 
             if cfg.tlen_range is not None:
                 bam_filtering_info.append(
-                    '- {:.1%} reads with {} <= tlen <= {}'.format(counts[-1], *cfg.tlen_range)
+                    '- {:.1%} reads w/ith {} <= tlen <= {}'.format(counts[-1], *cfg.tlen_range)
                 )
 
             logger.info('\n'.join(bam_filtering_info))

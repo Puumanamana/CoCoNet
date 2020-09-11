@@ -94,7 +94,7 @@ def parse_args():
     global_parser.add_argument(
       '--fragment-length', type=int, default=-1,
       help=('Length of contig fragments in bp. '
-            'Default is twice the half the minimum contig length.')
+            'Default is half the minimum contig length.')
     )
     global_parser.add_argument(
       '--features', type=str, default=['coverage', 'composition'],
@@ -113,8 +113,8 @@ def parse_args():
     )
 
     preproc_parser.add_argument(
-      '--min-ctg-len', type=int, default=-2048,
-      help='Minimum contig length. Default is twice the fragment length'
+      '--min-ctg-len', type=int, default=2048,
+      help='Minimum contig length. Default is 2048'
     )
     preproc_parser.add_argument(
       '--min-prevalence', type=int, default=2,
@@ -130,7 +130,7 @@ def parse_args():
       help='Discard alignments with less than %(default)s%% aligned nucleotides'
     )
     preproc_parser.add_argument(
-      '--flag', type=int, default=1796,
+      '--flag', type=int, default=3596,
       help='SAM flag for filtering (same as samtools "-F" option)'
     )
     preproc_parser.add_argument(
