@@ -33,9 +33,8 @@ class CoverageFeature(Feature):
     def to_h5(self, valid_nucleotides, output=None, logger=None, **filtering):
         if self.path.get('bam', None) is None:
             return
-
-        n_reads = 0
-        n_pass = 0
+        
+        counts = np.zeros(6)
         
         iterators = [pysam.AlignmentFile(bam, 'rb') for bam in self.path['bam']]
         handle = h5py.File(str(output), 'w')
@@ -47,11 +46,9 @@ class CoverageFeature(Feature):
             for i, bam_it in enumerate(iterators):
                 it = bam_it.fetch(contig, 1, size['raw'])
                 
-                (cov_i, (n_reads_i, n_pass_i)) = get_contig_coverage(it, length=size['raw'],
-                                                                     **filtering)
+                (cov_i, counts_i) = get_contig_coverage(it, length=size['raw'], **filtering)
                 coverages[i] = cov_i[positions]
-                n_reads += n_reads_i
-                n_pass += n_pass_i
+                counts += counts_i
                 
             handle.create_dataset(contig, data=coverages)
 
@@ -62,7 +59,8 @@ class CoverageFeature(Feature):
         handle.close()
         self.path['h5'] = Path(output)
 
-        return (n_reads, n_pass)
+        counts[1:] /= counts[0]
+        return counts
 
     def write_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
 
@@ -88,22 +86,25 @@ class CoverageFeature(Feature):
 def get_contig_coverage(iterator, length, **filtering):
     coverage = np.zeros(length, dtype='uint32')
 
-    (n_reads, n_pass) = (0, 0)
+    counts = np.zeros(6)
     for read in iterator:
-        n_reads += 1
-        if pass_filter(read, **filtering):
-            n_pass += 1
+        conditions = filter_aln(read, **filtering)
+        counts += conditions
+        
+        if all(conditions):
             # Need to handle overlap between forward and reverse read
             # bam files coordinates are 1-based --> offset
             coverage[read.reference_start-1:read.reference_end] += 1
 
-    return (coverage, (n_reads, n_pass))
+    return (coverage, counts)
 
-def pass_filter(aln, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
-    return (
-        aln.mapping_quality >= min_mapq
-        and aln.flag & flag == 0
-        and aln.query_alignment_length / aln.query_length >= min_coverage / 100
-        and (tlen_range is None
-            or (tlen_range[0] <= abs(aln.template_length) <= tlen_range[1]))
-    )
+def filter_aln(aln, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
+    return np.array([
+        True, # for total read count
+        not aln.is_unmapped, # for total read mapped
+        aln.mapping_quality >= min_mapq,
+        aln.query_alignment_length / aln.query_length >= min_coverage / 100,
+        aln.flag & flag == 0,
+        (tlen_range is None
+         or (tlen_range[0] <= abs(aln.template_length) <= tlen_range[1]))
+    ])

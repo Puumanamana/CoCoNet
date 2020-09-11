@@ -65,22 +65,38 @@ def preprocess(cfg):
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
 
+    indent = ' ' * 46 # For logging multiline-formatting
     if 'bam' in cfg.io:
-        logger.info('Filtering alignments and converting to h5 format')
-        logger.info((f'Criteria: mapq>={cfg.min_mapping_quality}, '
-                     f'read_coverage>={cfg.min_aln_coverage} '
-                     f'and (SAM_flag & {cfg.flag})==0'))
+        logger.info('Processing alignments and converting to h5 format')
+        logger.info((f'Alignments filtering criteria:\n'
+                     f'{indent}- mapq>={cfg.min_mapping_quality}\n'
+                     f'{indent}- read_coverage>={cfg.min_aln_coverage}\n'
+                     f'{indent}- (SAM_flag & {cfg.flag})==0'))
         if cfg.tlen_range is not None: logger.info('{}<tlen<{}'.format(*cfg.tlen_range))
         
-        (n_reads, n_pass) = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
-                                           tlen_range=cfg.tlen_range,
-                                           min_mapq=cfg.min_mapping_quality,
-                                           min_coverage=cfg.min_aln_coverage,
-                                           flag=cfg.flag)
+        counts = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
+                                tlen_range=cfg.tlen_range,
+                                min_mapq=cfg.min_mapping_quality,
+                                min_coverage=cfg.min_aln_coverage,
+                                flag=cfg.flag)
 
-        logger.info((f'Alignments filter -> '
-                     f'{n_pass:,} reads remaining ({n_pass/n_reads:.2%})'))
+        if counts is not None:
+            bam_filtering_info = [
+                'Coverage filtering summary:',
+                f'{indent}- {counts[0]:,.0f} total reads',
+                f'{indent}- {counts[1]:.1%} reads mapped',
+                f'{indent}- {counts[2]:.1%} reads with mapq > {cfg.min_mapping_quality}',
+                f'{indent}- {counts[3]:.1%} reads with coverage > {cfg.min_aln_coverage}%',
+                f'{indent}- {counts[4]:.1%} reads with flag & {cfg.flag} == 0',
+            ]
 
+            if cfg.tlen_range is not None:
+                bam_filtering_info.append(
+                    '- {:.1%} reads with {} <= tlen <= {}'.format(counts[-1], *cfg.tlen_range)
+                )
+
+            logger.info('\n'.join(bam_filtering_info))
+            
     if cfg.io['h5'].is_file():
         coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
         composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
