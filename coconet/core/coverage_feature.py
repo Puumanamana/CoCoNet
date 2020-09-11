@@ -21,17 +21,6 @@ class CoverageFeature(Feature):
 
         return np.array(contigs)
 
-    def count(self, key='bam'):
-        if key == 'bam':
-            return [pysam.AlignmentFile(bam).count() for bam in self.path['bam']]
-        
-        handle = self.get_handle()
-        count = sum(x[:].sum(axis=1) for x in handle.values())
-        handle.close()
-        
-        return list(count)
-            
-
     def n_samples(self):
         handle = self.get_handle()
         first_elt = list(handle.keys())[0]

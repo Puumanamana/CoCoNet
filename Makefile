@@ -10,5 +10,5 @@ publish:
 	twine upload dist/*
 
 container:
-	sudo docker build -f dockerfile -t nakor/coconet . \
+	sudo docker build --no-cache -f dockerfile -t nakor/coconet . \
 	&& sudo docker push nakor/coconet

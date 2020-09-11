@@ -56,8 +56,10 @@ def preprocess(cfg):
     logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
 
     composition = cfg.get_composition_feature()
+
+    logger.info(f'Preprocessing started: {composition.count("fasta")} contigs')
     composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
-    logger.info(f'Minimum length filter (>{cfg.min_ctg_len} bp): {composition.count("filt_fasta")} contigs discarded')
+    logger.info(f'Minimum length filter (>{cfg.min_ctg_len} bp): {composition.count("filt_fasta"):,} remaining')
 
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
@@ -81,7 +83,7 @@ def preprocess(cfg):
     if cfg.io['h5'].is_file():
         coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
         composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
-        logger.info(f'Prevalence filter (prevalence > {cfg.min_prevalence}): {composition.count("filt_fasta")} contigs discarded')
+        logger.info(f'Prevalence filter (prevalence > {cfg.min_prevalence}): {composition.count("filt_fasta"):,} contigs remaining')
 
 
 def make_train_test(cfg):
