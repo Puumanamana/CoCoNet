@@ -47,7 +47,8 @@ class CoverageFeature(Feature):
             for i, bam_it in enumerate(iterators):
                 it = bam_it.fetch(contig, 1, size['raw'])
                 
-                (cov_i, (n_reads_i, n_pass_i)) = get_contig_coverage(it, length=size['raw'], **filtering)
+                (cov_i, (n_reads_i, n_pass_i)) = get_contig_coverage(it, length=size['raw'],
+                                                                     **filtering)
                 coverages[i] = cov_i[positions]
                 n_reads += n_reads_i
                 n_pass += n_pass_i
@@ -98,13 +99,11 @@ def get_contig_coverage(iterator, length, **filtering):
 
     return (coverage, (n_reads, n_pass))
 
-def pass_filter(s, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
-    if (
-            s.mapping_quality < min_mapq
-            or s.flag & flag != 0
-            or s.query_alignment_length / s.query_length < min_coverage / 100
-            or (tlen_range is not None
-                and not (tlen_range[0] < abs(s.template_length) < tlen_range[1]))
-    ):
-        return False
-    return True
+def pass_filter(aln, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
+    return (
+        aln.mapping_quality >= min_mapq
+        and aln.flag & flag == 0
+        and aln.query_alignment_length / aln.query_length >= min_coverage / 100
+        and (tlen_range is None
+            or (tlen_range[0] <= abs(aln.template_length) <= tlen_range[1]))
+    )

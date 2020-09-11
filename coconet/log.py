@@ -2,8 +2,13 @@ import logging
 from pathlib import Path
 
 def setup_logger(name, log_file, level=logging.INFO):
+
     # Create the Logger
     logger = logging.getLogger(name)
+    if logger.hasHandlers():
+        # We already set a logger with the same name
+        return logger
+
     logger.setLevel(logging.DEBUG)
 
     # Create the Handler for logging data to a file
@@ -17,7 +22,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 
     # Create a Formatter for formatting the log messages
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)-8s : %(message)s',
+        '%(asctime)s (%(name)s) %(levelname)-8s: %(message)s',
         '%Y-%m-%d %H:%M:%S'
     )
 

@@ -57,19 +57,20 @@ def preprocess(cfg):
 
     composition = cfg.get_composition_feature()
 
-    logger.info(f'Preprocessing started: {composition.count("fasta")} contigs')
+    logger.info(f'Processing {composition.count("fasta"):,} contigs')
     composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
-    logger.info(f'Minimum length filter (>{cfg.min_ctg_len} bp): {composition.count("filt_fasta"):,} remaining')
+    logger.info((f'Length filter (L>{cfg.min_ctg_len} bp) -> '
+                 f'{composition.count("filt_fasta"):,} contigs remaining'))
 
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
 
     if 'bam' in cfg.io:
         logger.info('Filtering alignments and converting to h5 format')
-        logger.info(f'Minimum mapping quality: {cfg.min_mapping_quality}')
-        logger.info(f'Minimum read coverage: {cfg.min_aln_coverage}')
-        logger.info(f'SAM flag (-F): {cfg.flag}')
-        if cfg.tlen_range is not None: logger.info('{} < tlen < {}'.format(*cfg.tlen_range))
+        logger.info((f'Criteria: mapq>={cfg.min_mapping_quality}, '
+                     f'read_coverage>={cfg.min_aln_coverage} '
+                     f'and (SAM_flag & {cfg.flag})==0'))
+        if cfg.tlen_range is not None: logger.info('{}<tlen<{}'.format(*cfg.tlen_range))
         
         (n_reads, n_pass) = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
                                            tlen_range=cfg.tlen_range,
@@ -77,14 +78,14 @@ def preprocess(cfg):
                                            min_coverage=cfg.min_aln_coverage,
                                            flag=cfg.flag)
 
-        n_discarded = n_reads - n_pass
-        logger.info(f'Alignments filter: {n_discarded//1000:,}k reads discarded ({n_discarded/n_reads:.2%})')
+        logger.info((f'Alignments filter -> '
+                     f'{n_pass:,} reads remaining ({n_pass/n_reads:.2%})'))
 
     if cfg.io['h5'].is_file():
         coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
         composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
-        logger.info(f'Prevalence filter (prevalence > {cfg.min_prevalence}): {composition.count("filt_fasta"):,} contigs remaining')
-
+        logger.info((f'Prevalence filter (prevalence>{cfg.min_prevalence}) -> '
+                     f'{composition.count("filt_fasta"):,} contigs remaining'))
 
 def make_train_test(cfg):
     '''

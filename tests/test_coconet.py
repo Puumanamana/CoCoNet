@@ -3,6 +3,7 @@ Tests for main algorithm
 '''
 
 from pathlib import Path
+import shutil
 
 from coconet.coconet import main
 from coconet.parser import parse_args
@@ -51,9 +52,7 @@ def test_all():
     except Exception as error:
         print(error)
 
-    for filepath in PARAMS['output'].glob('./*'):
-        filepath.unlink()
-    PARAMS['output'].rmdir()
+    shutil.rmtree(PARAMS['output'])
 
     assert not fail
 
