@@ -99,11 +99,13 @@ def get_contig_coverage(iterator, length, **filtering):
     return (coverage, counts)
 
 def filter_aln(aln, min_mapq=50, tlen_range=None, min_coverage=0, flag=3852):
+    rlen = aln.query_length if aln.query_length > 0 else aln.infer_query_length()
+    
     return np.array([
         True, # for total read count
         not aln.is_unmapped, # for total read mapped
         aln.mapping_quality >= min_mapq,
-        aln.query_alignment_length / aln.query_length >= min_coverage / 100,
+        aln.query_alignment_length / rlen >= min_coverage / 100,
         aln.flag & flag == 0,
         (tlen_range is None
          or (tlen_range[0] <= abs(aln.template_length) <= tlen_range[1]))
