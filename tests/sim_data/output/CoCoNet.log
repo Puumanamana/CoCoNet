@@ -1,0 +1,41 @@
+2020-09-11 20:07:23 (preprocessing) INFO    : Processing 9 contigs
+2020-09-11 20:07:23 (preprocessing) INFO    : Length filter (L>2048 bp) -> 9 contigs remaining
+2020-09-11 20:07:23 (preprocessing) INFO    : Processing alignments and converting to h5 format
+2020-09-11 20:07:23 (preprocessing) INFO    : Alignments filtering criteria:
+                                              - mapq>=30
+                                              - read_coverage>=50
+                                              - (SAM_flag & 3596)==0
+                                              - 0<tlen<10000
+2020-09-11 20:07:24 (preprocessing) INFO    : Coverage filtering summary:
+                                              - 13,774 total reads
+                                              - 100.0% reads (mapped)
+                                              - 100.0% reads (primary alignments)
+                                              - 100.0% reads (mapq > 30)
+                                              - 100.0% reads (coverage > 50%)
+                                              - 100.0% reads (flag & 3596 == 0)
+                                              - 100.0% reads (0 <= tlen <= 10000)
+2020-09-11 20:07:24 (preprocessing) INFO    : Prevalence filter (prevalence>0) -> 9 contigs remaining
+2020-09-11 20:07:24 (learning) INFO    : Making train/test examples
+2020-09-11 20:07:24 (learning) INFO    : Neural network training on cpu
+2020-09-11 20:07:24 (learning) DEBUG   : CoCoNet(
+  (composition_model): CompositionModel(
+    (compo_shared): Linear(in_features=136, out_features=8, bias=True)
+    (compo_siam): Linear(in_features=16, out_features=4, bias=True)
+    (compo_prob): Linear(in_features=4, out_features=1, bias=True)
+    (loss_op): BCELoss()
+  )
+  (coverage_model): CoverageModel(
+    (conv_layer): Conv1d(2, 32, kernel_size=(2,), stride=(3,))
+    (cover_shared): Linear(in_features=5472, out_features=8, bias=True)
+    (cover_siam): Linear(in_features=16, out_features=4, bias=True)
+    (cover_prob): Linear(in_features=4, out_features=1, bias=True)
+    (loss_op): BCELoss()
+  )
+  (dense): Linear(in_features=8, out_features=32, bias=True)
+  (prob): Linear(in_features=32, out_features=1, bias=True)
+  (loss_op): BCELoss()
+)
+2020-09-11 20:07:25 (learning) INFO    : Training finished
+2020-09-11 20:07:25 (learning) INFO    : Computing intermediate representation of composition and coverage features
+2020-09-11 20:07:25 (clustering) INFO    : Pre-clustering contigs
+2020-09-11 20:07:25 (clustering) INFO    : Refining graph

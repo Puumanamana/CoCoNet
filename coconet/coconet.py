@@ -68,11 +68,6 @@ def preprocess(cfg):
     indent = ' ' * 46 # For logging multiline-formatting
     if 'bam' in cfg.io:
         logger.info('Processing alignments and converting to h5 format')
-        logger.info((f'Alignments filtering criteria:\n'
-                     f'{indent}- mapq>={cfg.min_mapping_quality}\n'
-                     f'{indent}- read_coverage>={cfg.min_aln_coverage}\n'
-                     f'{indent}- (SAM_flag & {cfg.flag})==0'))
-        if cfg.tlen_range is not None: logger.info('{}<tlen<{}'.format(*cfg.tlen_range))
         
         counts = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
                                 tlen_range=cfg.tlen_range,
@@ -86,14 +81,15 @@ def preprocess(cfg):
                 f'{indent}- {counts[0]:,.0f} total reads',
                 f'{indent}- {counts[2]:.1%} reads (mapped)',
                 f'{indent}- {counts[1]:.1%} reads (primary alignments)',
-                f'{indent}- {counts[3]:.1%} reads (mapq > {cfg.min_mapping_quality})',
-                f'{indent}- {counts[4]:.1%} reads (coverage > {cfg.min_aln_coverage/100:.0%})',
+                f'{indent}- {counts[3]:.1%} reads (mapq>{cfg.min_mapping_quality})',
+                f'{indent}- {counts[4]:.1%} reads (coverage>{cfg.min_aln_coverage/100:.0%})',
                 f'{indent}- {counts[5]:.1%} reads (flag & {cfg.flag} == 0)',
             ]
 
             if cfg.tlen_range is not None:
                 bam_filtering_info.append(
-                    '- {:.1%} reads ({} <= tlen <= {})'.format(counts[-1], *cfg.tlen_range)
+                    '{}- {:.1%} reads ({}<=tlen<={})'
+                    .format(indent, counts[-1], *cfg.tlen_range)
                 )
 
             logger.info('\n'.join(bam_filtering_info))
