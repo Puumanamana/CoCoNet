@@ -16,9 +16,9 @@ from .data import generate_fasta_file, generate_h5_file
 LOCAL_DIR = Path(__file__).parent
 
 def test_feature_obj_is_created():
-    f = Feature(ftype='x')
+    f = Feature(name='x')
 
-    assert f.ftype == 'x'
+    assert f.name == 'x'
 
 def test_composition_feature():
     fasta_raw = generate_fasta_file(20, 10, 15)
@@ -87,8 +87,8 @@ def test_remove_singletons():
 
     lengths = [60, 100, 80]
     h5_data = generate_h5_file(*lengths, n_samples=3,
-                                     baselines=[20, 40, 30],
-                                     empty_samples=[[False]*3, [True, True, False], [False]*3])
+                               baselines=[20, 40, 30],
+                               empty_samples=[[False]*3, [True, True, False], [False]*3])
     fasta = generate_fasta_file(*lengths)
     singleton_file = Path('singletons.txt')
 
@@ -96,6 +96,7 @@ def test_remove_singletons():
     cover = CoverageFeature(path=dict(h5=h5_data))
 
     cover.write_singletons(output=singleton_file, min_prevalence=2)
+    cover.filter_by_ids(ids_file=singleton_file)
     compo.filter_by_ids(output='filt.fasta', ids_file=singleton_file)
 
     singletons = pd.read_csv('singletons.txt', sep='\t').values

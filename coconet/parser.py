@@ -5,6 +5,7 @@ CoCoNet parser information and documentation
 from pathlib import Path
 import argparse
 import logging
+import os
 
 
 SUB_COMMANDS = ['preprocess', 'learn', 'cluster']
@@ -69,6 +70,10 @@ def parse_args():
     main_parser.add_argument(
       '--silent', action='store_const', dest='loglvl', const=logging.ERROR,
       help='Only error messages'
+    )
+    main_parser.add_argument(
+      '--continue', action='store_true',
+      help='Start from last checkpoint. The output directory needs to be the same.'
     )
 
     #========================================================#
@@ -297,5 +302,7 @@ def parse_args():
             args.fragment_length = args.min_ctg_len // 2
         else:
             raise ValueError('Unknow minimum contig length. Please set --min-ctg-len')
+
+    os.environ['COCONET_CONTINUE'] = 'Y' if getattr(args, 'continue') else 'N'
 
     return args

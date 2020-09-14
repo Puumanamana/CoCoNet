@@ -1,9 +1,7 @@
 from collections import deque
-from itertools import chain
 import re
 import logging
 
-from tqdm import tqdm
 import h5py
 import pandas as pd
 import numpy as np
@@ -111,13 +109,13 @@ def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=Non
 
     generators = []
 
-    if coverage is not None:
+    if fasta is not None:
         generators.append(CompositionGenerator(pairs, fasta,
                                                batch_size=batch_size,
                                                kmer=args['kmer'],
                                                rc=args['rc'],
                                                norm=args['norm']))
-    if fasta is not None:
+    if coverage is not None:
         generators.append(CoverageGenerator(pairs, coverage,
                                             batch_size=batch_size,
                                             load_batch=args['load_batch'],
@@ -126,6 +124,8 @@ def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=Non
 
     if len(generators) > 1:
         generators = zip(*generators)
+    else:
+        generators = generators[0]
 
     if mode == 'test':
         generators = list(generators)[0]
@@ -134,7 +134,7 @@ def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=Non
 
 @run_if_not_exists()
 def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
-          output=None, batch_size=None, logger=None, **args):
+          output=None, batch_size=None, **args):
     '''
     Train neural network:
     - Generate feature vectors (composition, coverage)
@@ -158,10 +158,6 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     n_batches = n_examples // batch_size
     losses_buffer = deque(maxlen=500)
 
-    pbar_scores = tqdm(total=n_examples, position=1,
-                       bar_format="{percentage:3.0f}%|{bar:10} {postfix}")
-    test_msg = ''
-
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
@@ -175,17 +171,15 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
             predictions = run_test(model, x_test)
             scores = get_test_scores(predictions, y_test)
 
-            test_msg = "Test: {}<{:.1%}> {}<{:.1%}> {}<{:.1%}>".format(
-                *chain(*[[k, v['acc']] for k, v in scores.items()])
-            )
-
+            train_msg = f"Loss<{np.mean(losses_buffer):.3f}>"
+            test_msg = ', '.join(f"{name}<{score['acc']:.1%}>"
+                                 for (name, score) in scores.items())
             if logger is not None:
-                logger.debug(f'Batch #{i:,}/{n_batches:,} - {test_msg}')
-
-        pbar_scores.set_postfix_str(
-            "Loss<{:.3f}> {}".format(np.mean(losses_buffer), test_msg)
-        )
-        pbar_scores.update(batch_size)
+                logger.info((
+                    f'Batch #{i:,}/{n_batches:,} - '
+                    f'Training loss: {train_msg}, '
+                    f'Test accuracy: {test_msg}'
+                ))
 
     torch.save({
         'state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'loss': loss,
@@ -194,8 +188,6 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     # Save last test performance to file
     predictions.update({'truth': y_test})
     pd.DataFrame(predictions).to_csv(test_output, index=False)
-
-    return model
 
 def run_test(model, x_test):
     '''
@@ -232,23 +224,19 @@ def get_test_scores(preds, truth):
 
     return scores
 
-@run_if_not_exists(keys=('latent_composition', 'latent_coverage'))
-def save_repr_all(model, fasta=None, coverage=None,
-                  latent_composition=None, latent_coverage=None,
+@run_if_not_exists()
+def save_repr_all(model, fasta=None, coverage=None, output=None,
                   n_frags=30, frag_len=1024,
-                  rc=True, kmer=4, wsize=64, wstep=32,
-                  force=False):
+                  rc=True, kmer=4, wsize=64, wstep=32):
     '''
     - Calculate intermediate representation for all fragments of all contigs
     - Save it in a .h5 file
     '''
 
-    if coverage is not None:
+    if 'coverage' in output:
         cov_h5 = h5py.File(coverage, 'r')
 
-    repr_h5 = {key: h5py.File(filename, 'w') for key, filename in
-               [('composition', latent_composition),
-                ('coverage', latent_coverage)]}
+    repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
 
     for contig in SeqIO.parse(fasta, "fasta"):
         step = int((len(contig)-frag_len) / n_frags)
@@ -257,7 +245,7 @@ def save_repr_all(model, fasta=None, coverage=None,
 
         feature_arrays = []
 
-        if fasta is not None:
+        if 'composition' in repr_h5:
             x_composition = torch.from_numpy(np.stack([
                 get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
                 for (start, stop) in fragment_boundaries
@@ -265,10 +253,10 @@ def save_repr_all(model, fasta=None, coverage=None,
 
             feature_arrays.append(x_composition)
 
-        if coverage is not None:
+        if 'coverage' in repr_h5:
             fragment_slices = np.array([np.arange(start, stop)
                                         for (start, stop) in fragment_boundaries])
-            coverage_genome = np.array(cov_h5.get(contig.id)[:]).astype(np.float32)[:, fragment_slices]
+            coverage_genome = np.array(cov_h5[contig.id][:]).astype(np.float32)[:, fragment_slices]
             coverage_genome = np.swapaxes(coverage_genome, 1, 0)
 
             x_coverage = torch.from_numpy(

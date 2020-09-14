@@ -1,7 +1,6 @@
 from multiprocessing.pool import Pool
 from functools import partial
 
-from tqdm import tqdm
 import numpy as np
 from Bio import SeqIO
 import torch
@@ -71,12 +70,6 @@ class CoverageGenerator:
         self.wsize = wsize
         self.wstep = wstep
 
-        self.pbar = None
-        if self.n_batches > 1:
-            self.pbar = tqdm(total=len(self.pairs), position=0,
-                             bar_format="{percentage:3.0f}%|{bar:10} {postfix}")
-            self.pbar.set_postfix_str('Loading')
-
     def __iter__(self):
         return self
 
@@ -90,8 +83,7 @@ class CoverageGenerator:
 
         pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
 
-        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.wsize, self.wstep,
-                                        pbar=self.pbar)
+        self.x1, self.x2 = get_coverage(pairs, self.coverage_h5, self.wsize, self.wstep)
 
     def __next__(self):
         if self.i < self.n_batches:

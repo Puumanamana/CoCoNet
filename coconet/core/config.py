@@ -5,6 +5,7 @@ Configuration object to handle CLI, loading/resuming runs
 from pathlib import Path
 from math import ceil
 import logging
+import shutil
 
 import yaml
 import h5py
@@ -44,7 +45,7 @@ class Configuration:
 
         return config
 
-    def init_config(self, mkdir=False, **kwargs):
+    def init_config(self, **kwargs):
         '''
         Make configuration from CLI
         '''
@@ -55,8 +56,7 @@ class Configuration:
             else:
                 self.set_input(name, value)
 
-        if mkdir:
-            self.io['output'].mkdir(exist_ok=True)
+        self.io['output'].mkdir(exist_ok=True)
 
         self.set_outputs()
 
@@ -117,23 +117,21 @@ class Configuration:
                     raise FileNotFoundError
 
             elif not dest.is_file():
-                dest.symlink_to(src)
+                shutil.copy(str(src), str(dest))
 
         if hasattr(self, 'theta'):
-            output_files.update({
-                'pre_graph': 'pre_graph.pkl',
-                'graph': 'graph_{}-{}-{}.pkl'.format(
-                    self.theta, self.gamma1, self.gamma2),
-                'assignments': 'bins_{}-{}-{}.csv'.format(
-                    self.theta, self.gamma1, self.gamma2)
-            })
+            output_files.update(dict(
+                pre_graph='pre_graph.pkl',
+                graph=f'graph_{self.theta}-{self.gamma1}-{self.gamma2}.pkl',
+                assignments=f'bins_{self.theta}-{self.gamma1}-{self.gamma2}.csv'
+            ))
 
         for name, filename in output_files.items():
             if isinstance(filename, str):
                 output_files[name] = Path(self.io['output'], filename)
             if isinstance(filename, dict):
                 for key, val in filename.items():
-                    output_files[name][key] = Path('{}/{}'.format(self.io['output'], val))
+                    output_files[name][key] = Path(self.io['output'], val)
 
         self.io.update(output_files)
 
@@ -143,7 +141,7 @@ class Configuration:
         '''
 
         to_save = self.__dict__
-        config_file = Path('{}/config.yaml'.format(self.io['output']))
+        config_file = Path(self.io['output'], 'config.yaml')
 
         if config_file.is_file() and config_file.stat().st_size > 0:
             complete_conf = Configuration.from_yaml(config_file).__dict__
@@ -171,29 +169,29 @@ class Configuration:
             'coverage': (ceil((self.fragment_length-self.wsize+1) / self.wstep), n_samples)
         }
 
-        return input_shapes
+        return input_shapes.get(''.join(self.features), input_shapes)
 
     def get_architecture(self):
         '''
         Format neural network architecture
         '''
 
-        architecture = {
-            'composition': {'neurons': self.compo_neurons},
-            'coverage': {'neurons': self.cover_neurons,
-                         'n_filters': self.cover_filters,
-                         'kernel_size': self.cover_kernel,
-                         'conv_stride': self.cover_stride},
-            'merge': {'neurons': self.merge_neurons}
-        }
+        architecture = dict(
+            composition=dict(neurons=self.compo_neurons),
+            coverage=dict(neurons=self.cover_neurons,
+                           n_filters=self.cover_filters,
+                           kernel_size=self.cover_kernel,
+                           conv_stride=self.cover_stride),
+            merge=dict(neurons=self.merge_neurons)
+        )
 
-        return architecture
+        return architecture.get(''.join(self.features), architecture)
 
     def get_composition_feature(self):
         composition = CompositionFeature(
             path=dict(fasta=self.io['fasta'],
                       filt_fasta=self.io['filt_fasta'],
-                      latent=self.io['repr']['composition'])
+                      latent=self.io['repr'].get('composition', None))
         )
         if not composition.check_paths():
             logger.critical(
@@ -208,7 +206,7 @@ class Configuration:
         coverage = CoverageFeature(
             path=dict(bam=self.io.get('bam', None),
                       h5=self.io.get('h5', None),
-                      latent=self.io['repr']['coverage'])
+                      latent=self.io['repr'].get('coverage', None))
         )
 
         if not coverage.check_paths():
@@ -220,10 +218,10 @@ class Configuration:
         return coverage
 
     def get_features(self):
-        features = {}
+        features = []
         if 'coverage' in self.features:
-            features['coverage'] = self.get_coverage_feature()
+            features.append(self.get_coverage_feature())
         if 'composition' in self.features:
-            features['composition'] = self.get_composition_feature()
+            features.append(self.get_composition_feature())
 
         return features

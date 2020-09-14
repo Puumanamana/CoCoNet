@@ -251,10 +251,10 @@ def test_save_repr():
     fasta = generate_fasta_file(*TEST_CTG_LENGTHS)
     coverage = generate_h5_file(*TEST_CTG_LENGTHS)
 
-    output = {f'latent_{k}': Path('repr_{}.h5'.format(k))
+    output = {k: Path('repr_{}.h5'.format(k))
               for k in ['composition', 'coverage']}
 
-    save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, **output,
+    save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, output=output,
                   wsize=WSIZE, wstep=WSTEP)
 
     assert all(out.is_file() for out in output.values())

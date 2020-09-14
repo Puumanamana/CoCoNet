@@ -3,11 +3,15 @@ Tools to split contigs into smaller fragment
 to train the neural network
 '''
 
+import logging
 from math import ceil
 from itertools import combinations
 import numpy as np
 
 from coconet.tools import run_if_not_exists
+
+
+logger = logging.getLogger('learning')
 
 def vstack_recarrays(arrays):
     '''
@@ -78,7 +82,8 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     pair_idx = np.unique(pair_idx[cond], axis=0)[:n_examples, :]
 
     if pair_idx.size == 0:
-        raise RuntimeError("No contigs found in data. Aborting")
+        logger.fatal('No contigs found in data. Aborting')
+        raise RuntimeError
 
     if len(pair_idx) < n_examples:
         pair_idx = np.vstack(np.triu_indices(len(n_frags_all), k=1)).T
@@ -96,7 +101,7 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     return pairs
 
 @run_if_not_exists()
-def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6, logger=None):
+def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     """
     Extract positive and negative pairs for [contigs]
     """

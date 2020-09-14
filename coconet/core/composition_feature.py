@@ -10,7 +10,7 @@ class CompositionFeature(Feature):
 
     def __init__(self, **kwargs):
         Feature.__init__(self, **kwargs)
-        self.ftype = 'composition'
+        self.name = 'composition'
 
     def count(self, key='fasta'):
         new_count = sum(1 for line in open(self.path[key]) if line.startswith('>'))
@@ -26,6 +26,8 @@ class CompositionFeature(Feature):
         if key is None:
             if 'latent' in self.path:
                 key = 'latent'
+            elif 'filt_fasta' in self.path:
+                key = 'filt_fasta'
             elif 'fasta' in self.path:
                 key = 'fasta'
             else:
@@ -39,14 +41,6 @@ class CompositionFeature(Feature):
             handle.close()
         return np.array(contigs)
 
-    def write_bed(self, output=None):
-        filt_ids = set(self.get_contigs('filt_fasta'))
-
-        with open(str(output), 'w') as writer:
-            for (ctg_id, seq) in self.get_iterator('fasta'):
-                if ctg_id in filt_ids:
-                       writer.write('\t'.join([ctg_id, '1', str(1+len(seq))]) + '\n')
-
     @run_if_not_exists()
     def filter_by_length(self, output=None, min_length=None):
         with open(str(output), 'w') as writer:
@@ -58,14 +52,19 @@ class CompositionFeature(Feature):
 
         self.path['filt_fasta'] = Path(output)
 
-    def filter_by_ids(self, output=None, ids_file=None):
+    def filter_by_ids(self, output=None, ids=None, ids_file=None):
         # Cannot stream if output is the same as the input
         filtered_fasta = []
-        ids = {x.strip().split()[0] for x in open(ids_file)}
+
+        if ids_file is not None:
+            ids = {x.strip().split()[0] for x in open(ids_file)}
 
         for (ctg_id, seq) in self.get_iterator('filt_fasta'):
             if ctg_id not in ids:
                 filtered_fasta.append((ctg_id, seq))
+
+        if output is None:
+            output = self.path['filt_fasta']
 
         with open(str(output), 'w') as writer:
             for (ctg_id, seq) in filtered_fasta:

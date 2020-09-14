@@ -6,6 +6,7 @@ Helpful routines for coconet
 - smoothing window
 '''
 
+import os
 import logging
 from pathlib import Path
 from math import ceil
@@ -27,10 +28,7 @@ def run_if_not_exists(keys=('output',)):
     def run_if_not_exists_key(func):
 
         def wrapper(*args, **kwargs):
-            if 'force' in kwargs and kwargs['force']:
-                exists = False
-            else:
-                exists = True
+            exists = os.getenv('COCONET_CONTINUE') == 'Y'
 
             for key in keys:
                 if key not in kwargs:
@@ -41,6 +39,8 @@ def run_if_not_exists(keys=('output',)):
                     break
                 if isinstance(kwargs[key], dict):
                     exists &= all(output.is_file() for output in kwargs[key].values())
+                elif isinstance(kwargs[key], list):
+                    exists &= all(output.is_file() for output in kwargs[key])
                 else:
                     exists &= Path(kwargs[key]).is_file()
 
@@ -124,7 +124,7 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
     return occurrences
 
-def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
+def get_coverage(pairs, coverage_h5, window_size, window_step):
     '''
     - Extracting coverage from h5 for all pairs of contigs in pairs
     - Smooth coverage with a sliding window of [window_size, window_step]
@@ -171,9 +171,6 @@ def get_coverage(pairs, coverage_h5, window_size, window_step, pbar=None):
             seen[(species, start)] = cov_sp
 
         coverage_feature[sorted_idx[i]] = cov_sp
-
-        if pbar is not None:
-            pbar.update(0.5)
 
     return (coverage_feature[:n_pairs, :, :],
             coverage_feature[n_pairs:, :, :])

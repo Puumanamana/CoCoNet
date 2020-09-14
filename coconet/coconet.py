@@ -23,6 +23,7 @@ def main(**kwargs):
     '''
 
     args = parse_args()
+
     params = vars(args)
 
     if kwargs:
@@ -95,9 +96,13 @@ def preprocess(cfg):
             logger.info('\n'.join(bam_filtering_info))
             
     if cfg.io['h5'].is_file():
-        coverage.write_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
-        composition.filter_by_ids(output=cfg.io['filt_fasta'], ids_file=cfg.io['singletons'])
-        logger.info((f'Prevalence filter (prevalence>{cfg.min_prevalence}) -> '
+        # Make sure the contig IDs are the same for both coverage and composition. Take the intersection otherwise
+        composition.synchronize(coverage, ['filt_fasta', 'h5'])
+        # remove singletons
+        coverage.find_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
+        coverage.filter_by_ids(ids_file=cfg.io['singletons'])
+        composition.filter_by_ids(ids_file=cfg.io['singletons'])
+        logger.info((f'Prevalence filter (prevalence>={cfg.min_prevalence}) -> '
                      f'{composition.count("filt_fasta"):,} contigs remaining'))
 
 def make_train_test(cfg):
@@ -121,18 +126,17 @@ def make_train_test(cfg):
 
     n_ctg_for_test = max(2, int(cfg.test_ratio*n_ctg))
 
-    assembly_idx = {'test': np.random.choice(n_ctg, n_ctg_for_test)}
+    assembly_idx = dict(test=np.random.choice(n_ctg, n_ctg_for_test))
     assembly_idx['train'] = np.setdiff1d(range(n_ctg), assembly_idx['test'])
 
-    n_examples = {'train': cfg.n_train, 'test': cfg.n_test}
+    n_examples = dict(train=cfg.n_train, test=cfg.n_test)
 
     for mode, pair_file in cfg.io['pairs'].items():
         make_pairs([assembly[idx] for idx in assembly_idx[mode]],
                    cfg.fragment_step,
                    cfg.fragment_length,
                    output=pair_file,
-                   n_examples=n_examples[mode],
-                   logger=logger)
+                   n_examples=n_examples[mode])
 
 def learn(cfg):
     '''
@@ -170,7 +174,7 @@ def learn(cfg):
         )
         raise FileNotFoundError
 
-    model = train(
+    train(
         model, **inputs,
         pairs=cfg.io['pairs'],
         test_output=cfg.io['nn_test'],
@@ -186,17 +190,21 @@ def learn(cfg):
     )
     logger.info('Training finished')
 
+    model = load_model(cfg, from_checkpoint=True)
+
     logger.info('Computing intermediate representation of composition and coverage features')
-    save_repr_all(model, fasta=cfg.io['filt_fasta'], coverage=cfg.io['h5'],
-                  latent_composition=cfg.io['repr']['composition'],
-                  latent_coverage=cfg.io['repr']['coverage'],
+
+    save_repr_all(model,
+                  fasta=cfg.io['filt_fasta'],
+                  coverage=cfg.io['h5'],
+                  output={feature: cfg.io['repr'][feature] for feature in cfg.features},
                   n_frags=cfg.n_frags,
                   frag_len=cfg.fragment_length,
                   rc=not cfg.no_rc,
                   wsize=cfg.wsize, wstep=cfg.wstep)
     return model
 
-def cluster(cfg, force=False):
+def cluster(cfg):
     '''
     Make adjacency matrix and cluster contigs
     '''
@@ -220,19 +228,21 @@ def cluster(cfg, force=False):
     logger.info('Pre-clustering contigs')
     make_pregraph(model, features, output=cfg.io['pre_graph'],
                   vote_threshold=cfg.vote_threshold,
-                  n_frags=n_frags, max_neighbors=cfg.max_neighbors, force=force)
+                  n_frags=n_frags, max_neighbors=cfg.max_neighbors)
 
     logger.info('Refining graph')
     iterate_clustering(
-        model, cfg.io['repr'], cfg.io['pre_graph'],
+        model,
+        features,
+        cfg.io['pre_graph'],
         singletons_file=cfg.io['singletons'],
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         vote_threshold=cfg.vote_threshold,
         n_frags=n_frags,
         theta=cfg.theta,
-        gamma1=cfg.gamma1, gamma2=cfg.gamma2,
-        force=force
+        gamma1=cfg.gamma1,
+        gamma2=cfg.gamma2
     )
 
 if __name__ == '__main__':

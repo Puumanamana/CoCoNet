@@ -22,7 +22,7 @@ def test_pairwise_comparisons():
     h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
                for k in ['composition', 'coverage']}
 
-    handles = {k: h5py.File(v, 'r') for k, v in h5_data.items()}
+    handles = [(k, h5py.File(v, 'r')) for k, v in h5_data.items()]
     contigs = ['V0', 'V1', 'V2']
 
     graph = igraph.Graph()
@@ -43,20 +43,19 @@ def test_make_pregraph():
     output = Path('pregraph.pkl')
     model = generate_rd_model()
 
-    features = {
-        'composition': CompositionFeature(path=dict(
-            latent=generate_h5_file(8, 8, 8, n_samples=5, filename='compo.h5')
-        )),
-        'coverage': CoverageFeature(path=dict(
-            latent=generate_h5_file(8, 8, 8, n_samples=5, filename='cover.h5'))
-        )
-    }
+    h5_files = [generate_h5_file(8, 8, 8, n_samples=5, filename=f'{name}.h5')
+                for name in ['compo', 'cover']]
+    
+    features = [
+        CompositionFeature(path=dict(latent=h5_files[0])),
+        CoverageFeature(path=dict(latent=h5_files[1]))
+    ]
 
     make_pregraph(model, features, output, n_frags=5)
     make_pregraph(model, features, output, n_frags=5, vote_threshold=0.5)
 
-    features['composition'].path['latent'].unlink()
-    features['coverage'].path['latent'].unlink()
+    features[0].path['latent'].unlink()
+    features[1].path['latent'].unlink()
 
     assert output.is_file()
 
@@ -89,8 +88,14 @@ def test_get_communities():
 
 def test_iterate_clustering():
     model = generate_rd_model()
-    h5_data = {k: generate_h5_file(*[8]*5, n_samples=5, filename=k+'.h5')
-               for k in ['composition', 'coverage']}
+    h5_files = [generate_h5_file(*[8]*5, n_samples=5, filename=k+'.h5')
+                for k in ['composition', 'coverage']]
+
+    features = [
+        CompositionFeature(path=dict(latent=h5_files[0])),
+        CoverageFeature(path=dict(latent=h5_files[1]))
+    ]
+
 
     files = ['singletons.txt', 'pre_graph.pkl', 'graph.pkl', 'assignments.csv']
 
@@ -115,7 +120,7 @@ def test_iterate_clustering():
     (pd.DataFrame([['W0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
      .to_csv(files[0], sep='\t'))
 
-    iterate_clustering(model, h5_data, files[1],
+    iterate_clustering(model, features, files[1],
                        singletons_file=files[0],
                        graph_file=files[2],
                        assignments_file=files[3],
@@ -125,7 +130,7 @@ def test_iterate_clustering():
 
     all_files = all(Path(f).is_file() for f in files)
 
-    for f in files + list(h5_data.values()):
+    for f in files + h5_files:
         Path(f).unlink()
 
     assert all_files

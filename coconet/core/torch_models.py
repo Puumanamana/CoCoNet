@@ -19,7 +19,7 @@ class CompositionModel(nn.Module):
         Representation of a composition input
         (Before merging the 2 inputs)
         '''
-        return F.relu(self.compo_shared(x))
+        return dict(composition=F.relu(self.compo_shared(x)))
 
     def combine_repr(self, *x):
         '''
@@ -39,7 +39,7 @@ class CompositionModel(nn.Module):
         It will be used by the CoCoNet model
         '''
 
-        x = [self.compute_repr(xi) for xi in x]
+        x = [self.compute_repr(xi)['composition'] for xi in x]
         x = self.combine_repr(*x)
 
         return x
@@ -52,7 +52,7 @@ class CompositionModel(nn.Module):
         x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.compo_prob(x))
 
-        return {'composition': x}
+        return dict(composition=x)
 
     def compute_loss(self, pred, truth):
         return self.loss_op(pred["composition"], truth).mean()
@@ -84,7 +84,7 @@ class CoverageModel(nn.Module):
         x = F.relu(self.conv_layer(x))
         # x = F.relu(self.pool(x))
         x = F.relu(self.cover_shared(x.view(x.shape[0], -1)))
-        return x
+        return dict(coverage=x)
 
     def combine_repr(self, *x):
         '''
@@ -105,7 +105,7 @@ class CoverageModel(nn.Module):
         It will be used by the CoCoNet model
         '''
 
-        x = [self.compute_repr(xi) for xi in x]
+        x = [self.compute_repr(xi)['coverage'] for xi in x]
         x = self.combine_repr(*x)
         return x
 
@@ -117,7 +117,7 @@ class CoverageModel(nn.Module):
         x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.cover_prob(x))
 
-        return {'coverage': x}
+        return dict(coverage=x)
 
     def compute_loss(self, pred, truth):
         return self.loss_op(pred["coverage"], truth).mean()
@@ -140,11 +140,10 @@ class CoCoNet(nn.Module):
         Compute representation for both sub-models
         '''
 
-        compo_repr = self.composition_model.compute_repr(x1)
-        cover_repr = self.coverage_model.compute_repr(x2)
+        latent_repr = self.composition_model.compute_repr(x1)
+        latent_repr.update(self.coverage_model.compute_repr(x2))
 
-        return {'composition': compo_repr,
-                'coverage': cover_repr}
+        return latent_repr
 
     def combine_repr(self, *latent_repr):
         '''
@@ -152,21 +151,20 @@ class CoCoNet(nn.Module):
         Compute the final probability
         '''
 
-        compo_repr = self.composition_model.combine_repr(latent_repr[0]["composition"],
-                                                         latent_repr[1]["composition"])
-        cover_repr = self.coverage_model.combine_repr(latent_repr[0]["coverage"],
-                                                      latent_repr[1]["coverage"])
-        combined = F.relu(self.dense(torch.cat([compo_repr, cover_repr],
-                                               axis=1)))
+        compo_repr = self.composition_model.combine_repr(
+            latent_repr[0]["composition"], latent_repr[1]["composition"]
+        )
+        cover_repr = self.coverage_model.combine_repr(
+            latent_repr[0]["coverage"], latent_repr[1]["coverage"]
+        )
+        combined = F.relu(self.dense(
+            torch.cat([compo_repr, cover_repr], axis=1)
+        ))
         compo_prob = torch.sigmoid(self.composition_model.compo_prob(compo_repr))
         cover_prob = torch.sigmoid(self.coverage_model.cover_prob(cover_repr))
         combined_prob = torch.sigmoid(self.prob(combined))
 
-        x = {'composition': compo_prob,
-             'coverage': cover_prob,
-             'combined': combined_prob}
-
-        return x
+        return dict(composition=compo_prob, coverage=cover_prob, combined=combined_prob)
 
     def forward(self, x1, x2):
         '''
@@ -183,9 +181,7 @@ class CoCoNet(nn.Module):
         cover_prob = torch.sigmoid(self.coverage_model.cover_prob(cover_repr))
         combined_prob = torch.sigmoid(self.prob(combined))
 
-        x = {'composition': compo_prob,
-             'coverage': cover_prob,
-             'combined': combined_prob}
+        x = dict(composition=compo_prob, coverage=cover_prob, combined=combined_prob)
         return x
 
     def compute_loss(self, pred, truth):

@@ -4,8 +4,7 @@ Groups all the functions required to run the clustering steps
 
 import numpy as np
 import pandas as pd
-import h5py
-from tqdm import tqdm
+import logging
 
 import torch
 
@@ -14,10 +13,13 @@ import leidenalg
 
 from coconet.tools import run_if_not_exists
 
+
+logger = logging.getLogger('clustering')
+
 def compute_pairwise_comparisons(model, graph, handles,
                                  vote_threshold=None,
                                  neighbors=None, max_neighbors=100,
-                                 n_frags=30, bin_id=-1, pbar=False):
+                                 n_frags=30, bin_id=-1):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
@@ -29,31 +31,14 @@ def compute_pairwise_comparisons(model, graph, handles,
 
     contigs = np.array(graph.vs['name'])
 
-    if pbar:
-        if bin_id < 0:
-            contig_iter = tqdm(enumerate(contigs), total=len(contigs))
-            contig_iter.bar_format = "{desc:<70} {percentage:3.0f}%|{bar:20}"
-        else:
-            contig_iter = enumerate(contigs[neighbors])
-
-            if len(neighbors) > 100:
-                contig_iter = tqdm(contig_iter, total=len(neighbors))
-                contig_iter.bar_format = "{desc:<30} {percentage:3.0f}%|{bar:10}"
-                contig_iter.set_description(f'Refining bin #{bin_id} ({len(neighbors)} contigs)')
-    else:
-        contig_iter = enumerate(contigs)
-
     edges = {}
 
-    for k, ctg in contig_iter:
-
-        # graph.neighbors() returns the index of the contigs that are connected to ctg
+    for k, ctg in enumerate(contigs):
+        # Case 1: we are computing the pre-graph --> We limit the comparisons to the closest neighbors
         if bin_id == -1:
-            # Case 1: we are computing the pre-graph
-            # We limit the comparisons to the closest neighbors (precomputed)
             neighb_idx = neighbors[k]
-        else:
-            # Case 2: we are computing all remaining comparisons among contigs in a given bin
+        # Case 2: we are computing all remaining comparisons among contigs in a given bin
+        else: 
             neighb_idx = neighbors
 
         processed = np.isin(neighb_idx, graph.neighbors(ctg))
@@ -63,26 +48,30 @@ def compute_pairwise_comparisons(model, graph, handles,
         if neighb_k.size == 0:
             continue
 
-        if pbar and bin_id < 0:
-            contig_iter.set_description(f'Contig #{k} - {len(neighb_k)} neighbors')
+        x_ref = {name: torch.from_numpy(handle[ctg][:][ref_idx]) for name, handle in handles}
 
-        x_ref = {k: torch.from_numpy(handle[ctg][:][ref_idx]) for k, handle in handles.items()}
+        if len(handles) == 1: # Only one feature type
+            feature = list(x_ref)[0]
+            x_ref = x_ref[feature]
 
         # Compare the reference contig against all of its neighbors
         for other_ctg in neighb_k:
             if other_ctg == ctg or (other_ctg, ctg) in edges:
                 continue
 
-            x_other = {k: torch.from_numpy(handle[other_ctg][:][other_idx])
-                       for k, handle in handles.items()}
+            x_other = {name: torch.from_numpy(handle[other_ctg][:][other_idx])
+                       for name, handle in handles}
 
-            probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
+            if len(handles) == 1: # Only one feature type
+                x_other = x_other[feature]
+                probs = model.combine_repr(x_ref, x_other).detach().numpy()[:, 0]
+            else:
+                probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
 
             if vote_threshold is not None:
-                score = sum(probs > vote_threshold)
-            else:
-                score = sum(probs)
-            edges[(ctg, other_ctg)] = score
+                probs = probs > vote_threshold
+
+            edges[(ctg, other_ctg)] = sum(probs)
 
     if edges:
         prev_weights = graph.es['weight']
@@ -90,7 +79,7 @@ def compute_pairwise_comparisons(model, graph, handles,
         graph.es['weight'] = prev_weights + list(edges.values())
 
 @run_if_not_exists()
-def make_pregraph(model, features, output, force=False, **kw):
+def make_pregraph(model, features, output, **kw):
     '''
     Fill contig-contig adjacency matrix. For a given contig:
     - Extract neighbors
@@ -98,15 +87,18 @@ def make_pregraph(model, features, output, force=False, **kw):
     - Fill the value with the expected number of hits
     '''
 
-    contigs = features['composition'].get_contigs()
+    contigs = features[0].get_contigs()
 
     # Intersect neighbors for all features
-    neighbors_each = {name: feature.get_neighbors() for (name, feature) in features.items()}
-    neighbors = []
+    neighbors_each = [feature.get_neighbors() for feature in features]
 
-    for (n1, n2) in zip(*neighbors_each.values()):
-        common_neighbors = n1[np.isin(n1, n2)]
-        neighbors.append(common_neighbors)
+    if len(features) > 1:
+        neighbors = []
+        for (n1, n2) in zip(*neighbors_each):
+            common_neighbors = n1[np.isin(n1, n2)]
+            neighbors.append(common_neighbors)
+    else:
+        neighbors = neighbors_each[0]
 
     # Initialize graph
     graph = igraph.Graph()
@@ -114,12 +106,11 @@ def make_pregraph(model, features, output, force=False, **kw):
     graph.es['weight'] = []
 
     # Compute edges
-    handles = {name: feature.get_handle('latent')
-               for (name, feature) in features.items()}
+    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
     compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, **kw)
 
-    for handle in handles.values():
-        handle.close()
+    for handle in handles:
+        handle[1].close()
 
     # Save pre-graph
     graph.write_pickle(output)
@@ -144,16 +135,16 @@ def get_communities(graph, threshold, gamma=0.5):
     graph.vs['cluster'] = communities.sort_values().index
 
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
-def iterate_clustering(model, repr_file, pre_graph_file,
+def iterate_clustering(model,
+                       features,
+                       pre_graph_file,
                        singletons_file=None,
                        graph_file=None,
                        assignments_file=None,
                        n_frags=30,
                        theta=0.9,
                        vote_threshold=None,
-                       gamma1=0.1, gamma2=0.75,
-                       force=False,
-                       logger=None):
+                       gamma1=0.1, gamma2=0.75):
     '''
     - Go through all clusters
     - Fill the pairwise comparisons within clusters
@@ -164,11 +155,7 @@ def iterate_clustering(model, repr_file, pre_graph_file,
     pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
     edge_threshold = theta * n_frags**2
 
-    handles = {key: h5py.File(filename, 'r') for key, filename in repr_file.items()}
-    contigs = np.array(list(handles['coverage'].keys()))
     get_communities(pre_graph, edge_threshold, gamma=gamma1)
-
-    clusters = pre_graph.vs['cluster']
 
     mapping_id_ctg = pd.Series(pre_graph.vs.indices, index=pre_graph.vs['name'])
 
@@ -178,23 +165,25 @@ def iterate_clustering(model, repr_file, pre_graph_file,
     clusters = np.unique(pre_graph.vs['cluster'])
     last_cluster = max(clusters)
 
-    # Logging
-    msg = f'Refining graph ({len(clusters)} clusters)'
-    if logger is None: print(msg)
-    else: logger.info(msg)
+    logger.info(f'Processing {clusters.size} clusters')
 
+    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
+    
     for i, cluster in enumerate(clusters):
-
-        if i > 0 and i // len(clusters) == 10:
-            logger.debug(f'{i:,} clusters processed')
 
         contigs_c = pre_graph.vs.select(cluster=cluster)['name']
         contigs += contigs_c
 
-        if len(contigs_c) < 3:
+        if len(contigs_c) <= 2:
             assignments += [cluster] * len(contigs_c)
             continue
 
+        if len(contigs_c) > 50:
+            logger.info(f"Processing cluster #{i} ({len(contigs_c)} contigs)")
+
+        elif i > 0 and i % (len(clusters)//5) == 0:
+            logger.info(f'{i:,} clusters processed')
+        
         # Compute all comparisons in this cluster
         compute_pairwise_comparisons(model, pre_graph, handles,
                                      neighbors=mapping_id_ctg[contigs_c].values,
@@ -209,10 +198,9 @@ def iterate_clustering(model, repr_file, pre_graph_file,
         assignments += [x + last_cluster + 1 for x in sub_graph.vs['cluster']]
         last_cluster = max(assignments)
 
-    # get_communities(pre_graph, edge_threshold, gamma=gamma2)
-    # assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
-    # last_cluster = assignments.max()
-
+    for _, handle in handles:
+        handle.close()
+        
     assignments = pd.Series(dict(zip(contigs, assignments)))
 
     # Add the rest of the contigs (singletons) set aside at the beginning
