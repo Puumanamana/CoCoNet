@@ -26,7 +26,7 @@ def test_init_config():
     kwargs = {'a': 1, 'fasta': '/a/b/c.fasta', 'output': 'test123abc'}
 
     cfg = Configuration()
-    cfg.init_config(**kwargs, mkdir=True)
+    cfg.init_config(**kwargs)
 
     assert cfg.a == kwargs['a']
     assert cfg.io['fasta'] == Path(kwargs['fasta'])
@@ -46,7 +46,7 @@ def test_load_save():
     kwargs['h5'].touch()
 
     cfg = Configuration()
-    cfg.init_config(mkdir=True, **kwargs)
+    cfg.init_config(**kwargs)
     cfg.to_yaml()
 
     config_file = Path(cfg.io['output'], 'config.yaml')
@@ -70,7 +70,7 @@ def test_input_sizes():
     '''
 
     cfg = Configuration()
-    cfg.init_config(mkdir=True, output='test123', kmer=4, no_rc=False,
+    cfg.init_config(output='test123', kmer=4, no_rc=False,
                     fragment_length=10, wsize=4, wstep=2)
     cfg.io['h5'] = generate_h5_file(10)
 
@@ -107,6 +107,8 @@ def test_architecture():
         'merge': {'neurons': args['merge_neurons']}
     }
 
+    shutil.rmtree(cfg.io['output'])
+    
     assert architecture == cfg.get_architecture()
 
 if __name__ == '__main__':

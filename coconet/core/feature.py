@@ -57,7 +57,7 @@ class Feature:
 
         warning = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
         logger.warning(warning)
-        
+
 
     def get_neighbors(self):
         if not 'latent' in self.path:

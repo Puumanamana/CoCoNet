@@ -32,23 +32,6 @@ def test_composition_feature():
 
     assert filtered_lengths == [20, 15]
 
-
-def test_bed_is_created():
-    '''
-    Test bed generation
-    '''
-
-    fasta_raw = generate_fasta_file(20, 10, 15)
-    f = CompositionFeature(path=dict(fasta=fasta_raw, filt_fasta=fasta_raw))
-    f.write_bed('regions.bed')
-
-    bed_dims = pd.read_csv('regions.bed', sep='\t', header=None).shape
-
-    fasta_raw.unlink()
-    Path('regions.bed').unlink()
-
-    assert bed_dims == (3, 3)
-
 def test_coverage_feature():
     h5 = generate_h5_file(10, 20)
     f = CoverageFeature(path={'h5': h5})
@@ -95,7 +78,7 @@ def test_remove_singletons():
     compo = CompositionFeature(path=dict(filt_fasta=fasta))
     cover = CoverageFeature(path=dict(h5=h5_data))
 
-    cover.write_singletons(output=singleton_file, min_prevalence=2)
+    cover.find_singletons(output=singleton_file, min_prevalence=2)
     cover.filter_by_ids(ids_file=singleton_file)
     compo.filter_by_ids(output='filt.fasta', ids_file=singleton_file)
 

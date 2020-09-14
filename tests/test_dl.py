@@ -266,8 +266,8 @@ def test_save_repr():
     latent_dim = (TEST_ARCHITECTURE['composition']['neurons'][-1]
                   + TEST_ARCHITECTURE['coverage']['neurons'][-1])
 
-    assert firsts['latent_composition'] == (5, latent_dim)
-    assert firsts['latent_coverage'] == (5, latent_dim)
+    assert firsts['composition'] == (5, latent_dim)
+    assert firsts['coverage'] == (5, latent_dim)
 
     fasta.unlink()
     coverage.unlink()

@@ -38,7 +38,7 @@ def compute_pairwise_comparisons(model, graph, handles,
         if bin_id == -1:
             neighb_idx = neighbors[k]
         # Case 2: we are computing all remaining comparisons among contigs in a given bin
-        else: 
+        else:
             neighb_idx = neighbors
 
         processed = np.isin(neighb_idx, graph.neighbors(ctg))
@@ -168,7 +168,7 @@ def iterate_clustering(model,
     logger.info(f'Processing {clusters.size} clusters')
 
     handles = [(feature.name, feature.get_handle('latent')) for feature in features]
-    
+
     for i, cluster in enumerate(clusters):
 
         contigs_c = pre_graph.vs.select(cluster=cluster)['name']
@@ -183,7 +183,7 @@ def iterate_clustering(model,
 
         elif i > 0 and i % (len(clusters)//5) == 0:
             logger.info(f'{i:,} clusters processed')
-        
+
         # Compute all comparisons in this cluster
         compute_pairwise_comparisons(model, pre_graph, handles,
                                      neighbors=mapping_id_ctg[contigs_c].values,
@@ -200,7 +200,7 @@ def iterate_clustering(model,
 
     for _, handle in handles:
         handle.close()
-        
+
     assignments = pd.Series(dict(zip(contigs, assignments)))
 
     # Add the rest of the contigs (singletons) set aside at the beginning
