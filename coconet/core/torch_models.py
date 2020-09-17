@@ -160,11 +160,8 @@ class CoCoNet(nn.Module):
         combined = F.relu(self.dense(
             torch.cat([compo_repr, cover_repr], axis=1)
         ))
-        compo_prob = torch.sigmoid(self.composition_model.compo_prob(compo_repr))
-        cover_prob = torch.sigmoid(self.coverage_model.cover_prob(cover_repr))
-        combined_prob = torch.sigmoid(self.prob(combined))
 
-        return dict(composition=compo_prob, coverage=cover_prob, combined=combined_prob)
+        return torch.sigmoid(self.prob(combined))
 
     def forward(self, x1, x2):
         '''

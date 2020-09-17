@@ -13,9 +13,7 @@ import h5py
 from coconet.tools import kmer_count
 from coconet.core.composition_feature import CompositionFeature
 from coconet.core.coverage_feature import CoverageFeature
-
-
-logger = logging.getLogger('CoCoNet')
+from coconet.log import setup_logger
 
 class Configuration:
     """
@@ -28,6 +26,13 @@ class Configuration:
         self.features = ['coverage', 'composition']
         self.verbosity = 'INFO'
 
+    def log(self, msg, level):
+        try:
+            logger = setup_logger('CoCoNet', self.io['log'], self.loglvl)
+        except (KeyError, AttributeError):
+            logger = logging.getLogger('CoCoNet')
+        getattr(logger, level)(msg)
+        
     @classmethod
     def from_yaml(cls, filepath):
         '''
@@ -56,8 +61,9 @@ class Configuration:
             else:
                 self.set_input(name, value)
 
+        self.init_values_if_not_set()
+        
         self.io['output'].mkdir(exist_ok=True)
-
         self.set_outputs()
 
     def set_input(self, name, val):
@@ -68,7 +74,8 @@ class Configuration:
         if name == 'fasta':
             filepath = Path(val)
             if filepath.suffix not in ['.fa', '.fasta', '.fna']:
-                raise NotImplementedError(f'Unknown file extension: {filepath.suffix}')
+                self.log(f'Unknown file extension: {filepath.suffix}', 'critical')
+                raise NotImplementedError
 
         if name == 'bam':
             if not val:
@@ -76,7 +83,8 @@ class Configuration:
             filepath = [Path(cov) for cov in val]
             suffixes = {cov.suffix for cov in filepath if cov != 'bam'}
             if not suffixes:
-                raise NotImplementedError(f'Unknown file extension: {suffixes}')
+                self.log(f'Unknown file extension: {suffixes}', 'critical')
+                raise NotImplementedError
 
         if name == 'h5':
             if val is None:
@@ -111,9 +119,11 @@ class Configuration:
             dest = Path(self.io['output'], output_files['h5']).resolve()
 
             if not src.is_file():
-                logger.warning(f'h5 was set as input but the file does not exist')
+                self.log(f'h5 was set as input but the file does not exist',
+                        'critical')
                 if 'bam' not in self.io:
-                    logger.critical(f'Could not find any bam file in the inputs. Aborting')
+                    self.log(f'Could not find any bam file in the inputs. Aborting',
+                            'critical')
                     raise FileNotFoundError
 
             elif not dest.is_file():
@@ -135,6 +145,16 @@ class Configuration:
 
         self.io.update(output_files)
 
+    def init_values_if_not_set(self):
+        if not hasattr(self, 'fragment_length') or self.fragment_length < 0:
+            if not hasattr(self, 'min_ctg_len'):
+                self.min_ctg_len = 2048
+            self.fragment_length = self.min_ctg_len // 2
+
+        if not hasattr(self, 'min_ctg_len'):
+            self.min_ctg_len = 2*self.fragment_length
+                
+        
     def to_yaml(self):
         '''
         Save configuration to YAML file
@@ -194,9 +214,10 @@ class Configuration:
                       latent=self.io['repr'].get('composition', None))
         )
         if not composition.check_paths():
-            logger.critical(
+            self.log(
                 ('Could not find the .fasta file. '
-                 'Did you run coconet preprocess with the --fasta flag?')
+                 'Did you run coconet preprocess with the --fasta flag?'),
+                'critical'
             )
             raise FileNotFoundError
 
@@ -210,9 +231,10 @@ class Configuration:
         )
 
         if not coverage.check_paths():
-            logger.critical(
+            self.log(
                 ('Could not find the coverage information. '
-                 'Did you run coconet preprocess with the --bam flag?')
+                 'Did you run coconet preprocess with the --bam flag?'),
+                'critical'
             )
             raise FileNotFoundError
         return coverage

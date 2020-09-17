@@ -31,13 +31,20 @@ def compute_pairwise_comparisons(model, graph, handles,
 
     contigs = np.array(graph.vs['name'])
 
+    if len(contigs) > 20:
+        logger.info(f"Processing cluster ({contigs.size} contigs)")
+
     edges = {}
 
     for k, ctg in enumerate(contigs):
-        # Case 1: we are computing the pre-graph --> We limit the comparisons to the closest neighbors
+        # Case 1: we are computing the pre-graph
+        # --> We limit the comparisons to the closest neighbors
         if bin_id == -1:
+            if k % max(1, len(contigs)//100) == 0:
+                logger.debug(f"{k:,} contig done")
             neighb_idx = neighbors[k]
-        # Case 2: we are computing all remaining comparisons among contigs in a given bin
+            
+        # Case 2: we are computing all remaining comparisons in a given bin
         else:
             neighb_idx = neighbors
 
@@ -64,15 +71,13 @@ def compute_pairwise_comparisons(model, graph, handles,
 
             if len(handles) == 1: # Only one feature type
                 x_other = x_other[feature]
-                probs = model.combine_repr(x_ref, x_other).detach().numpy()[:, 0]
-            else:
-                probs = model.combine_repr(x_ref, x_other)['combined'].detach().numpy()[:, 0]
 
+            probs = model.combine_repr(x_ref, x_other).detach().numpy()[:, 0]
+            
             if vote_threshold is not None:
                 probs = probs > vote_threshold
 
             edges[(ctg, other_ctg)] = sum(probs)
-
     if edges:
         prev_weights = graph.es['weight']
         graph.add_edges(list(edges.keys()))
@@ -178,10 +183,7 @@ def iterate_clustering(model,
             assignments += [cluster] * len(contigs_c)
             continue
 
-        if len(contigs_c) > 50:
-            logger.info(f"Processing cluster #{i} ({len(contigs_c)} contigs)")
-
-        elif i > 0 and i % (len(clusters)//5) == 0:
+        if i > 0 and i % (len(clusters)//5) == 0:
             logger.info(f'{i:,} clusters processed')
 
         # Compute all comparisons in this cluster
