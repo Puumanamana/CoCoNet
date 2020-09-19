@@ -32,7 +32,7 @@ class Configuration:
         except (KeyError, AttributeError):
             logger = logging.getLogger('CoCoNet')
         getattr(logger, level)(msg)
-        
+
     @classmethod
     def from_yaml(cls, filepath):
         '''
@@ -62,7 +62,7 @@ class Configuration:
                 self.set_input(name, value)
 
         self.init_values_if_not_set()
-        
+
         self.io['output'].mkdir(exist_ok=True)
         self.set_outputs()
 
@@ -153,8 +153,7 @@ class Configuration:
 
         if not hasattr(self, 'min_ctg_len'):
             self.min_ctg_len = 2*self.fragment_length
-                
-        
+
     def to_yaml(self):
         '''
         Save configuration to YAML file

@@ -26,14 +26,6 @@ class CompositionModel(nn.Module):
         Combine representation given 2 composition vectors
         Siamese network to make output symetrical
         '''
-
-        # from time import  time
-        # t0 = time(); torch.set_num_threads(1); v=torch.cat(x, axis=1); print(time()-t0)
-        # t0 = time(); torch.set_num_threads(5); v=torch.cat(x, axis=1); print(time()-t0)
-        # t0 = time(); torch.set_num_threads(10); v=torch.cat(x, axis=1); print(time()-t0)                
-        # t0 = time(); torch.set_num_threads(1); self.compo_siam(v) ; print(time()-t0)
-        # t0 = time(); torch.set_num_threads(10); self.compo_siam(v) ; print(time()-t0)        
-        # import ipdb;ipdb.set_trace()
         x_siam1 = F.relu(self.compo_siam(torch.cat(x, axis=1)))
         x_siam2 = F.relu(self.compo_siam(torch.cat(x[::-1], axis=1)))
         x = torch.max(x_siam1, x_siam2)

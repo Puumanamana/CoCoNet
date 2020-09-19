@@ -42,7 +42,7 @@ def main(**kwargs):
     cfg.to_yaml()
 
     logger.info(f'Using {cfg.threads} threads')
-    
+
     if action == 'preprocess':
         preprocess(cfg)
     elif action == 'learn':
@@ -76,7 +76,7 @@ def preprocess(cfg):
     indent = ' ' * 42 # For logging multiline-formatting
     if 'bam' in cfg.io:
         logger.info('Processing alignments and converting to h5 format')
-        
+
         counts = coverage.to_h5(composition.get_valid_nucl_pos(), output=cfg.io['h5'],
                                 tlen_range=cfg.tlen_range,
                                 min_mapq=cfg.min_mapping_quality,
@@ -101,7 +101,7 @@ def preprocess(cfg):
                 )
 
             logger.info('\n'.join(bam_filtering_info))
-            
+
     if cfg.io['h5'].is_file():
         # Make sure the contig IDs are the same for both coverage and composition. Take the intersection otherwise
         composition.synchronize(coverage, ['filt_fasta', 'h5'])
@@ -137,7 +137,7 @@ def make_train_test(cfg):
             ))
             raise RuntimeError
         assembly.append((name, contig))
-    
+
     n_ctg = len(assembly)
     n_ctg_for_test = max(2, int(cfg.test_ratio*n_ctg))
 

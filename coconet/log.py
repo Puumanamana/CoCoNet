@@ -13,12 +13,12 @@ def setup_logger(name, log_file, level=logging.INFO):
         if (logger.hasHandlers()):
             logger.handlers.clear()
         logger.propagate = False
-        
+
         # Create a Formatter for formatting the log messages
         formatter = logging.Formatter(
             '%(asctime)s (%(name)s) %(levelname)s: %(message)s',
             '%Y-%m-%d %H:%M:%S'
-        )    
+        )
 
         # Create the Handler for logging data to a file
         Path(log_file.parent).mkdir(exist_ok=True)

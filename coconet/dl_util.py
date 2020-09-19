@@ -143,7 +143,6 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     - Display confusion table and other metrics
     - Single epoch training
     '''
-    
     (x_test, x_train_gen) = (
         load_data(fasta=fasta, coverage=coverage, pairs=pairs[mode],
                   mode=mode, batch_size=batch_size, **args)

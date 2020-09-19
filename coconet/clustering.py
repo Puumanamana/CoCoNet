@@ -34,7 +34,7 @@ def compute_pairwise_comparisons(model, graph, handles,
     contigs = np.array(graph.vs['name'])
     if bin_id > 0:
         contigs = contigs[neighbors]
-    
+
     contigs_chunks = (contigs[i:i+buffer_size]
                       for i in range(0, len(contigs), buffer_size))
 
@@ -73,13 +73,13 @@ def compute_pairwise_comparisons(model, graph, handles,
                                 dtype=np.float32)
               for (feature, dim) in latent_dim}
              for _ in range(2)]
-        
+
         # 3) fill array and cache already loaded contigs
         loaded = {}
         for k, pair in enumerate(ctg_pairs):
             indices = {feature: np.arange(k*n_frag_pairs, (k+1)*n_frag_pairs)
                        for feature in x[0]}
-            
+
             for (l, ctg) in enumerate(pair):
                 if not ctg in loaded:
                     loaded[ctg] = {feature: handle[ctg][:][comb_indices[l]]
