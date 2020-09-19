@@ -55,8 +55,9 @@ class Feature:
             other.filter_by_ids(ids=diff21)
             warning.append(f'{diff21.size:,} contigs are only present in the {other.name}')
 
-        warning = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
-        logger.warning(warning)
+        if warning:
+            warning = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
+            logger.warning(warning)
 
 
     def get_neighbors(self):

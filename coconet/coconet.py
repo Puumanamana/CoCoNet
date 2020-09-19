@@ -29,7 +29,7 @@ def main(**kwargs):
     if kwargs:
         params.update(kwargs)
 
-    setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
+    logger = setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
     action = params.pop('action')
 
     prev_config = Path(args.output, 'config.yaml')
@@ -41,6 +41,8 @@ def main(**kwargs):
     cfg.init_config(mkdir=True, **params)
     cfg.to_yaml()
 
+    logger.info(f'Using {cfg.threads} threads')
+    
     if action == 'preprocess':
         preprocess(cfg)
     elif action == 'learn':
@@ -161,6 +163,7 @@ def learn(cfg):
     torch.set_num_threads(cfg.threads)
 
     model = load_model(cfg)
+    model.train()
 
     device = list({p.device.type for p in model.parameters()})
     logger.info(f'Neural network training on {" and ".join(device)}')
@@ -227,7 +230,7 @@ def cluster(cfg):
     torch.set_num_threads(cfg.threads)
 
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
-    model = load_model(full_cfg)
+    model = load_model(full_cfg, from_checkpoint=True)
     n_frags = full_cfg.n_frags
 
     if not all(x.is_file() for x in cfg.io['repr'].values()):

@@ -19,65 +19,91 @@ logger = logging.getLogger('clustering')
 def compute_pairwise_comparisons(model, graph, handles,
                                  vote_threshold=None,
                                  neighbors=None, max_neighbors=100,
-                                 n_frags=30, bin_id=-1):
+                                 n_frags=30, bin_id=-1,
+                                 buffer_size=50):
     '''
     Compare each contig in [contigs] with its [neighbors]
     by running the neural network for each fragment combinations
     between the contig pair
     '''
 
-    ref_idx, other_idx = (np.repeat(np.arange(n_frags), n_frags),
-                          np.tile(np.arange(n_frags), n_frags))
+    n_frag_pairs = n_frags**2
+    comb_indices = (np.repeat(np.arange(n_frags), n_frags),
+                    np.tile(np.arange(n_frags), n_frags))
 
     contigs = np.array(graph.vs['name'])
+    if bin_id > 0:
+        contigs = contigs[neighbors]
+    
+    contigs_chunks = (contigs[i:i+buffer_size]
+                      for i in range(0, len(contigs), buffer_size))
 
     if len(contigs) > 20:
-        logger.info(f"Processing cluster ({contigs.size} contigs)")
+        logger.info(f"Processing cluster ({len(contigs)} contigs)")
+
+    # Get latent variable dimension
+    latent_dim = []
+    for (feature, handle) in handles:
+        a_value = list(handle.values())[0]
+        latent_dim.append((feature, a_value.shape))
 
     edges = {}
-
-    for k, ctg in enumerate(contigs):
-        # Case 1: we are computing the pre-graph
-        # --> We limit the comparisons to the closest neighbors
+    # Case 1 (bin_id == -1): we are computing the pre-graph
+    # Case 2 (else): we are computed edges in sub-graph
+    for i, chunk in enumerate(contigs_chunks):
         if bin_id == -1:
-            if k % max(1, len(contigs)//100) == 0:
-                logger.debug(f"{k:,} contig done")
-            neighb_idx = neighbors[k]
-            
-        # Case 2: we are computing all remaining comparisons in a given bin
-        else:
-            neighb_idx = neighbors
+            if i*buffer_size % max(1, len(contigs)//100) == 0:
+                logger.debug(f"{i*buffer_size:,} contigs done")
 
-        processed = np.isin(neighb_idx, graph.neighbors(ctg))
+        # 1) get list of (contig, other)
+        ctg_pairs = []
+        for j, ctg in enumerate(chunk):
+            neighb_idx = neighbors[i*buffer_size+j] if bin_id == -1 else neighbors
+            processed = np.isin(neighb_idx, graph.neighbors(ctg))
+            neighb_j = contigs[neighb_idx][~processed][:int(max_neighbors)]
 
-        neighb_k = contigs[neighb_idx][~processed][:int(max_neighbors)]
+            ctg_pairs += [(ctg, other) for other in neighb_j
+                          if other != ctg and (other, ctg) not in edges]
 
-        if neighb_k.size == 0:
+        if not ctg_pairs:
             continue
 
-        x_ref = {name: torch.from_numpy(handle[ctg][:][ref_idx]) for name, handle in handles}
-
-        if len(handles) == 1: # Only one feature type
-            feature = list(x_ref)[0]
-            x_ref = x_ref[feature]
-
-        # Compare the reference contig against all of its neighbors
-        for other_ctg in neighb_k:
-            if other_ctg == ctg or (other_ctg, ctg) in edges:
-                continue
-
-            x_other = {name: torch.from_numpy(handle[other_ctg][:][other_idx])
-                       for name, handle in handles}
-
-            if len(handles) == 1: # Only one feature type
-                x_other = x_other[feature]
-
-            probs = model.combine_repr(x_ref, x_other).detach().numpy()[:, 0]
+        # 2) create empty numpy array to hold data
+        x = [{feature: np.zeros((len(ctg_pairs)*n_frag_pairs, dim[1]),
+                                dtype=np.float32)
+              for (feature, dim) in latent_dim}
+             for _ in range(2)]
+        
+        # 3) fill array and cache already loaded contigs
+        loaded = {}
+        for k, pair in enumerate(ctg_pairs):
+            indices = {feature: np.arange(k*n_frag_pairs, (k+1)*n_frag_pairs)
+                       for feature in x[0]}
             
-            if vote_threshold is not None:
-                probs = probs > vote_threshold
+            for (l, ctg) in enumerate(pair):
+                if not ctg in loaded:
+                    loaded[ctg] = {feature: handle[ctg][:][comb_indices[l]]
+                                   for (feature, handle) in handles}
 
-            edges[(ctg, other_ctg)] = sum(probs)
+                for (feature, data) in loaded[ctg].items():
+                    x[l][feature][indices[feature]] = data
+
+        for x_i in x:
+            for feature, data in x_i.items():
+                x_i[feature] = torch.from_numpy(data)
+
+            if len(x_i) == 1: # Only one feature type
+                x_i = x_i[feature]
+
+        # 4) convert to torch and make prediction
+        probs = model.combine_repr(*x).detach().numpy()[:, 0]
+
+        if vote_threshold is not None:
+            probs = probs > vote_threshold
+
+        for i, pair in enumerate(ctg_pairs):
+            edges[pair] = sum(probs[i*n_frag_pairs:(i+1)*n_frag_pairs])
+
     if edges:
         prev_weights = graph.es['weight']
         graph.add_edges(list(edges.keys()))
