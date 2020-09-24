@@ -11,8 +11,11 @@ import igraph
 
 from coconet.core.composition_feature import CompositionFeature
 from coconet.core.coverage_feature import CoverageFeature
-from coconet.clustering import compute_pairwise_comparisons, make_pregraph
-from coconet.clustering import get_communities, iterate_clustering
+from coconet.clustering import (compute_pairwise_comparisons,
+                                contig_pair_iterator,
+                                make_pregraph,
+                                refine_clustering,
+                                get_communities)
 from .data import generate_h5_file, generate_rd_model
 
 LOCAL_DIR = Path(__file__).parent
@@ -23,21 +26,30 @@ def test_pairwise_comparisons():
                for k in ['composition', 'coverage']}
 
     handles = [(k, h5py.File(v, 'r')) for k, v in h5_data.items()]
-    contigs = ['V0', 'V1', 'V2']
 
-    graph = igraph.Graph()
-    graph.add_vertices(contigs)
-    graph.es['weight'] = []
-    neighbors = [np.array([0, 1]), np.array([0, 1]), np.array([2])]
+    pair_generators = (((x, y) for (x,y) in [('V0', 'V1'), ('V0', 'V2')]),)
 
-    compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, n_frags=5)
+    edges = compute_pairwise_comparisons(model, handles, pair_generators, vote_threshold=0.5)
 
     for v in h5_data.values():
         v.unlink()
 
-    assert (0, 1) in graph.get_edgelist()
-    assert (1, 2) not in graph.get_edgelist()
-    assert 0 <= graph.es['weight'][0] <= 25
+    assert ('V0', 'V1') in edges
+    assert ('V0', 'V2') in edges
+    assert ('V1', 'V2') not in edges
+
+def test_contig_pair_iterator():
+    contigs = ['V0', 'V1', 'V2', 'V3']
+    neighbors = [0, 2, 1, 3]
+    
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
+    graph.add_edge('V0', 'V1')
+    
+    generator = contig_pair_iterator('V0', neighbors, graph, max_neighbors=2)
+    all_pairs = list(generator)
+
+    assert all_pairs == [('V0', 'V2'), ('V0', 'V3')]
 
 def test_make_pregraph():
     output = Path('pregraph.pkl')
@@ -45,14 +57,12 @@ def test_make_pregraph():
 
     h5_files = [generate_h5_file(8, 8, 8, n_samples=5, filename=f'{name}.h5')
                 for name in ['compo', 'cover']]
-    
     features = [
         CompositionFeature(path=dict(latent=h5_files[0])),
         CoverageFeature(path=dict(latent=h5_files[1]))
     ]
 
-    make_pregraph(model, features, output, n_frags=5)
-    make_pregraph(model, features, output, n_frags=5, vote_threshold=0.5)
+    make_pregraph(model, features, output)
 
     features[0].path['latent'].unlink()
     features[1].path['latent'].unlink()
@@ -86,7 +96,7 @@ def test_get_communities():
     assert all(clusters[2:] == clusters[2])
     assert clusters[1] != clusters[2]
 
-def test_iterate_clustering():
+def test_refine_clustering():
     model = generate_rd_model()
     h5_files = [generate_h5_file(*[8]*5, n_samples=5, filename=k+'.h5')
                 for k in ['composition', 'coverage']]
@@ -120,11 +130,10 @@ def test_iterate_clustering():
     (pd.DataFrame([['W0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
      .to_csv(files[0], sep='\t'))
 
-    iterate_clustering(model, features, files[1],
+    refine_clustering(model, features, files[1],
                        singletons_file=files[0],
                        graph_file=files[2],
-                       assignments_file=files[3],
-                       n_frags=5)
+                       assignments_file=files[3])
 
     clustering = pd.read_csv(files[3], header=None, index_col=0)[1]
 
@@ -141,4 +150,8 @@ def test_iterate_clustering():
 
 
 if __name__ == '__main__':
-    test_make_pregraph()
+    # test_pairwise_comparisons()
+    # test_contig_pair_iterator()
+    # test_make_pregraph()
+    # test_get_communities()
+    test_refine_clustering()

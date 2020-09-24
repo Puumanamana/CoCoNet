@@ -60,7 +60,7 @@ class Feature:
             logger.warning(warning)
 
 
-    def get_neighbors(self):
+    def get_neighbors_index(self):
         if not 'latent' in self.path:
             return
 
@@ -89,3 +89,5 @@ class Feature:
         handle.close()
 
         return neighbors_ordered
+
+    

@@ -36,7 +36,7 @@ def make_pregraph(
     contigs = features[0].get_contigs()
     
     # Intersect neighbors for all features
-    neighbors_each = [feature.get_neighbors() for feature in features]
+    neighbors_each = [feature.get_neighbors_index() for feature in features]
 
     if len(features) > 1:
         neighbors = []
@@ -157,12 +157,12 @@ def refine_clustering(
 
    
 def contig_pair_iterator(
-        contig, neighbors=None, graph=None, max_neighbors=100
+        contig, neighbors_index=None, graph=None, max_neighbors=100
 ):
     '''
     Args:
         contig: reference contig to be compared with the neighbors
-        neighbors: neighboring contigs to consider
+        neighbors_index: neighboring contigs index to consider
         graph: Graph with already computed edges
         max_neighbors: Maximum number of neighbors for a given contig
     Returns:
@@ -171,18 +171,19 @@ def contig_pair_iterator(
     
     contigs = np.array(graph.vs['name'])
     # Since we use .pop(), we need the last neighbors to be the closest
-    neighbors = list(neighbors[::-1])
+    neighbors_index = list(neighbors_index[::-1])
 
     i = 0
-    while neighbors:
-        neighbor = neighbors.pop()
-        if i > max_neighbors:
-            raise StopIteration
-        if graph.are_connected(contig, neighbor):
-            continue
-        i += 1
+    while neighbors_index:
+        neighbor_index = neighbors_index.pop()
+        neighbor = contigs[neighbor_index]
         
-        yield (contig, contigs[neighbor])
+        if i < max_neighbors:
+            if graph.are_connected(contig, neighbor) or contig == neighbor:
+                continue
+            i += 1
+        
+            yield (contig, neighbor)
 
 
 def compute_pairwise_comparisons(
