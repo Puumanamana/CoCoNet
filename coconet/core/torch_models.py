@@ -58,16 +58,12 @@ class CompositionModel(nn.Module):
 
 class CoverageModel(nn.Module):
     def __init__(self, input_size, n_samples, neurons=None,
-                 n_filters=64, kernel_size=16, conv_stride=8):
+                 n_filters=64, kernel_size=16, conv_stride=8, pool_size=3, pool_stride=1):
         super(CoverageModel, self).__init__()
 
         self.conv_layer = nn.Conv1d(n_samples, n_filters, kernel_size, conv_stride)
         conv_out_dim = (n_filters,
                         (input_size-kernel_size)//conv_stride + 1)
-        # self.pool = nn.MaxPool1d(pool_size, pool_stride)
-        # pool_out_dim = (n_filters,
-        #                 int((conv_out_dim[-1]-pool_size)/pool_stride)+1)
-        # self.cover_shared = nn.Linear(np.prod(pool_out_dim), neurons[0])
         self.cover_shared = nn.Linear(np.prod(conv_out_dim), neurons[0])
         self.cover_siam = nn.Linear(2*neurons[0], neurons[1])
         self.cover_prob = nn.Linear(neurons[1], 1)
@@ -81,7 +77,6 @@ class CoverageModel(nn.Module):
         '''
 
         x = F.relu(self.conv_layer(x))
-        # x = F.relu(self.pool(x))
         x = F.relu(self.cover_shared(x.view(x.shape[0], -1)))
         return dict(coverage=x)
 

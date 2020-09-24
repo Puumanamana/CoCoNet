@@ -7,7 +7,6 @@ import pandas as pd
 import logging
 
 import torch
-
 import igraph
 import leidenalg
 
@@ -32,9 +31,8 @@ def compute_pairwise_comparisons(model, graph, handles,
                     np.tile(np.arange(n_frags), n_frags))
 
     contigs = np.array(graph.vs['name'])
-    if bin_id > 0:
+    if bin_id >= 0:
         contigs = contigs[neighbors]
-
     contigs_chunks = (contigs[i:i+buffer_size]
                       for i in range(0, len(contigs), buffer_size))
 
@@ -58,9 +56,13 @@ def compute_pairwise_comparisons(model, graph, handles,
         # 1) get list of (contig, other)
         ctg_pairs = []
         for j, ctg in enumerate(chunk):
-            neighb_idx = neighbors[i*buffer_size+j] if bin_id == -1 else neighbors
-            processed = np.isin(neighb_idx, graph.neighbors(ctg))
-            neighb_j = contigs[neighb_idx][~processed][:int(max_neighbors)]
+            if bin_id == -1:
+                neighb_idx = neighbors[i*buffer_size+j]
+                processed = np.isin(neighb_idx, graph.neighbors(ctg))
+                neighb_j = contigs[neighb_idx][~processed][:int(max_neighbors)]
+            else:
+                processed = np.isin(neighbors, graph.neighbors(ctg))
+                neighb_j = contigs[~processed][:int(max_neighbors)]
 
             ctg_pairs += [(ctg, other) for other in neighb_j
                           if other != ctg and (other, ctg) not in edges]
@@ -88,12 +90,12 @@ def compute_pairwise_comparisons(model, graph, handles,
                 for (feature, data) in loaded[ctg].items():
                     x[l][feature][indices[feature]] = data
 
-        for x_i in x:
+        for i, x_i in enumerate(x):
             for feature, data in x_i.items():
                 x_i[feature] = torch.from_numpy(data)
 
             if len(x_i) == 1: # Only one feature type
-                x_i = x_i[feature]
+                x[i] = x_i[feature]
 
         # 4) convert to torch and make prediction
         probs = model.combine_repr(*x).detach().numpy()[:, 0]
@@ -162,6 +164,12 @@ def get_communities(graph, threshold, gamma=0.5):
 
     communities = pd.Series(dict(enumerate(partition))).explode()
 
+    # communities2 = pd.Series(dict(enumerate(
+    #     cluster_graph.community_leiden(
+    #         objective_function='CPM',
+    #         resolution_parameter=gamma,
+    #         n_iterations=-1)
+    # )))
     # Set the "cluster" attribute
     graph.vs['cluster'] = communities.sort_values().index
 

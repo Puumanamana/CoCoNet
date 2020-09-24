@@ -42,18 +42,23 @@ def main(**kwargs):
     cfg.to_yaml()
 
     logger.info(f'Using {cfg.threads} threads')
+    logger.info(f'Features: {", ".join(args.features)}')
+
+    torch.set_num_threads(cfg.threads)
 
     if action == 'preprocess':
         preprocess(cfg)
     elif action == 'learn':
         make_train_test(cfg)
         learn(cfg)
+        precompute_latent_repr(cfg)
     elif action == 'cluster':
         cluster(cfg)
     else:
         preprocess(cfg)
         make_train_test(cfg)
         learn(cfg)
+        precompute_latent_repr(cfg)
         cluster(cfg)
 
 def preprocess(cfg):
@@ -146,6 +151,12 @@ def make_train_test(cfg):
 
     n_examples = dict(train=cfg.n_train, test=cfg.n_test)
 
+    logger.info((
+        f'Parameters: fragment_step={cfg.fragment_step}, '
+        f'fragment_length={cfg.fragment_length}, '
+        f'#examples (train)={n_examples["train"]}, '
+        f'#examples (test)={n_examples["test"]}'
+    ))
     for mode, pair_file in cfg.io['pairs'].items():
         make_pairs([assembly[idx] for idx in assembly_idx[mode]],
                    cfg.fragment_step,
@@ -159,8 +170,6 @@ def learn(cfg):
     '''
 
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
-
-    torch.set_num_threads(cfg.threads)
 
     model = load_model(cfg)
     model.train()
@@ -177,10 +186,10 @@ def learn(cfg):
 
     for (key, path) in inputs.items():
         if not path.is_file():
-            logger.critical(
-                (f'{key} file not found at {path}. '
-                 'Did you run the preprocessing step with the {key} file?')
-            )
+            logger.critical((
+                f'{key} file not found at {path}. '
+                'Did you run the preprocessing step with the {key} file?'
+            ))
             raise FileNotFoundError
 
     if not all(f.is_file() for f in cfg.io['pairs'].values()):
@@ -190,6 +199,12 @@ def learn(cfg):
         )
         raise FileNotFoundError
 
+    logger.info((
+        f'Parameters: batch size={cfg.batch_size}, learning rate={cfg.learning_rate}, '
+        f'kmer size={cfg.kmer}, cannonical={not cfg.no_rc}, '
+        f'coverage smoothing=(wsize={cfg.wsize}, wstep={cfg.wstep}).'
+    ))
+    
     train(
         model, **inputs,
         pairs=cfg.io['pairs'],
@@ -206,9 +221,12 @@ def learn(cfg):
     )
     logger.info('Training finished')
 
-    model = load_model(cfg, from_checkpoint=True)
 
+def precompute_latent_repr(cfg):
+    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
     logger.info('Computing intermediate representation of composition and coverage features')
+
+    model = load_model(cfg, from_checkpoint=True)
 
     save_repr_all(model,
                   fasta=cfg.io['filt_fasta'],
@@ -227,26 +245,27 @@ def cluster(cfg):
 
     logger = setup_logger('clustering', cfg.io['log'], cfg.loglvl)
 
-    torch.set_num_threads(cfg.threads)
-
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg, from_checkpoint=True)
     n_frags = full_cfg.n_frags
 
     if not all(x.is_file() for x in cfg.io['repr'].values()):
-        logger.critical(
-            (f'Could not find the latent representations in {cfg.io["output"]}. '
-             'Did you run coconet learn before?')
-        )
+        logger.critical((
+            f'Could not find the latent representations in {cfg.io["output"]}. '
+            'Did you run coconet learn before?'
+        ))
+        raise FileNotFoundError
 
     features = cfg.get_features()
 
     logger.info('Pre-clustering contigs')
+    logger.info(f'Parameters: max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
     make_pregraph(model, features, output=cfg.io['pre_graph'],
                   vote_threshold=cfg.vote_threshold,
                   n_frags=n_frags, max_neighbors=cfg.max_neighbors)
 
     logger.info('Refining graph')
+    logger.info(f'Parameters: theta={cfg.theta}, gamma={cfg.gamma2}')
     iterate_clustering(
         model,
         features,

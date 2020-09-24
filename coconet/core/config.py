@@ -119,11 +119,11 @@ class Configuration:
             dest = Path(self.io['output'], output_files['h5']).resolve()
 
             if not src.is_file():
-                self.log(f'h5 was set as input but the file does not exist',
-                        'critical')
+                self.log(f'h5 was set as input but the file does not exist', 'critical')
+                raise FileNotFoundError
+
                 if 'bam' not in self.io:
-                    self.log(f'Could not find any bam file in the inputs. Aborting',
-                            'critical')
+                    self.log(f'Could not find any bam file in the inputs. Aborting', 'critical')
                     raise FileNotFoundError
 
             elif not dest.is_file():

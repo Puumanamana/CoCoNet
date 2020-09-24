@@ -124,17 +124,17 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
     return occurrences
 
-def get_coverage(pairs, coverage_h5, window_size, window_step):
+def get_coverage(pairs, h5_file, window_size, window_step):
     '''
     - Extracting coverage from h5 for all pairs of contigs in pairs
     - Smooth coverage with a sliding window of [window_size, window_step]
     '''
 
-    h5data = h5py.File(coverage_h5, 'r')
+    h5data = h5py.File(h5_file, 'r')
     contigs = np.unique(pairs['sp'].flatten())
 
     try:
-        coverage_data = {ctg: np.array(h5data.get(ctg)[:]) for ctg in contigs}
+        coverage = {ctg: h5data[ctg][:] for ctg in contigs}
     except TypeError:
         diff = set(contigs).difference(set(h5data.keys()))
         if diff:
@@ -147,7 +147,7 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
             raise RuntimeError
 
     n_pairs = len(pairs)
-    n_samples, _ = np.array(list(coverage_data.values())[0]).shape
+    n_samples, _ = np.array(list(coverage.values())[0]).shape
     frag_len = pairs['end'][0, 0] - pairs['start'][0, 0]
 
     pairs = np.concatenate([pairs[:, 0], pairs[:, 1]])
@@ -159,18 +159,19 @@ def get_coverage(pairs, coverage_h5, window_size, window_step):
                                 dtype=np.float32)
     seen = {}
 
-    for i, (species, start, end) in enumerate(pairs[sorted_idx]):
-        cov_sp = seen.get((species, start), None)
+    for i, (sp, start, end) in enumerate(pairs[sorted_idx]):
+        cov_sp = seen.get((sp, start))
 
         if cov_sp is None:
             cov_sp = np.apply_along_axis(
-                lambda x: avg_window(x, window_size, window_step),
-                1,
-                coverage_data[species][:, start:end]
+                lambda x: avg_window(x, window_size, window_step), 1, coverage[sp][:, start:end]
             )
-            seen[(species, start)] = cov_sp
+            seen[(sp, start)] = cov_sp
 
-        coverage_feature[sorted_idx[i]] = cov_sp
+        try:
+            coverage_feature[sorted_idx[i]] = cov_sp
+        except:
+            import ipdb;ipdb.set_trace()
 
     return (coverage_feature[:n_pairs, :, :],
             coverage_feature[n_pairs:, :, :])
