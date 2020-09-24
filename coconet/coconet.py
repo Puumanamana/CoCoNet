@@ -12,7 +12,7 @@ from coconet.core.config import Configuration
 from coconet.parser import parse_args
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import load_model, train, save_repr_all
-from coconet.clustering import make_pregraph, iterate_clustering
+from coconet.clustering import make_pregraph, refine_clustering
 
 
 
@@ -247,7 +247,6 @@ def cluster(cfg):
 
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg, from_checkpoint=True)
-    n_frags = full_cfg.n_frags
 
     if not all(x.is_file() for x in cfg.io['repr'].values()):
         logger.critical((
@@ -262,11 +261,11 @@ def cluster(cfg):
     logger.info(f'Parameters: max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
     make_pregraph(model, features, output=cfg.io['pre_graph'],
                   vote_threshold=cfg.vote_threshold,
-                  n_frags=n_frags, max_neighbors=cfg.max_neighbors)
+                  max_neighbors=cfg.max_neighbors)
 
     logger.info('Refining graph')
     logger.info(f'Parameters: theta={cfg.theta}, gamma={cfg.gamma2}')
-    iterate_clustering(
+    refine_clustering(
         model,
         features,
         cfg.io['pre_graph'],
@@ -274,7 +273,6 @@ def cluster(cfg):
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         vote_threshold=cfg.vote_threshold,
-        n_frags=n_frags,
         theta=cfg.theta,
         gamma1=cfg.gamma1,
         gamma2=cfg.gamma2

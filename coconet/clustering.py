@@ -1,127 +1,40 @@
 '''
 Groups all the functions required to run the clustering steps
 '''
+import logging
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
-import logging
 
 import torch
 import igraph
 import leidenalg
 
-from coconet.tools import run_if_not_exists
-
+from coconet.tools import run_if_not_exists, chunk
 
 logger = logging.getLogger('clustering')
 
-def compute_pairwise_comparisons(model, graph, handles,
-                                 vote_threshold=None,
-                                 neighbors=None, max_neighbors=100,
-                                 n_frags=30, bin_id=-1,
-                                 buffer_size=50):
-    '''
-    Compare each contig in [contigs] with its [neighbors]
-    by running the neural network for each fragment combinations
-    between the contig pair
-    '''
-
-    n_frag_pairs = n_frags**2
-    comb_indices = (np.repeat(np.arange(n_frags), n_frags),
-                    np.tile(np.arange(n_frags), n_frags))
-
-    contigs = np.array(graph.vs['name'])
-    if bin_id >= 0:
-        contigs = contigs[neighbors]
-    contigs_chunks = (contigs[i:i+buffer_size]
-                      for i in range(0, len(contigs), buffer_size))
-
-    if len(contigs) > 20:
-        logger.info(f"Processing cluster ({len(contigs)} contigs)")
-
-    # Get latent variable dimension
-    latent_dim = []
-    for (feature, handle) in handles:
-        a_value = list(handle.values())[0]
-        latent_dim.append((feature, a_value.shape))
-
-    edges = {}
-    # Case 1 (bin_id == -1): we are computing the pre-graph
-    # Case 2 (else): we are computed edges in sub-graph
-    for i, chunk in enumerate(contigs_chunks):
-        if bin_id == -1:
-            if i*buffer_size % max(1, len(contigs)//100) == 0:
-                logger.debug(f"{i*buffer_size:,} contigs done")
-
-        # 1) get list of (contig, other)
-        ctg_pairs = []
-        for j, ctg in enumerate(chunk):
-            if bin_id == -1:
-                neighb_idx = neighbors[i*buffer_size+j]
-                processed = np.isin(neighb_idx, graph.neighbors(ctg))
-                neighb_j = contigs[neighb_idx][~processed][:int(max_neighbors)]
-            else:
-                processed = np.isin(neighbors, graph.neighbors(ctg))
-                neighb_j = contigs[~processed][:int(max_neighbors)]
-
-            ctg_pairs += [(ctg, other) for other in neighb_j
-                          if other != ctg and (other, ctg) not in edges]
-
-        if not ctg_pairs:
-            continue
-
-        # 2) create empty numpy array to hold data
-        x = [{feature: np.zeros((len(ctg_pairs)*n_frag_pairs, dim[1]),
-                                dtype=np.float32)
-              for (feature, dim) in latent_dim}
-             for _ in range(2)]
-
-        # 3) fill array and cache already loaded contigs
-        loaded = {}
-        for k, pair in enumerate(ctg_pairs):
-            indices = {feature: np.arange(k*n_frag_pairs, (k+1)*n_frag_pairs)
-                       for feature in x[0]}
-
-            for (l, ctg) in enumerate(pair):
-                if not ctg in loaded:
-                    loaded[ctg] = {feature: handle[ctg][:][comb_indices[l]]
-                                   for (feature, handle) in handles}
-
-                for (feature, data) in loaded[ctg].items():
-                    x[l][feature][indices[feature]] = data
-
-        for i, x_i in enumerate(x):
-            for feature, data in x_i.items():
-                x_i[feature] = torch.from_numpy(data)
-
-            if len(x_i) == 1: # Only one feature type
-                x[i] = x_i[feature]
-
-        # 4) convert to torch and make prediction
-        probs = model.combine_repr(*x).detach().numpy()[:, 0]
-
-        if vote_threshold is not None:
-            probs = probs > vote_threshold
-
-        for i, pair in enumerate(ctg_pairs):
-            edges[pair] = sum(probs[i*n_frag_pairs:(i+1)*n_frag_pairs])
-
-    if edges:
-        prev_weights = graph.es['weight']
-        graph.add_edges(list(edges.keys()))
-        graph.es['weight'] = prev_weights + list(edges.values())
 
 @run_if_not_exists()
-def make_pregraph(model, features, output, **kw):
+def make_pregraph(
+        model, features, output,
+        vote_threshold=None,
+        max_neighbors=100,
+        buffer_size=50
+):
     '''
-    Fill contig-contig adjacency matrix. For a given contig:
-    - Extract neighbors
-    - Make all n_frags**2 comparisons
-    - Fill the value with the expected number of hits
+    Args:
+        model: PyTorch neural network model
+        features: List of binning feature to use (composition, coverage, or both)
+        output: path to save igraph object
+        kw: dict of additional parameters to pass to contig_pair_iterator()
+    Returns:
+        None
     '''
 
     contigs = features[0].get_contigs()
-
+    
     # Intersect neighbors for all features
     neighbors_each = [feature.get_neighbors() for feature in features]
 
@@ -136,59 +49,53 @@ def make_pregraph(model, features, output, **kw):
     # Initialize graph
     graph = igraph.Graph()
     graph.add_vertices(contigs)
-    graph.es['weight'] = []
+    
+    edges = dict()
 
-    # Compute edges
+    # Get input data handles
     handles = [(feature.name, feature.get_handle('latent')) for feature in features]
-    compute_pairwise_comparisons(model, graph, handles, neighbors=neighbors, **kw)
 
+    # Get contig-contig pair generator
+    pair_generators = (contig_pair_iterator(ctg, neighb_ctg, graph, max_neighbors=max_neighbors)
+                       for (ctg, neighb_ctg) in zip(contigs, neighbors))
+
+    edges = compute_pairwise_comparisons(model, handles, pair_generators,
+                                         vote_threshold=vote_threshold)
+    # Add edges to graph
+    if edges:
+        graph.add_edges(list(edges.keys()))
+        graph.es['weight'] = list(edges.values())
+        
     for handle in handles:
         handle[1].close()
 
     # Save pre-graph
     graph.write_pickle(output)
 
-def get_communities(graph, threshold, gamma=0.5):
-    '''
-    Cluster using with the Leiden algorithm with parameter gamma
-    Use the graph previously filled
-    '''
-
-    cluster_graph = graph.copy()
-    cluster_graph.es.select(weight_lt=threshold).delete()
-
-    optimiser = leidenalg.Optimiser()
-
-    partition = leidenalg.CPMVertexPartition(cluster_graph, resolution_parameter=gamma)
-    optimiser.optimise_partition(partition)
-
-    communities = pd.Series(dict(enumerate(partition))).explode()
-
-    # communities2 = pd.Series(dict(enumerate(
-    #     cluster_graph.community_leiden(
-    #         objective_function='CPM',
-    #         resolution_parameter=gamma,
-    #         n_iterations=-1)
-    # )))
-    # Set the "cluster" attribute
-    graph.vs['cluster'] = communities.sort_values().index
-
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
-def iterate_clustering(model,
-                       features,
-                       pre_graph_file,
-                       singletons_file=None,
-                       graph_file=None,
-                       assignments_file=None,
-                       n_frags=30,
-                       theta=0.9,
-                       vote_threshold=None,
-                       gamma1=0.1, gamma2=0.75):
+def refine_clustering(
+        model, features, pre_graph_file,
+        singletons_file=None, graph_file=None, assignments_file=None,
+        theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None
+):
     '''
-    - Go through all clusters
-    - Fill the pairwise comparisons within clusters
-    - Re-cluster the clusters
+    Args:
+        model: PyTorch neural network model
+        features: List of binning feature to use (composition, coverage, or both)
+        pre_graph_file: Path to graph of pre-clustered contigs
+        singletons_file: Path to singleton contigs that were excluded for the analysis
+        assignments_file: Path to output bin assignments
+        theta: binary threshold to draw an edge between contigs
+        gamma1: Resolution parameter for leiden clustering in 1st iteration
+        gamma2: Resolution parameter for leiden clustering in 2nd iteration
+        vote_threshold: Voting scheme to compare fragments. (Default: disabled)
+    Returns:
+        None
     '''
+
+    # Data handles
+    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
+    n_frags = next(iter(handles[0][1].values())).shape[0]
 
     # Pre-clustering
     pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
@@ -196,52 +103,40 @@ def iterate_clustering(model,
 
     get_communities(pre_graph, edge_threshold, gamma=gamma1)
 
-    mapping_id_ctg = pd.Series(pre_graph.vs.indices, index=pre_graph.vs['name'])
-
     # Refining the clusters
-    contigs = []
-    assignments = []
     clusters = np.unique(pre_graph.vs['cluster'])
-    last_cluster = max(clusters)
 
     logger.info(f'Processing {clusters.size} clusters')
 
-    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
-
-    for i, cluster in enumerate(clusters):
-
+    # Get contig-contig pair generator
+    comparisons = []
+    for cluster in clusters:
         contigs_c = pre_graph.vs.select(cluster=cluster)['name']
-        contigs += contigs_c
-
-        if len(contigs_c) <= 2:
-            assignments += [cluster] * len(contigs_c)
+        n_c = len(contigs_c)
+        
+        if n_c <= 2:
             continue
 
-        if i > 0 and i % (len(clusters)//5) == 0:
-            logger.info(f'{i:,} clusters processed')
+        combs = [c for c in combinations(contigs_c, 2) if not pre_graph.are_connected(*c)]
+        indices = np.random.choice(len(combs), min(len(combs), int(1e5)))
+        comparisons.append([combs[i] for i in indices])
 
-        # Compute all comparisons in this cluster
-        compute_pairwise_comparisons(model, pre_graph, handles,
-                                     neighbors=mapping_id_ctg[contigs_c].values,
-                                     max_neighbors=5000,
-                                     n_frags=n_frags,
-                                     vote_threshold=vote_threshold,
-                                     bin_id=cluster)
-        # Find the leiden communities
-        sub_graph = pre_graph.subgraph(contigs_c)
-        get_communities(sub_graph, edge_threshold, gamma=gamma2)
+    edges = compute_pairwise_comparisons(model, handles, comparisons)
 
-        assignments += [x + last_cluster + 1 for x in sub_graph.vs['cluster']]
-        last_cluster = max(assignments)
-
+    # Add edges to graph
+    if edges:
+        pre_graph.add_edges(list(edges.keys()))
+        pre_graph.es['weight'] = list(edges.values())
+        
     for _, handle in handles:
         handle.close()
-
-    assignments = pd.Series(dict(zip(contigs, assignments)))
+    
+    # get_communities(pre_graph, edge_threshold, gamma=gamma2)
+    assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
 
     # Add the rest of the contigs (singletons) set aside at the beginning
     ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
-    ignored['clusters'] = np.arange(len(ignored)) + last_cluster + 1
+    ignored['clusters'] = np.arange(len(ignored)) + assignments.values.max() + 1
 
     if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size > 0:
         logger.error('Something went wrong: singleton contigs are already in the graph.')
@@ -258,3 +153,128 @@ def iterate_clustering(model,
     # Write the cluster in .csv format
     communities = pd.Series(pre_graph.vs['cluster'], index=pre_graph.vs['name'])
     communities.to_csv(assignments_file, header=False)
+
+
+   
+def contig_pair_iterator(
+        contig, neighbors=None, graph=None, max_neighbors=100
+):
+    '''
+    Args:
+        contig: reference contig to be compared with the neighbors
+        neighbors: neighboring contigs to consider
+        graph: Graph with already computed edges
+        max_neighbors: Maximum number of neighbors for a given contig
+    Returns:
+        Generator of (contig, contigs) pairs
+    '''
+    
+    contigs = np.array(graph.vs['name'])
+    # Since we use .pop(), we need the last neighbors to be the closest
+    neighbors = list(neighbors[::-1])
+
+    i = 0
+    while neighbors:
+        neighbor = neighbors.pop()
+        if i > max_neighbors:
+            raise StopIteration
+        if graph.are_connected(contig, neighbor):
+            continue
+        i += 1
+        
+        yield (contig, contigs[neighbor])
+
+
+def compute_pairwise_comparisons(
+        model, handles, pairs_generator,
+        vote_threshold=None, buffer_size=50
+):
+    '''
+    Args:
+        model: PyTorch neural network model
+        handles: (key, descriptor) list where keys are feature names 
+          and values are handles to the latent representations of each 
+          fragment in the contig (shape=(n_fragments, latent_dim))
+        pairs_generator: (ctg1, ctg2) generator corresponding to the comparisons to compute
+        vote_threshold: Voting scheme to compare fragments. (Default: disabled)
+        buffer_size: Number of contigs to load at once.
+    Returns:
+        dictionnary of edges computed with corresponding probability values
+    '''
+
+    # Get all pairs of fragments between any 2 contigs
+    (n_frags, latent_dim) = next(iter(handles[0][1].values())).shape
+    n_frag_pairs = n_frags**2
+    comb_indices = (np.repeat(np.arange(n_frags), n_frags),
+                    np.tile(np.arange(n_frags), n_frags))
+
+    edges = dict()
+
+    # Smaller chunks
+    for i, pairs_buffer in enumerate(chunk(*pairs_generator, size=buffer_size)):
+        # Initialize arrays to store inputs of the network
+        inputs = [{feature:
+            np.zeros((buffer_size*n_frag_pairs, latent_dim), dtype='float32')
+                   for feature, _ in handles} for _ in range(2)]
+
+        # Load data
+        for j, contig_pair in enumerate(pairs_buffer):
+            pos = range(j*n_frag_pairs, (j+1)*n_frag_pairs)
+        
+            for k, contig in enumerate(contig_pair):
+                for (feature, handle) in handles:
+                    inputs[k][feature][pos] = handle[contig][:][comb_indices[k]]
+
+        # Convert to pytorch
+        for j, input_j in enumerate(inputs):
+            for feature, matrix in input_j.items():
+                inputs[j][feature] = torch.from_numpy(matrix)
+
+            if len(input_j) == 1: # Only one feature type
+                input_j = input_j[feature]
+  
+        # make prediction
+        probs = model.combine_repr(*inputs).detach().numpy()[:, 0]
+
+        if vote_threshold is not None:
+            probs = probs > vote_threshold
+
+        # Save edge weight
+        for j, contig_pair in enumerate(pairs_buffer):
+            edges[contig_pair] =  sum(probs[j*n_frags**2:(j+1)*n_frags**2])
+
+        if i % 10 == 0:
+            logger.info(f'{i*buffer_size:,} contig pairs processed')
+
+    return edges
+
+    
+def get_communities(graph, threshold, gamma=0.5):
+    '''
+    Args:
+        graph: contig-contig igraph object
+        threshold: binary edge weight cutoff
+        gamma: Resolution parameter for leiden clustering
+    Returns:
+        None
+    '''
+
+    cluster_graph = graph.copy()
+    cluster_graph.es.select(weight_lt=threshold).delete()
+
+    optimiser = leidenalg.Optimiser()
+
+    partition = leidenalg.CPMVertexPartition(cluster_graph, resolution_parameter=gamma)
+    optimiser.optimise_partition(partition)
+
+    communities = pd.Series(dict(enumerate(partition))).explode()
+
+    # communities = pd.Series(dict(enumerate(
+    #     cluster_graph.community_leading_eigenvector(
+    #         clusters=int(189*gamma)
+    #     )
+    # )))
+
+    # Set the "cluster" attribute
+    graph.vs['cluster'] = communities.sort_values().index
+

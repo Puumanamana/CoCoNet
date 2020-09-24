@@ -12,6 +12,7 @@ from pathlib import Path
 from math import ceil
 from textwrap import wrap
 from functools import lru_cache
+from itertools import chain, islice
 
 import h5py
 import numpy as np
@@ -179,3 +180,12 @@ def get_coverage(pairs, h5_file, window_size, window_step):
 def avg_window(x, window_size, window_step):
     x_conv = np.convolve(x, np.ones(window_size)/window_size, mode="valid")
     return x_conv[::window_step]
+
+
+def chunk(*it, size=2):
+    '''
+    Function adapted from senderle's answer in
+    https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+    '''
+    it = chain(*it)
+    return iter(lambda: tuple(islice(it, size)), ())
