@@ -35,7 +35,7 @@ def make_pregraph(
     """
 
     contigs = features[0].get_contigs()
-    
+
     # Intersect neighbors for all features
     neighbors_each = [feature.get_neighbors_index() for feature in features]
 
@@ -50,7 +50,7 @@ def make_pregraph(
     # Initialize graph
     graph = igraph.Graph()
     graph.add_vertices(contigs)
-    
+
     edges = dict()
 
     # Get input data handles
@@ -66,7 +66,7 @@ def make_pregraph(
     if edges:
         graph.add_edges(list(edges.keys()))
         graph.es['weight'] = list(edges.values())
-        
+
     for handle in handles:
         handle[1].close()
 
@@ -81,7 +81,7 @@ def refine_clustering(
         **kwargs
 ):
     """
-    Refines graph by computing remaining edges within each cluster 
+    Refines graph by computing remaining edges within each cluster
     and re-clustering the whole graph.
 
     Args:
@@ -119,7 +119,7 @@ def refine_clustering(
     for cluster in clusters:
         contigs_c = pre_graph.vs.select(cluster=cluster)['name']
         n_c = len(contigs_c)
-        
+
         if n_c <= 2:
             continue
 
@@ -133,10 +133,10 @@ def refine_clustering(
     if edges:
         pre_graph.add_edges(list(edges.keys()))
         pre_graph.es['weight'] = list(edges.values())
-        
+
     for _, handle in handles:
         handle.close()
-    
+
     get_communities(pre_graph, edge_threshold, gamma=gamma2, **kwargs)
     assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
 
@@ -161,7 +161,7 @@ def refine_clustering(
     communities.to_csv(assignments_file, header=False)
 
 
-   
+
 def contig_pair_iterator(
         contig, neighbors_index=None, graph=None, max_neighbors=100
 ):
@@ -177,7 +177,7 @@ def contig_pair_iterator(
     Returns:
         Generator: Generates (contig, contigs) pairs
     """
-    
+
     contigs = np.array(graph.vs['name'])
     # Since we use .pop(), we need the last neighbors to be the closest
     neighbors_index = list(neighbors_index[::-1])
@@ -186,12 +186,12 @@ def contig_pair_iterator(
     while neighbors_index:
         neighbor_index = neighbors_index.pop()
         neighbor = contigs[neighbor_index]
-        
+
         if i < max_neighbors:
             if graph.are_connected(contig, neighbor) or contig == neighbor:
                 continue
             i += 1
-        
+
             yield (contig, neighbor)
 
 
@@ -201,7 +201,7 @@ def compute_pairwise_comparisons(
 ):
     """
     Computes all comparisons between contig pairs produced by `pairs generator` using the provided `model`.
-    A given contig-contig comparison involves comparing all n_frag*(n_frag-1)/2 pairs of fragments from 
+    A given contig-contig comparison involves comparing all n_frag*(n_frag-1)/2 pairs of fragments from
     both contigs. When set, `vote_threshold` imposed a hard threshold on each fragment-fragment comparison
     and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold and 0 otherwise.
     To save some memory, all comparisons are done in batches and at most `buffer_size`
@@ -209,8 +209,8 @@ def compute_pairwise_comparisons(
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
-        handles (list): items are (key, file descriptor) where keys are feature names 
-          and values are handles to the latent representations of each 
+        handles (list): items are (key, file descriptor) where keys are feature names
+          and values are handles to the latent representations of each
           fragment in the contig (shape=(n_fragments, latent_dim))
         pairs_generator (tuple generator): contig pairs to compare
         vote_threshold (float or None): Voting scheme to compare fragments. (None means disabled)
@@ -237,7 +237,7 @@ def compute_pairwise_comparisons(
         # Load data
         for j, contig_pair in enumerate(pairs_buffer):
             pos = range(j*n_frag_pairs, (j+1)*n_frag_pairs)
-        
+
             for k, contig in enumerate(contig_pair):
                 for (feature, handle) in handles:
                     inputs[k][feature][pos] = handle[contig][:][comb_indices[k]]
@@ -249,7 +249,7 @@ def compute_pairwise_comparisons(
 
             if len(input_j) == 1: # Only one feature type
                 input_j = input_j[feature]
-  
+
         # make prediction
         probs = model.combine_repr(*inputs).detach().numpy()[:, 0]
 
@@ -265,7 +265,7 @@ def compute_pairwise_comparisons(
 
     return edges
 
-    
+
 def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, **kwargs):
     """
     Find communities in `graph` using the `alg` algorithm. Edges with weights lower than `threshold` are
@@ -295,7 +295,7 @@ def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, 
         )
     elif alg == 'label_propagation':
         communities = bin_graph.community_label_propagation(**kwargs)
-        
+
     elif alg == 'spectral':
         if 'cluster' in bin_graph.vs.attribute_names():
             # Pre-clustering
@@ -309,7 +309,6 @@ def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, 
     communities = pd.Series(dict(
         enumerate(communities)
     )).explode()
-    
+
     # Set the "bin" attribute
     graph.vs['cluster'] = communities.sort_values().index
-

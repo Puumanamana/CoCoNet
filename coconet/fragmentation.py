@@ -46,7 +46,7 @@ def calculate_optimal_dist(n_frags, fppc):
 def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128):
     """
     Select fragments as distant as possible for the given contig
-    
+
     Args:
         label (int): contig name
         frag_steps (int): number of steps in a fragment

@@ -219,7 +219,7 @@ def learn(cfg):
         f'kmer size={cfg.kmer}, cannonical={not cfg.no_rc}, '
         f'coverage smoothing=(wsize={cfg.wsize}, wstep={cfg.wstep}).'
     ))
-    
+
     train(
         model, **inputs,
         pairs=cfg.io['pairs'],
@@ -247,7 +247,7 @@ def precompute_latent_repr(cfg):
     Returns:
         None
     """
-    
+
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
     logger.info('Computing intermediate representation of composition and coverage features')
 

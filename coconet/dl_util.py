@@ -50,7 +50,7 @@ def load_model(config, from_checkpoint=False):
     """
     Wrapper around initialize_model. Loads model with parameters in config
     and loads weights if from_checkpoint is set to True.
-    
+
     Args:
         config (coconet.core.Configuration object)
         from_checkpoint (bool): whether to load a pre-trained model
@@ -85,7 +85,7 @@ def get_labels(pairs_file):
     Extract label from pair file
     = 1 if both species are identical,
     = 0 otherwise
-    
+
     Args:
         pairs_file (str): npy file with structured numpy array
     Returns:
@@ -135,7 +135,7 @@ def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=Non
         CompositionGenerator
         CoverageGenerator
         list (when `mode` is test)
-        
+
     """
 
     if mode == 'test':
@@ -180,8 +180,8 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet)
         fasta (str): path to fasta file
-        coverage (str): path to .h5 coverage file  
-        pairs (str): path to .npy pair file 
+        coverage (str): path to .h5 coverage file
+        pairs (str): path to .npy pair file
         test_output (str): filename to save neural network test results
         output (str): filename to save neural network model
         batch_size (int): Mini-batch for learning
@@ -291,7 +291,7 @@ def save_repr_all(model, fasta=None, coverage=None, output=None,
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet)
-        fasta (str): path to fasta file    
+        fasta (str): path to fasta file
         coverage (str): path to .h5 coverage file
         output (dict): filename to save latent representations for each feature
         n_frags (int): number of equal size fragments to split contigs
@@ -299,10 +299,10 @@ def save_repr_all(model, fasta=None, coverage=None, output=None,
         rc (bool): whether to take the reverse complements of kmer composition
         kmer (int): kmer for composition feature. Must be the same as the one used
           for the training.
-        wsize (int): window size for coverage smoothing. Must be the same as the 
+        wsize (int): window size for coverage smoothing. Must be the same as the
           one used for the training.
-        wstep (int): window step for coverage smoothing. Must be the same as the 
-          one used for the training. 
+        wstep (int): window step for coverage smoothing. Must be the same as the
+          one used for the training.
     Returns:
         None
     """

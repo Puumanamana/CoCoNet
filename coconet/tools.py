@@ -20,7 +20,7 @@ logger = logging.getLogger('CoCoNet')
 def run_if_not_exists(keys=('output',)):
     """
     Decorator to skip function if the outputs defined in `keys` already exist.
-    This decorator is overriden if the environment variable COCONET_CONTINUE 
+    This decorator is overriden if the environment variable COCONET_CONTINUE
     is not 'Y'.
 
     Args:
@@ -89,7 +89,7 @@ def kmer_rc_idx(k=4):
     Get the non redundant kmer indexes when reverse complement is on
 
     Args:
-        k (int): kmer size  
+        k (int): kmer size
     Returns:
         tuple(list, np.array): where the list are the indices to the canonical kmers
           and np.array maps the non-canonical indices to the corresponding canonical index
