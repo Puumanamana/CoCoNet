@@ -259,7 +259,7 @@ def test_save_repr():
 
     assert all(out.is_file() for out in output.values())
 
-    handles = {k: h5py.File(v) for (k, v) in output.items()}
+    handles = {k: h5py.File(v, 'r') for (k, v) in output.items()}
     firsts = {k: handle.get(list(handle.keys())[0]).shape
               for k, handle in handles.items()}
 
