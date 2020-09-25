@@ -3,6 +3,16 @@ from pathlib import Path
 
 
 def setup_logger(name, log_file, level=logging.INFO):
+    """
+    Setup logging if not set, or return logger if already exists
+
+    Args:
+        name (str): name of logger
+        log_file (str): path to save logs
+        level (int): log level for stderr
+    Returns:
+        logging.Logger
+    """
 
     # Create the Logger
     logger = logging.getLogger(name)

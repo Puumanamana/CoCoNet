@@ -18,6 +18,7 @@ from coconet.clustering import (compute_pairwise_comparisons,
                                 get_communities)
 from .data import generate_h5_file, generate_rd_model
 
+
 LOCAL_DIR = Path(__file__).parent
 
 def test_pairwise_comparisons():
@@ -73,19 +74,21 @@ def test_make_pregraph():
 
 def test_get_communities():
     adj = np.array([
-        [10, 10, 0, -1, -1],
-        [9, 10, 0, 0, 0],
-        [0, 0, 10, 8, 9],
-        [0, -1, 9, 10, 10],
-        [0, 0, 0, 10, 10]])
+        [10,  9,  0, -1, -1],
+        [ 9, 10,  0,  0,  0],
+        [ 0,  0, 10,  9,  9],
+        [-1,  0,  9, 10, 10],
+        [-1,  0,  9, 10, 10]
+    ])
 
     contigs = ['V{}|0'.format(i) for i in range(len(adj))]
 
     graph = igraph.Graph()
     graph.add_vertices(contigs)
 
-    edges = [(i, j, adj[i,j]) for i in range(len(contigs)) for j in range(len(contigs))
-             if adj[i, j] >= 0]
+    edges = [(contigs[i], contigs[j], adj[i,j]) for i in range(len(contigs)) for j in range(len(contigs))
+             if adj[i, j] >= 0 and i>j]
+    
     for i, j, w in edges:
         graph.add_edge(i, j, weight=w)
 
@@ -109,15 +112,15 @@ def test_refine_clustering():
 
     files = ['singletons.txt', 'pre_graph.pkl', 'graph.pkl', 'assignments.csv']
 
-    adj = np.array([[25, 24, 0, 0, -1],
-                    [23, 25, 0, -1, 0],
-                    [0, -1, 25, 25, 25],
-                    [-1, 0, 24, 25, 24],
-                    [0, -1, 18, 23, 25]])
+    adj = np.array([[25, 24,  0, -1,  0],
+                    [24, 25, -1,  0, -1],
+                    [ 0, -1, 25, 25, 24],
+                    [-1,  0, 25, 25, 23],
+                    [ 0, -1, 23, 23, 25]])
 
     contigs = ["V{}".format(i) for i in range(5)]
-    edges = [(i, j, adj[i, j]) for i in range(len(contigs)) for j in range(len(contigs))
-             if adj[i, j] >= 0]
+    edges = [(f"V{i}", f"V{j}", adj[i, j]) for i in range(len(contigs)) for j in range(len(contigs))
+             if adj[i, j] >= 0 and i>j]
 
     graph = igraph.Graph()
     graph.add_vertices(contigs)
@@ -131,9 +134,9 @@ def test_refine_clustering():
      .to_csv(files[0], sep='\t'))
 
     refine_clustering(model, features, files[1],
-                       singletons_file=files[0],
-                       graph_file=files[2],
-                       assignments_file=files[3])
+                      singletons_file=files[0],
+                      graph_file=files[2],
+                      assignments_file=files[3])
 
     clustering = pd.read_csv(files[3], header=None, index_col=0)[1]
 

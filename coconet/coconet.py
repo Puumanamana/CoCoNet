@@ -17,10 +17,10 @@ from coconet.clustering import make_pregraph, refine_clustering
 
 
 def main(**kwargs):
-    '''
+    """
     Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.
     CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
-    '''
+    """
 
     args = parse_args()
 
@@ -62,9 +62,14 @@ def main(**kwargs):
         cluster(cfg)
 
 def preprocess(cfg):
-    '''
+    """
     Preprocess assembly and coverage
-    '''
+
+    Args:
+        cfg (coconet.core.config.Configuration)
+    Returns:
+        None
+    """
 
     logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
 
@@ -118,12 +123,17 @@ def preprocess(cfg):
                      f'{composition.count("filt_fasta"):,} contigs remaining'))
 
 def make_train_test(cfg):
-    '''
+    """
     - Split contigs into fragments
     - Make pairs of fragments such that we have:
        - n/2 positive examples (fragments from the same contig)
        - n/2 negative examples (fragments from different contigs)
-    '''
+
+    Args:
+        cfg (coconet.core.config.Configuration)
+    Returns:
+        None
+    """
 
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
     if not cfg.io['filt_fasta'].is_file():
@@ -165,9 +175,14 @@ def make_train_test(cfg):
                    n_examples=n_examples[mode])
 
 def learn(cfg):
-    '''
+    """
     Deep learning model
-    '''
+
+    Args:
+        cfg (coconet.core.config.Configuration)
+    Returns:
+        None
+    """
 
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
 
@@ -223,6 +238,16 @@ def learn(cfg):
 
 
 def precompute_latent_repr(cfg):
+    """
+    Computes latent representation using the trained model.
+    Saves output in .h5 file for each feature
+
+    Args:
+        cfg (coconet.core.config.Configuration)
+    Returns:
+        None
+    """
+    
     logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
     logger.info('Computing intermediate representation of composition and coverage features')
 
@@ -239,9 +264,14 @@ def precompute_latent_repr(cfg):
     return model
 
 def cluster(cfg):
-    '''
+    """
     Make adjacency matrix and cluster contigs
-    '''
+
+    Args:
+        cfg (coconet.core.config.Configuration)
+    Returns:
+        None
+    """
 
     logger = setup_logger('clustering', cfg.io['log'], cfg.loglvl)
 
@@ -258,13 +288,13 @@ def cluster(cfg):
     features = cfg.get_features()
 
     logger.info('Pre-clustering contigs')
-    logger.info(f'Parameters: max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
+    logger.info(f'Parameters: alg={cfg.alg}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
     make_pregraph(model, features, output=cfg.io['pre_graph'],
                   vote_threshold=cfg.vote_threshold,
                   max_neighbors=cfg.max_neighbors)
 
     logger.info('Refining graph')
-    logger.info(f'Parameters: theta={cfg.theta}, gamma={cfg.gamma2}')
+    logger.info(f'Parameters: alg={cfg.alg}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')
     refine_clustering(
         model,
         features,
@@ -273,6 +303,8 @@ def cluster(cfg):
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         vote_threshold=cfg.vote_threshold,
+        alg=cfg.alg,
+        n_clusters=cfg.n_clusters,
         theta=cfg.theta,
         gamma1=cfg.gamma1,
         gamma2=cfg.gamma2

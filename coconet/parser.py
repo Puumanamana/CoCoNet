@@ -11,8 +11,8 @@ import os
 SUB_COMMANDS = ['preprocess', 'learn', 'cluster']
 
 def get_version():
-  from coconet import __version__
-  return 'CoCoNet v{version}'.format(version=__version__)
+    from coconet import __version__
+    return 'CoCoNet v{version}'.format(version=__version__)
 
 
 class ToPathAction(argparse.Action):
@@ -36,6 +36,7 @@ class ToPathAction(argparse.Action):
 
 def parse_args():
     '''
+    Command line parser for CoCoNet algorithm
     '''
 
     parser = argparse.ArgumentParser(
@@ -249,18 +250,26 @@ def parse_args():
             'from each pairwise comparison.')
     )
     cluster_parser.add_argument(
+      '--alg', type=str, default='leiden', choices=['leiden', 'label_propagation', 'spectral'],
+      help=('Algorithm for clustering the contig-contig graph. '
+            'Note: the number of cluster is required if "spectral" is chosen.')
+    )
+    cluster_parser.add_argument(
       '--theta', type=float, default=0.8,
-      help='Minimum percent of edges between two contigs to form an edge between them'
+      help='(leiden) Minimum percent of edges between two contigs to form an edge between them'
     )
     cluster_parser.add_argument(
       '--gamma1', type=float, default=0.1,
-      help='CPM optimization value for the first run of the Leiden clustering'
+      help='(leiden) CPM optimization value for the first run of the Leiden clustering'
     )
     cluster_parser.add_argument(
       '--gamma2', type=float, default=0.75,
-      help='CPM optimization value for the second run of the Leiden clustering'
+      help='(leiden) CPM optimization value for the second run of the Leiden clustering'
     )
-
+    cluster_parser.add_argument(
+      '--n-clusters', type=int,
+      help='(spectral) Estimated number of clusters.'
+    )
     #========================================================#
     #====================== Subparsers ======================#
     #========================================================#
@@ -296,6 +305,10 @@ def parse_args():
 
     if args.action is None:
         return parser.parse_known_args(['run'])[0]
+
+    if args.alg == 'spectral' and not isinstance(args.n_clusters, int):
+        print('--n-clusters needs to be set when --alg is "spectral"')
+        raise ValueError
 
     os.environ['COCONET_CONTINUE'] = 'Y' if getattr(args, 'continue') else 'N'
 

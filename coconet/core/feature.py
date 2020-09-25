@@ -89,5 +89,3 @@ class Feature:
         handle.close()
 
         return neighbors_ordered
-
-    

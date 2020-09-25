@@ -1,10 +1,6 @@
-'''
-Helpful routines for coconet
-- Decorator to prevent re-executing finished steps (for resuming)
-- kmer calculation
-- coverage extraction from a hdf5 and npy file
-- smoothing window
-'''
+"""
+Helpful functions for coconet
+"""
 
 import os
 import logging
@@ -22,9 +18,16 @@ KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
 logger = logging.getLogger('CoCoNet')
 
 def run_if_not_exists(keys=('output',)):
-    '''
-    Decorator to skip function if output exists
-    '''
+    """
+    Decorator to skip function if the outputs defined in `keys` already exist.
+    This decorator is overriden if the environment variable COCONET_CONTINUE 
+    is not 'Y'.
+
+    Args:
+        keys (tuple): outputs to verify
+    Returns:
+        function
+    """
 
     def run_if_not_exists_key(func):
 
@@ -63,6 +66,15 @@ def run_if_not_exists(keys=('output',)):
 
 @lru_cache(maxsize=None)
 def kmer_count(k, rc=False):
+    """
+    Counts the number of possible k-mers
+
+    Args:
+        k (int): kmer size
+        rc (bool): Use canonical k-mers
+    Returns:
+        int: number of possible kmers
+    """
     if not rc:
         return 4**k
 
@@ -73,9 +85,15 @@ def kmer_count(k, rc=False):
 
 @lru_cache(maxsize=None)
 def kmer_rc_idx(k=4):
-    '''
+    """
     Get the non redundant kmer indexes when reverse complement is on
-    '''
+
+    Args:
+        k (int): kmer size  
+    Returns:
+        tuple(list, np.array): where the list are the indices to the canonical kmers
+          and np.array maps the non-canonical indices to the corresponding canonical index
+    """
 
     mapping = []
     uniq_idx = set()
@@ -93,9 +111,15 @@ def kmer_rc_idx(k=4):
     return (list(uniq_idx), np.array(mapping))
 
 def get_kmer_number(sequence, k=4):
-    '''
+    """
     Converts A, C, G, T sequence into sequence of kmer numbers
-    '''
+
+    Args:
+        sequence (str): DNA sequence
+        k (int): kmer size
+    Returns:
+        list of kmer index/hash using the `KMER_CODES` encoding
+    """
 
     kmer_encoding = sequence.translate(KMER_CODES)
     kmer_indices = [int(kmer_encoding[i:i+2*k], 2) for i in range(0, 2*(len(sequence)-k+1), 2)]
@@ -103,10 +127,20 @@ def get_kmer_number(sequence, k=4):
     return kmer_indices
 
 def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
-    '''
+    """
     - Compute kmer occurrences in sequence
     - If kmer index are provided, skip the first part (faster)
-    '''
+
+    Args:
+        sequence (str or int list): DNA sequence
+        kmer (int): kmer size for composition
+        rc (bool): Use canonical k-mers
+        index (bool): whether kmer indexes are provided instead of char sequence
+        norm (bool): whether to normalize composition into ratios
+
+    Returns:
+        np.array: `kmer` frequencies for sequence
+    """
 
     if rc:
         uniq_idx, rev_mapping = kmer_rc_idx(kmer)
@@ -126,10 +160,16 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
     return occurrences
 
 def get_coverage(pairs, h5_file, window_size, window_step):
-    '''
+    """
     - Extracting coverage from h5 for all pairs of contigs in pairs
     - Smooth coverage with a sliding window of [window_size, window_step]
-    '''
+
+    Args:
+        pairs (np.recarray): Fragment pairs for which to extract coverage values
+        h5_file (str): Path to coverage file
+        window_size (int): Smoothing window size
+        window_step (int): Smoothing window step
+    """
 
     h5data = h5py.File(h5_file, 'r')
     contigs = np.unique(pairs['sp'].flatten())
@@ -178,14 +218,30 @@ def get_coverage(pairs, h5_file, window_size, window_step):
             coverage_feature[n_pairs:, :, :])
 
 def avg_window(x, window_size, window_step):
+    """
+    Averaging window with subsampling
+
+    Args:
+        x (np.array): Values to process
+        window_size (int): Smoothing window size
+        window_step (int): Smoothing window step
+    Returns:
+        np.array
+    """
     x_conv = np.convolve(x, np.ones(window_size)/window_size, mode="valid")
     return x_conv[::window_step]
 
 
 def chunk(*it, size=2):
-    '''
+    """
     Function adapted from senderle's answer in
     https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
-    '''
+
+    Args:
+        it (list): list of iterable
+        size (int): chunk size
+    Returns:
+        Iterator over the chunks of size `size` of it
+    """
     it = chain(*it)
     return iter(lambda: tuple(islice(it, size)), ())

@@ -93,7 +93,7 @@ class Configuration:
             self.cov_type = '.h5'
 
         if name in ['tmp_dir', 'output']:
-            filepath = Path(val).resolve()
+            filepath = Path(val)
 
         self.io[name] = filepath
 
@@ -115,8 +115,8 @@ class Configuration:
 
         # if coverage_h5 already exists, symlink it to the output folder
         if 'h5' in self.io:
-            src = self.io['h5'].resolve()
-            dest = Path(self.io['output'], output_files['h5']).resolve()
+            src = self.io['h5']
+            dest = Path(self.io['output'], output_files['h5'])
 
             if not src.is_file():
                 self.log(f'h5 was set as input but the file does not exist', 'critical')

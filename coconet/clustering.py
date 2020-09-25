@@ -1,6 +1,6 @@
-'''
+"""
 Groups all the functions required to run the clustering steps
-'''
+"""
 import logging
 from itertools import combinations
 
@@ -9,7 +9,6 @@ import pandas as pd
 
 import torch
 import igraph
-import leidenalg
 
 from coconet.tools import run_if_not_exists, chunk
 
@@ -23,15 +22,17 @@ def make_pregraph(
         max_neighbors=100,
         buffer_size=50
 ):
-    '''
+    """
+    Pre-cluster contigs into rough communities to be refined later.
+
     Args:
-        model: PyTorch neural network model
-        features: List of binning feature to use (composition, coverage, or both)
-        output: path to save igraph object
-        kw: dict of additional parameters to pass to contig_pair_iterator()
+        model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
+        features (list): List of binning feature to use (composition, coverage, or both)
+        output (str): path to save igraph object
+        kw (dict): additional parameters to pass to contig_pair_iterator()
     Returns:
         None
-    '''
+    """
 
     contigs = features[0].get_contigs()
     
@@ -76,22 +77,27 @@ def make_pregraph(
 def refine_clustering(
         model, features, pre_graph_file,
         singletons_file=None, graph_file=None, assignments_file=None,
-        theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None
+        theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None,
+        **kwargs
 ):
-    '''
+    """
+    Refines graph by computing remaining edges within each cluster 
+    and re-clustering the whole graph.
+
     Args:
-        model: PyTorch neural network model
-        features: List of binning feature to use (composition, coverage, or both)
-        pre_graph_file: Path to graph of pre-clustered contigs
-        singletons_file: Path to singleton contigs that were excluded for the analysis
-        assignments_file: Path to output bin assignments
-        theta: binary threshold to draw an edge between contigs
-        gamma1: Resolution parameter for leiden clustering in 1st iteration
-        gamma2: Resolution parameter for leiden clustering in 2nd iteration
-        vote_threshold: Voting scheme to compare fragments. (Default: disabled)
+        model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
+        features (list): List of binning feature to use (composition, coverage, or both)
+        pre_graph_file (str): Path to graph of pre-clustered contigs
+        singletons_file (str): Path to singleton contigs that were excluded for the analysis
+        assignments_file (str): Path to output bin assignments
+        theta (int): binary threshold to draw an edge between contigs
+        gamma1 (float): Resolution parameter for leiden clustering in 1st iteration
+        gamma2 (float): Resolution parameter for leiden clustering in 2nd iteration
+        vote_threshold (float or None): Voting scheme to compare fragments. (Default: disabled)
+        kwargs (dict): additional clustering parameters passed to get_communities
     Returns:
         None
-    '''
+    """
 
     # Data handles
     handles = [(feature.name, feature.get_handle('latent')) for feature in features]
@@ -101,7 +107,7 @@ def refine_clustering(
     pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
     edge_threshold = theta * n_frags**2
 
-    get_communities(pre_graph, edge_threshold, gamma=gamma1)
+    get_communities(pre_graph, edge_threshold, gamma=gamma1, **kwargs)
 
     # Refining the clusters
     clusters = np.unique(pre_graph.vs['cluster'])
@@ -131,7 +137,7 @@ def refine_clustering(
     for _, handle in handles:
         handle.close()
     
-    # get_communities(pre_graph, edge_threshold, gamma=gamma2)
+    get_communities(pre_graph, edge_threshold, gamma=gamma2, **kwargs)
     assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
 
     # Add the rest of the contigs (singletons) set aside at the beginning
@@ -159,15 +165,18 @@ def refine_clustering(
 def contig_pair_iterator(
         contig, neighbors_index=None, graph=None, max_neighbors=100
 ):
-    '''
+    """
+    Generator of (contig, contig1) pairs defined where `contig1`
+    are in the `neighbors` of `contig` that were not already edges in the `graph`
+
     Args:
-        contig: reference contig to be compared with the neighbors
-        neighbors_index: neighboring contigs index to consider
-        graph: Graph with already computed edges
-        max_neighbors: Maximum number of neighbors for a given contig
+        contig (str): reference contig to be compared with the neighbors
+        neighbors_index (list): neighboring contigs index to consider
+        graph (igraph.Graph): Graph with already computed edges
+        max_neighbors (int): Maximum number of neighbors for a given contig
     Returns:
-        Generator of (contig, contigs) pairs
-    '''
+        Generator: Generates (contig, contigs) pairs
+    """
     
     contigs = np.array(graph.vs['name'])
     # Since we use .pop(), we need the last neighbors to be the closest
@@ -190,18 +199,25 @@ def compute_pairwise_comparisons(
         model, handles, pairs_generator,
         vote_threshold=None, buffer_size=50
 ):
-    '''
+    """
+    Computes all comparisons between contig pairs produced by `pairs generator` using the provided `model`.
+    A given contig-contig comparison involves comparing all n_frag*(n_frag-1)/2 pairs of fragments from 
+    both contigs. When set, `vote_threshold` imposed a hard threshold on each fragment-fragment comparison
+    and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold and 0 otherwise.
+    To save some memory, all comparisons are done in batches and at most `buffer_size`
+    contig pairs are compared at once.
+
     Args:
-        model: PyTorch neural network model
-        handles: (key, descriptor) list where keys are feature names 
+        model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
+        handles (list): items are (key, file descriptor) where keys are feature names 
           and values are handles to the latent representations of each 
           fragment in the contig (shape=(n_fragments, latent_dim))
-        pairs_generator: (ctg1, ctg2) generator corresponding to the comparisons to compute
-        vote_threshold: Voting scheme to compare fragments. (Default: disabled)
-        buffer_size: Number of contigs to load at once.
+        pairs_generator (tuple generator): contig pairs to compare
+        vote_threshold (float or None): Voting scheme to compare fragments. (None means disabled)
+        buffer_size (int): Number of contigs to load at once.
     Returns:
-        dictionnary of edges computed with corresponding probability values
-    '''
+        dict: computed edges with corresponding probability values
+    """
 
     # Get all pairs of fragments between any 2 contigs
     (n_frags, latent_dim) = next(iter(handles[0][1].values())).shape
@@ -244,38 +260,56 @@ def compute_pairwise_comparisons(
         for j, contig_pair in enumerate(pairs_buffer):
             edges[contig_pair] =  sum(probs[j*n_frags**2:(j+1)*n_frags**2])
 
-        if i % 10 == 0:
+        if i % 10 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')
 
     return edges
 
     
-def get_communities(graph, threshold, gamma=0.5):
-    '''
+def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, **kwargs):
+    """
+    Find communities in `graph` using the `alg` algorithm. Edges with weights lower than `threshold` are
+    removed and only edge presence/absence is used for clustering. The other parameters are used
+    or not depending on which algorithm is chosen.
+
     Args:
-        graph: contig-contig igraph object
-        threshold: binary edge weight cutoff
-        gamma: Resolution parameter for leiden clustering
+        graph (igraph.Graph): contig-contig igraph object
+        threshold (int): binary edge weight cutoff
+        gamma (float): Resolution parameter for cluster density
+        alg (str): Community detection algorithm to use
+        kwargs (dict): additional parameters passed to the underlying
+          community detection algorithm
     Returns:
         None
-    '''
+    """
 
-    cluster_graph = graph.copy()
-    cluster_graph.es.select(weight_lt=threshold).delete()
+    bin_graph = graph.copy()
+    bin_graph.es.select(weight_lt=threshold).delete()
 
-    optimiser = leidenalg.Optimiser()
+    if alg == 'leiden':
+        communities = bin_graph.community_leiden(
+            objective_function="CPM",
+            resolution_parameter=gamma,
+            n_iterations=-1,
+            **kwargs
+        )
+    elif alg == 'label_propagation':
+        communities = bin_graph.community_label_propagation(**kwargs)
+        
+    elif alg == 'spectral':
+        if 'cluster' in bin_graph.vs.attribute_names():
+            # Pre-clustering
+            n_clusters = int(n_clusters*gamma)
 
-    partition = leidenalg.CPMVertexPartition(cluster_graph, resolution_parameter=gamma)
-    optimiser.optimise_partition(partition)
+        if not isinstance(n_clusters, int):
+            logger.critical('n_clusters is required for spectral clustering')
+            raise ValueError
+        communities = bin_graph.community_leading_eigenvector(int(n_clusters * gamma))
 
-    communities = pd.Series(dict(enumerate(partition))).explode()
-
-    # communities = pd.Series(dict(enumerate(
-    #     cluster_graph.community_leading_eigenvector(
-    #         clusters=int(189*gamma)
-    #     )
-    # )))
-
-    # Set the "cluster" attribute
+    communities = pd.Series(dict(
+        enumerate(communities)
+    )).explode()
+    
+    # Set the "bin" attribute
     graph.vs['cluster'] = communities.sort_values().index
 

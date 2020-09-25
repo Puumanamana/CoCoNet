@@ -1,7 +1,7 @@
-'''
+"""
 Tools to split contigs into smaller fragment
 to train the neural network
-'''
+"""
 
 import logging
 from math import ceil
@@ -14,21 +14,29 @@ from coconet.tools import run_if_not_exists
 logger = logging.getLogger('learning')
 
 def vstack_recarrays(arrays):
-    '''
+    """
     numpy.vstack destructures the recarray.
     Solution taken from Stackoverflow:
     stackoverflow.com/questions/1791791/stacking-numpy-recarrays-without-losing-their-recarrayness/14613280
-    '''
+
+    Args:
+        arrays (list of np.recarray): list of recarrays to vstack
+    Returns:
+        np.recarray
+    """
 
     return arrays[0].__array_wrap__(np.vstack(arrays))
 
 def calculate_optimal_dist(n_frags, fppc):
     """
-    For a given contig, get the maximum distance between fragments, s.t.:
-       - A fragment step (step)
-       - A number of fragment pairs per contig (fppc)
-       - A number of fragment per contig (n_frags)
+    For a given contig, get the maximum distance between fragments/
     Explanation for formula in paper
+
+    Args:
+        n_frags (int): Number of fragments
+        fppc (int): Number of fragments pairs per contig
+    Returns:
+        int: maximum distance between fragments
     """
 
     min_dist_in_steps = int(n_frags+0.5*(1-np.sqrt(8*fppc+1)))
@@ -36,9 +44,18 @@ def calculate_optimal_dist(n_frags, fppc):
     return min_dist_in_steps
 
 def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128):
-    '''
+    """
     Select fragments as distant as possible for the given contig
-    '''
+    
+    Args:
+        label (int): contig name
+        frag_steps (int): number of steps in a fragment
+        contig_frags (int): Number of fragments in contig
+        fppc (int): Number of fragments to generate
+        encoding_len (int): contig name encoding length (to save space)
+    Returns:
+        np.recarray: fragment pairs for contig label
+    """
 
     min_dist_in_step = calculate_optimal_dist(contig_frags, fppc)
 
@@ -63,11 +80,16 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
 
 def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
     """
-    n_frags_all: nb of fragments per genome
-    n_examples: nb of pairs to generate
-    frag_steps: nb of steps in a fragment
     1) select genome pairs
     2) select random fragments
+
+    Args:
+        n_frags_all (int): nb of fragments per genome
+        n_examples (int): nb of pairs to generate
+        frag_steps (int): number of steps in a fragment
+        encoding_len (int): contig name encoding length (to save space)
+    Returns:
+        np.recarray: fragment pairs for each distinct contig pair
     """
 
     pairs = np.recarray([n_examples, 2],
@@ -104,6 +126,16 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
 def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     """
     Extract positive and negative pairs for [contigs]
+
+    Args:
+        contigs (list): (name, sequence) of a set of contigs
+        step (int): distance between two consecutive fragments
+        frag_len (int): length of contig substrings
+        output (str): path to save pairs
+        n_examples (int): number of examples to generate
+
+    Returns:
+        np.recarray: fragment pairs for each pair
     """
 
     contig_frags = np.array([(1+len(ctg)-frag_len)//step
