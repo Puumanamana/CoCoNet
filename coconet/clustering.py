@@ -38,7 +38,7 @@ def make_pregraph(
     contigs = features[0].get_contigs()
     
     neighbors = get_neighbors([feature.get_handle('latent') for feature in features])
-    
+
     # Initialize graph
     graph = igraph.Graph()
     graph.add_vertices(contigs)
@@ -182,12 +182,12 @@ def get_neighbors(handles):
         tree = KDTree(contig_centers, leaf_size=min(100, n_contigs))  
 
         # Preserve the order for the first feature (should be the most predictive feature)
-        (_, new_indices) = tree.query_radius(
+        (new_indices, _) = tree.query_radius(
             contig_centers, radii, sort_results=(i==0), return_distance=True
         )
         
         if i == 0:
-            indices = [ind.astype(int) for ind in new_indices]
+            indices = new_indices
         else:
             # Get common neighbors with previous feature(s)
             for i, (idx1, idx2) in enumerate(zip(indices, new_indices)):
@@ -301,7 +301,6 @@ def compute_pairwise_comparisons(
 
         if i % 10 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')
-            import ipdb;ipdb.set_trace()
 
     return edges
 
