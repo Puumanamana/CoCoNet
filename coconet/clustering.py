@@ -175,8 +175,7 @@ def get_neighbors(handles):
         distance_to_resp_center = np.sqrt(np.sum(
             (components - contig_centers[:, None, :])**2, axis=2
         ))
-        # Radius of all spheres centered around a given contigs and within 2 standard deviations
-        # of the center of mass of the fragments
+        # Radius=mean distance to reference contig + 2 standard deviations
         radii = np.mean(distance_to_resp_center, axis=1) + 2*np.std(distance_to_resp_center, axis=1)
         
         tree = KDTree(contig_centers, leaf_size=min(100, n_contigs))  
