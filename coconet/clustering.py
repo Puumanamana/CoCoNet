@@ -6,14 +6,14 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
-
+from sklearn.neighbors import KDTree
 import torch
 import igraph
 
 from coconet.tools import run_if_not_exists, chunk
 
-logger = logging.getLogger('clustering')
 
+logger = logging.getLogger('clustering')
 
 @run_if_not_exists()
 def make_pregraph(
@@ -34,32 +34,24 @@ def make_pregraph(
         None
     """
 
+
     contigs = features[0].get_contigs()
-
-    # Intersect neighbors for all features
-    neighbors_each = [feature.get_neighbors_index() for feature in features]
-
-    if len(features) > 1:
-        neighbors = []
-        for (n1, n2) in zip(*neighbors_each):
-            common_neighbors = n1[np.isin(n1, n2)]
-            neighbors.append(common_neighbors)
-    else:
-        neighbors = neighbors_each[0]
-
+    
+    neighbors = get_neighbors([feature.get_handle('latent') for feature in features])
+    
     # Initialize graph
     graph = igraph.Graph()
     graph.add_vertices(contigs)
 
     edges = dict()
-
+    
     # Get input data handles
     handles = [(feature.name, feature.get_handle('latent')) for feature in features]
 
     # Get contig-contig pair generator
     pair_generators = (contig_pair_iterator(ctg, neighb_ctg, graph, max_neighbors=max_neighbors)
                        for (ctg, neighb_ctg) in zip(contigs, neighbors))
-
+    
     edges = compute_pairwise_comparisons(model, handles, pair_generators,
                                          vote_threshold=vote_threshold)
     # Add edges to graph
@@ -161,6 +153,48 @@ def refine_clustering(
     communities.to_csv(assignments_file, header=False)
 
 
+def get_neighbors(handles):
+    """
+    Returns contigs within a radius in both dimensions for each contig. 
+    Ordered by distance in first dimension.
+    TODO: use the dimension with the best test scores during learning
+
+    Args:
+        handles (tuple list): (feature name, hdf5 file descriptor)
+    Returns:
+        list: closest {max_neighbors} neighbors of each contig
+    """
+
+    n_contigs = len(next(iter(handles[0].keys())))
+    
+    for i, handle in enumerate(handles):
+        components = np.stack([np.array(handle[ctg][:]) for ctg in handle.keys()])
+        contig_centers = np.mean(components, axis=1)
+
+        # Distance of each fragment to its center (n_contigs, n_fragments, n_latent)
+        distance_to_resp_center = np.sqrt(np.sum(
+            (components - contig_centers[:, None, :])**2, axis=2
+        ))
+        # Radius of all spheres centered around a given contigs and within 2 standard deviations
+        # of the center of mass of the fragments
+        radii = np.mean(distance_to_resp_center, axis=1) + 2*np.std(distance_to_resp_center, axis=1)
+        
+        tree = KDTree(contig_centers, leaf_size=min(100, n_contigs))  
+
+        # Preserve the order for the first feature (should be the most predictive feature)
+        (_, new_indices) = tree.query_radius(
+            contig_centers, radii, sort_results=(i==0), return_distance=True
+        )
+        
+        if i == 0:
+            indices = [ind.astype(int) for ind in new_indices]
+        else:
+            # Get common neighbors with previous feature(s)
+            for i, (idx1, idx2) in enumerate(zip(indices, new_indices)):
+                valid = np.isin(idx1, idx2)
+                indices[i] = idx1[valid]
+
+    return indices
 
 def contig_pair_iterator(
         contig, neighbors_index=None, graph=None, max_neighbors=100
@@ -185,6 +219,7 @@ def contig_pair_iterator(
     i = 0
     while neighbors_index:
         neighbor_index = neighbors_index.pop()
+        
         neighbor = contigs[neighbor_index]
 
         if i < max_neighbors:
@@ -226,14 +261,15 @@ def compute_pairwise_comparisons(
                     np.tile(np.arange(n_frags), n_frags))
 
     edges = dict()
+    
+    # Initialize arrays to store inputs of the network
+    inputs = [{feature:
+               np.zeros((buffer_size*n_frag_pairs, latent_dim), dtype='float32')
+               for feature, _ in handles} for _ in range(2)]
 
     # Smaller chunks
     for i, pairs_buffer in enumerate(chunk(*pairs_generator, size=buffer_size)):
-        # Initialize arrays to store inputs of the network
-        inputs = [{feature:
-            np.zeros((buffer_size*n_frag_pairs, latent_dim), dtype='float32')
-                   for feature, _ in handles} for _ in range(2)]
-
+        
         # Load data
         for j, contig_pair in enumerate(pairs_buffer):
             pos = range(j*n_frag_pairs, (j+1)*n_frag_pairs)
@@ -243,15 +279,18 @@ def compute_pairwise_comparisons(
                     inputs[k][feature][pos] = handle[contig][:][comb_indices[k]]
 
         # Convert to pytorch
-        for j, input_j in enumerate(inputs):
-            for feature, matrix in input_j.items():
-                inputs[j][feature] = torch.from_numpy(matrix)
-
-            if len(input_j) == 1: # Only one feature type
-                input_j = input_j[feature]
+        inputs_torch = [
+            {feature: torch.from_numpy(matrix)
+             for feature, matrix in input_j.items()}
+            for input_j in inputs
+        ]
+        
+        if len(inputs_torch[0]) == 1: # Only one feature type
+            feature = next(iter(inputs_torch[0].keys()))
+            inputs_torch = [x[feature] for x in inputs_torch]
 
         # make prediction
-        probs = model.combine_repr(*inputs).detach().numpy()[:, 0]
+        probs = model.combine_repr(*inputs_torch).detach().numpy()[:, 0]
 
         if vote_threshold is not None:
             probs = probs > vote_threshold
@@ -262,6 +301,7 @@ def compute_pairwise_comparisons(
 
         if i % 10 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')
+            import ipdb;ipdb.set_trace()
 
     return edges
 

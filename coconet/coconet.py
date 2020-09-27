@@ -216,7 +216,7 @@ def learn(cfg):
 
     logger.info((
         f'Parameters: batch size={cfg.batch_size}, learning rate={cfg.learning_rate}, '
-        f'kmer size={cfg.kmer}, cannonical={not cfg.no_rc}, '
+        f'kmer size={cfg.kmer}, canonical={not cfg.no_rc}, '
         f'coverage smoothing=(wsize={cfg.wsize}, wstep={cfg.wstep}).'
     ))
 
