@@ -26,8 +26,9 @@ def setup_logger(name, log_file, level=logging.INFO):
 
         # Create a Formatter for formatting the log messages
         formatter = logging.Formatter(
-            '%(asctime)s (%(name)s) %(levelname)s: %(message)s',
-            '%Y-%m-%d %H:%M:%S'
+            '{asctime} {name:^15} {levelname}: {message}',
+            '%Y-%m-%d %H:%M:%S',
+            style="{"
         )
 
         # Create the Handler for logging data to a file

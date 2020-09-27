@@ -6,7 +6,8 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KDTree
+import sklearn.neighbors
+import hnswlib
 import torch
 import igraph
 
@@ -20,7 +21,8 @@ def make_pregraph(
         model, features, output,
         vote_threshold=None,
         max_neighbors=100,
-        buffer_size=50
+        buffer_size=50,
+        threads=1
 ):
     """
     Pre-cluster contigs into rough communities to be refined later.
@@ -37,7 +39,9 @@ def make_pregraph(
 
     contigs = features[0].get_contigs()
     
-    neighbors = get_neighbors([feature.get_handle('latent') for feature in features])
+    neighbors = get_neighbors(
+        [feature.get_handle('latent') for feature in features], threads=threads
+    )
 
     # Initialize graph
     graph = igraph.Graph()
@@ -153,7 +157,7 @@ def refine_clustering(
     communities.to_csv(assignments_file, header=False)
 
 
-def get_neighbors(handles):
+def get_neighbors(handles, threads=1):
     """
     Returns contigs within a radius in both dimensions for each contig. 
     Ordered by distance in first dimension.
@@ -165,7 +169,7 @@ def get_neighbors(handles):
         list: closest {max_neighbors} neighbors of each contig
     """
 
-    n_contigs = len(next(iter(handles[0].keys())))
+    n_contigs = len(handles[0])
     
     for i, handle in enumerate(handles):
         components = np.stack([np.array(handle[ctg][:]) for ctg in handle.keys()])
@@ -176,15 +180,25 @@ def get_neighbors(handles):
             (components - contig_centers[:, None, :])**2, axis=2
         ))
         # Radius=mean distance to reference contig + 2 standard deviations
-        radii = np.mean(distance_to_resp_center, axis=1) + 2*np.std(distance_to_resp_center, axis=1)
-        
-        tree = KDTree(contig_centers, leaf_size=min(100, n_contigs))  
+        radius = np.mean(distance_to_resp_center) + 2*np.std(distance_to_resp_center)
 
-        # Preserve the order for the first feature (should be the most predictive feature)
-        (new_indices, _) = tree.query_radius(
-            contig_centers, radii, sort_results=(i==0), return_distance=True
-        )
-        
+        if n_contigs < 10:
+            tree = sklearn.neighbors.NearestNeighbors(
+                radius=radius, algorithm='ball_tree', n_jobs=threads
+            )
+            tree.fit(contig_centers)
+
+            # Preserve the order for the first feature (should be the most predictive feature)
+            (_, new_indices) = tree.radius_neighbors(
+                contig_centers, sort_results=(i==0), return_distance=True
+            )
+        else: # use a more efficient library, hnswlib
+            p = hnswlib.Index(space='l2', dim=components.shape[-1])
+            p.init_index(max_elements=n_contigs, ef_construction=200, M=32)
+            p.set_num_threads(threads)
+            p.add_items(contig_centers)
+            new_indices, distances = p.knn_query(contig_centers, k=min(500, n_contigs))
+            new_indices = [idx[dist <= radius**2] for (idx, dist) in zip(new_indices, distances)]
         if i == 0:
             indices = new_indices
         else:

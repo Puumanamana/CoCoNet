@@ -29,7 +29,7 @@ def main(**kwargs):
     if kwargs:
         params.update(kwargs)
 
-    logger = setup_logger('CoCoNet', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
+    logger = setup_logger('<CoCoNet>', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
     action = params.pop('action')
 
     prev_config = Path(args.output, 'config.yaml')
@@ -71,7 +71,7 @@ def preprocess(cfg):
         None
     """
 
-    logger = setup_logger('preprocessing', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('<preprocessing>', cfg.io['log'], cfg.loglvl)
 
     composition = cfg.get_composition_feature()
 
@@ -135,7 +135,7 @@ def make_train_test(cfg):
         None
     """
 
-    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('<learning>', cfg.io['log'], cfg.loglvl)
     if not cfg.io['filt_fasta'].is_file():
         logger.warning('Input fasta file was not preprocessed. Using raw fasta instead.')
         cfg.io['filt_fasta'] = cfg.io['fasta']
@@ -184,7 +184,7 @@ def learn(cfg):
         None
     """
 
-    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('<learning>', cfg.io['log'], cfg.loglvl)
 
     model = load_model(cfg)
     model.train()
@@ -248,7 +248,7 @@ def precompute_latent_repr(cfg):
         None
     """
 
-    logger = setup_logger('learning', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('<learning>', cfg.io['log'], cfg.loglvl)
     logger.info('Computing intermediate representation of composition and coverage features')
 
     model = load_model(cfg, from_checkpoint=True)
@@ -273,7 +273,7 @@ def cluster(cfg):
         None
     """
 
-    logger = setup_logger('clustering', cfg.io['log'], cfg.loglvl)
+    logger = setup_logger('<clustering>', cfg.io['log'], cfg.loglvl)
 
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg, from_checkpoint=True)
@@ -289,9 +289,12 @@ def cluster(cfg):
 
     logger.info('Pre-clustering contigs')
     logger.info(f'Parameters: alg={cfg.alg}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
-    make_pregraph(model, features, output=cfg.io['pre_graph'],
-                  vote_threshold=cfg.vote_threshold,
-                  max_neighbors=cfg.max_neighbors)
+    make_pregraph(
+        model, features, output=cfg.io['pre_graph'],
+        vote_threshold=cfg.vote_threshold,
+        max_neighbors=cfg.max_neighbors,
+        threads=cfg.threads
+    )
 
     logger.info('Refining graph')
     logger.info(f'Parameters: alg={cfg.alg}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')

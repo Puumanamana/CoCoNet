@@ -29,5 +29,7 @@ setup(name='coconet-binning',
           'torch>=1.0',
           'Biopython',
           'python-igraph>=0.8',
-          'pysam>=0.16'
+          'pysam>=0.16',
+          'pybind11',
+          'hnswlib'
       ])
