@@ -14,7 +14,7 @@ class CoverageFeature(Feature):
         Feature.__init__(self, **kwargs)
         self.name = 'coverage'
 
-    def get_contigs(self, key='h5'):        
+    def get_contigs(self, key='h5'):
         with h5py.File(self.path['h5'], 'r') as handle:
             contigs = list(handle.keys())
         return np.array(contigs)
@@ -22,7 +22,7 @@ class CoverageFeature(Feature):
     def n_samples(self):
         with h5py.File(self.path['h5'], 'r') as handle:
             n_samples = next(iter(handle.values())).shape[0]
-        
+
         return n_samples
 
     @run_if_not_exists()
@@ -80,7 +80,7 @@ class CoverageFeature(Feature):
         h5_handle.close()
 
     def filter_by_ids(self, ids=None, ids_file=None):
-        h5_handle = h5py.File(self.path['h5'], 'a')  
+        h5_handle = h5py.File(self.path['h5'], 'a')
 
         if ids_file is not None:
             ids = {x.strip().split()[0] for x in open(ids_file)}
