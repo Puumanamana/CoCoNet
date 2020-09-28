@@ -6,9 +6,11 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+
+WORKDIR /workspace
+
 RUN git clone https://github.com/Puumanamana/CoCoNet.git \
     && cd CoCoNet \
     && pip install . \
     && rm -rf CoCoNet
 
-WORKDIR /workspace

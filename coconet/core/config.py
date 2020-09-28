@@ -113,18 +113,14 @@ class Configuration:
             repr={feature: f'latent_{feature}.h5' for feature in self.features}
         )
 
-        # if coverage_h5 already exists, symlink it to the output folder
+        # if coverage_h5 already exists, copy it to the output folder
         if 'h5' in self.io:
             src = self.io['h5']
             dest = Path(self.io['output'], output_files['h5'])
 
-            if not src.is_file():
-                self.log(f'h5 was set as input but the file does not exist', 'critical')
+            if not src.is_file() and 'bam' not in self.io:
+                self.log(f'Could not find any coverage files', 'critical')
                 raise FileNotFoundError
-
-                if 'bam' not in self.io:
-                    self.log(f'Could not find any bam file in the inputs. Aborting', 'critical')
-                    raise FileNotFoundError
 
             elif not dest.is_file():
                 shutil.copy(str(src), str(dest))

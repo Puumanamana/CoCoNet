@@ -209,10 +209,7 @@ def get_coverage(pairs, h5_file, window_size, window_step):
             )
             seen[(sp, start)] = cov_sp
 
-        try:
-            coverage_feature[sorted_idx[i]] = cov_sp
-        except:
-            import ipdb;ipdb.set_trace()
+        coverage_feature[sorted_idx[i]] = cov_sp
 
     return (coverage_feature[:n_pairs, :, :],
             coverage_feature[n_pairs:, :, :])

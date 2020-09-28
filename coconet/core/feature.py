@@ -1,7 +1,6 @@
 import logging
 import h5py
 import numpy as np
-from sklearn.neighbors import KDTree
 
 
 logger = logging.getLogger('<preprocessing>')
