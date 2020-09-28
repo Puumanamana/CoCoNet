@@ -1,6 +1,7 @@
 """
 Groups all the functions required to run the clustering steps
 """
+
 import logging
 from itertools import combinations
 
@@ -14,14 +15,14 @@ import igraph
 from coconet.tools import run_if_not_exists, chunk
 
 
-logger = logging.getLogger('clustering')
+logger = logging.getLogger('<clustering>')
 
 @run_if_not_exists()
 def make_pregraph(
-        model, features, output,
+        model, latent_vectors, output,
         vote_threshold=None,
         max_neighbors=100,
-        buffer_size=50,
+        buffer_size=500,
         threads=1
 ):
     """
@@ -29,49 +30,42 @@ def make_pregraph(
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
-        features (list): List of binning feature to use (composition, coverage, or both)
+        latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs, 
+          and values are the latent representations of the fragments in the contig
         output (str): path to save igraph object
         kw (dict): additional parameters to pass to contig_pair_iterator()
     Returns:
         None
     """
 
+    contigs = list(latent_vectors[0][1].keys())
 
-    contigs = features[0].get_contigs()
-    
-    neighbors = get_neighbors(
-        [feature.get_handle('latent') for feature in features], threads=threads
-    )
-
-    # Initialize graph
-    graph = igraph.Graph()
-    graph.add_vertices(contigs)
-
-    edges = dict()
-    
-    # Get input data handles
-    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
+    neighbors = get_neighbors(latent_vectors, threads=threads)
 
     # Get contig-contig pair generator
     pair_generators = (contig_pair_iterator(ctg, neighb_ctg, graph, max_neighbors=max_neighbors)
                        for (ctg, neighb_ctg) in zip(contigs, neighbors))
     
-    edges = compute_pairwise_comparisons(model, handles, pair_generators,
-                                         vote_threshold=vote_threshold)
+    # Initialize graph
+    graph = igraph.Graph()
+    graph.add_vertices(contigs)
+
+    edges = compute_pairwise_comparisons(
+        model, latent_vectors, pair_generators, vote_threshold=vote_threshold,
+        buffer_size=buffer_size
+    )
+
     # Add edges to graph
     if edges:
         graph.add_edges(list(edges.keys()))
         graph.es['weight'] = list(edges.values())
-
-    for handle in handles:
-        handle[1].close()
 
     # Save pre-graph
     graph.write_pickle(output)
 
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
 def refine_clustering(
-        model, features, pre_graph_file,
+        model, latent_vectors, pre_graph_file,
         singletons_file=None, graph_file=None, assignments_file=None,
         theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None,
         **kwargs
@@ -82,7 +76,8 @@ def refine_clustering(
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
-        features (list): List of binning feature to use (composition, coverage, or both)
+        latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs, 
+          and values are the latent representations of the fragments in the contig
         pre_graph_file (str): Path to graph of pre-clustered contigs
         singletons_file (str): Path to singleton contigs that were excluded for the analysis
         assignments_file (str): Path to output bin assignments
@@ -95,9 +90,8 @@ def refine_clustering(
         None
     """
 
-    # Data handles
-    handles = [(feature.name, feature.get_handle('latent')) for feature in features]
-    n_frags = next(iter(handles[0][1].values())).shape[0]
+    # Get dimensions from any latent vectors
+    (n_frags, _) = next(iter(latent_vectors[0][1].values())).shape
 
     # Pre-clustering
     pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
@@ -123,15 +117,12 @@ def refine_clustering(
         indices = np.random.choice(len(combs), min(len(combs), int(1e5)))
         comparisons.append([combs[i] for i in indices])
 
-    edges = compute_pairwise_comparisons(model, handles, comparisons)
+    edges = compute_pairwise_comparisons(model, latent_vectors, comparisons)
 
     # Add edges to graph
     if edges:
         pre_graph.add_edges(list(edges.keys()))
         pre_graph.es['weight'] = list(edges.values())
-
-    for _, handle in handles:
-        handle.close()
 
     get_communities(pre_graph, edge_threshold, gamma=gamma2, **kwargs)
     assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
@@ -157,22 +148,23 @@ def refine_clustering(
     communities.to_csv(assignments_file, header=False)
 
 
-def get_neighbors(handles, threads=1):
+def get_neighbors(latent_vectors, threads=1):
     """
     Returns contigs within a radius in both dimensions for each contig. 
     Ordered by distance in first dimension.
     TODO: use the dimension with the best test scores during learning
 
     Args:
-        handles (tuple list): (feature name, hdf5 file descriptor)
+        latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs, 
+          and values are the latent representations of the fragments in the contig
     Returns:
         list: closest {max_neighbors} neighbors of each contig
     """
 
-    n_contigs = len(handles[0])
+    n_contigs = len(latent_vectors[0][1])
     
-    for i, handle in enumerate(handles):
-        components = np.stack([np.array(handle[ctg][:]) for ctg in handle.keys()])
+    for i, (_, data) in enumerate(latent_vectors):
+        components = np.stack(list(data.values()))
         contig_centers = np.mean(components, axis=1)
 
         # Distance of each fragment to its center (n_contigs, n_fragments, n_latent)
@@ -180,9 +172,10 @@ def get_neighbors(handles, threads=1):
             (components - contig_centers[:, None, :])**2, axis=2
         ))
         # Radius=mean distance to reference contig + 2 standard deviations
-        radius = np.mean(distance_to_resp_center) + 2*np.std(distance_to_resp_center)
+        (q75, median, q25) = np.percentile(distance_to_resp_center, [75, 50, 25])
+        radius = median + (q75-q25)
 
-        if n_contigs < 10:
+        if n_contigs < 20000:
             tree = sklearn.neighbors.NearestNeighbors(
                 radius=radius, algorithm='ball_tree', n_jobs=threads
             )
@@ -192,12 +185,12 @@ def get_neighbors(handles, threads=1):
             (_, new_indices) = tree.radius_neighbors(
                 contig_centers, sort_results=(i==0), return_distance=True
             )
-        else: # use a more efficient library, hnswlib
+        else: # use a more efficient library: hnswlib
             p = hnswlib.Index(space='l2', dim=components.shape[-1])
             p.init_index(max_elements=n_contigs, ef_construction=200, M=32)
             p.set_num_threads(threads)
             p.add_items(contig_centers)
-            new_indices, distances = p.knn_query(contig_centers, k=min(500, n_contigs))
+            new_indices, distances = p.knn_query(contig_centers, k=min(1000, n_contigs))
             new_indices = [idx[dist <= radius**2] for (idx, dist) in zip(new_indices, distances)]
         if i == 0:
             indices = new_indices
@@ -244,8 +237,8 @@ def contig_pair_iterator(
 
 
 def compute_pairwise_comparisons(
-        model, handles, pairs_generator,
-        vote_threshold=None, buffer_size=50
+        model, latent_vectors, pairs_generator,
+        vote_threshold=None, buffer_size=500
 ):
     """
     Computes all comparisons between contig pairs produced by `pairs generator` using the provided `model`.
@@ -257,9 +250,8 @@ def compute_pairwise_comparisons(
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
-        handles (list): items are (key, file descriptor) where keys are feature names
-          and values are handles to the latent representations of each
-          fragment in the contig (shape=(n_fragments, latent_dim))
+        latent_vectors (list): items are (feature name, dict) where dict is the latent 
+          representations for all fragments in the contig (shape=(n_fragments, latent_dim))
         pairs_generator (tuple generator): contig pairs to compare
         vote_threshold (float or None): Voting scheme to compare fragments. (None means disabled)
         buffer_size (int): Number of contigs to load at once.
@@ -267,8 +259,9 @@ def compute_pairwise_comparisons(
         dict: computed edges with corresponding probability values
     """
 
-    # Get all pairs of fragments between any 2 contigs
-    (n_frags, latent_dim) = next(iter(handles[0][1].values())).shape
+    # Get dimensions from any latent vectors
+    (n_frags, latent_dim) = next(iter(latent_vectors[0][1].values())).shape
+    
     n_frag_pairs = n_frags**2
     comb_indices = (np.repeat(np.arange(n_frags), n_frags),
                     np.tile(np.arange(n_frags), n_frags))
@@ -278,18 +271,18 @@ def compute_pairwise_comparisons(
     # Initialize arrays to store inputs of the network
     inputs = [{feature:
                np.zeros((buffer_size*n_frag_pairs, latent_dim), dtype='float32')
-               for feature, _ in handles} for _ in range(2)]
+               for feature, _ in latent_vectors} for _ in range(2)]
 
     # Smaller chunks
     for i, pairs_buffer in enumerate(chunk(*pairs_generator, size=buffer_size)):
-        
-        # Load data
-        for j, contig_pair in enumerate(pairs_buffer):
-            pos = range(j*n_frag_pairs, (j+1)*n_frag_pairs)
 
-            for k, contig in enumerate(contig_pair):
-                for (feature, handle) in handles:
-                    inputs[k][feature][pos] = handle[contig][:][comb_indices[k]]
+        # Load data
+        for (feature, data) in latent_vectors:
+            for j, contig_pair in enumerate(pairs_buffer):
+                pos = range(j*n_frag_pairs, (j+1)*n_frag_pairs)
+
+                for k, contig in enumerate(contig_pair):
+                    inputs[k][feature][pos] = data[contig][comb_indices[k]]
 
         # Convert to pytorch
         inputs_torch = [
@@ -314,7 +307,7 @@ def compute_pairwise_comparisons(
 
         if i % 10 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')
-
+            
     return edges
 
 

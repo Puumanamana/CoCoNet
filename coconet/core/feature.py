@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 
 
-logger = logging.getLogger('preprocessing')
+logger = logging.getLogger('<preprocessing>')
 
 class Feature:
 
@@ -36,9 +36,6 @@ class Feature:
             if p is not None and p.is_file():
                 return True
 
-    def get_handle(self, key, mode='r'):
-        return h5py.File(self.path[key], mode)
-
     def synchronize(self, other, keys):
         contigs_1 = self.get_contigs(keys[0])
         contigs_2 = other.get_contigs(keys[1])
@@ -47,14 +44,19 @@ class Feature:
         diff21 = np.setdiff1d(contigs_2, contigs_1)
         inter = np.intersect1d(contigs_1, contigs_2)
 
-        warning = []
+        infos = []
         if diff12.size > 0:
             self.filter_by_ids(ids=diff12)
-            warning.append(f'{diff12.size:,} contigs are only present in the {self.name}')
+            infos.append(f'{diff12.size:,} contigs are only present in the {self.name}')
         if diff21.size > 0:
             other.filter_by_ids(ids=diff21)
-            warning.append(f'{diff21.size:,} contigs are only present in the {other.name}')
+            infos.append(f'{diff21.size:,} contigs are only present in the {other.name}')
 
-        if warning:
-            warning = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
-            logger.warning(warning)
+        if infos:
+            info = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
+            logger.info(info)
+
+    def get_h5_data(self, key='latent'):
+        with h5py.File(self.path[key], 'r') as handle:
+            data = {contig: matrix[:] for contig, matrix in handle.items()}
+            return data

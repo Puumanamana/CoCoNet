@@ -11,7 +11,7 @@ import numpy as np
 from coconet.tools import run_if_not_exists
 
 
-logger = logging.getLogger('learning')
+logger = logging.getLogger('<learning>')
 
 def vstack_recarrays(arrays):
     """

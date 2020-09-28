@@ -113,12 +113,11 @@ def preprocess(cfg):
             logger.info('\n'.join(bam_filtering_info))
 
     if cfg.io['h5'].is_file():
-        # Make sure the contig IDs are the same for both coverage and composition. Take the intersection otherwise
-        composition.synchronize(coverage, ['filt_fasta', 'h5'])
         # remove singletons
-        coverage.find_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
-        coverage.filter_by_ids(ids_file=cfg.io['singletons'])
-        composition.filter_by_ids(ids_file=cfg.io['singletons'])
+        coverage.remove_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
+        # Make sure the contig IDs are the same for both coverage and composition.
+        # Take the intersection otherwise
+        composition.synchronize(coverage, ['filt_fasta', 'h5'])
         logger.info((f'Prevalence filter (prevalence>={cfg.min_prevalence}) -> '
                      f'{composition.count("filt_fasta"):,} contigs remaining'))
 
@@ -285,12 +284,12 @@ def cluster(cfg):
         ))
         raise FileNotFoundError
 
-    features = cfg.get_features()
+    latent_vectors = [(feature.name, feature.get_h5_data()) for feature in cfg.get_features()]
 
     logger.info('Pre-clustering contigs')
     logger.info(f'Parameters: alg={cfg.alg}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
     make_pregraph(
-        model, features, output=cfg.io['pre_graph'],
+        model, latent_vectors, output=cfg.io['pre_graph'],
         vote_threshold=cfg.vote_threshold,
         max_neighbors=cfg.max_neighbors,
         threads=cfg.threads
@@ -300,7 +299,7 @@ def cluster(cfg):
     logger.info(f'Parameters: alg={cfg.alg}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')
     refine_clustering(
         model,
-        features,
+        latent_vectors,
         cfg.io['pre_graph'],
         singletons_file=cfg.io['singletons'],
         graph_file=cfg.io['graph'],

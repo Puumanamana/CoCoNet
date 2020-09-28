@@ -23,17 +23,12 @@ LOCAL_DIR = Path(__file__).parent
 
 def test_pairwise_comparisons():
     model = generate_rd_model()
-    h5_data = {k: generate_h5_file(8, 8, 8, n_samples=5, filename=k+'.h5')
-               for k in ['composition', 'coverage']}
-
-    handles = [(k, h5py.File(v, 'r')) for k, v in h5_data.items()]
+    h5_data = [(f, generate_h5_file(8, 8, 8, n_samples=5))
+               for f in ['composition', 'coverage']]
 
     pair_generators = (((x, y) for (x,y) in [('V0', 'V1'), ('V0', 'V2')]),)
 
-    edges = compute_pairwise_comparisons(model, handles, pair_generators, vote_threshold=0.5)
-
-    for v in h5_data.values():
-        v.unlink()
+    edges = compute_pairwise_comparisons(model, h5_data, pair_generators, vote_threshold=0.5)
 
     assert ('V0', 'V1') in edges
     assert ('V0', 'V2') in edges
@@ -56,17 +51,10 @@ def test_make_pregraph():
     output = Path('pregraph.pkl')
     model = generate_rd_model()
 
-    h5_files = [generate_h5_file(8, 8, 8, n_samples=5, filename=f'{name}.h5')
-                for name in ['compo', 'cover']]
-    features = [
-        CompositionFeature(path=dict(latent=h5_files[0])),
-        CoverageFeature(path=dict(latent=h5_files[1]))
-    ]
+    h5_data = [(name, generate_h5_file(8, 8, 8, n_samples=5))
+                for name in ['composition', 'coverage']]
 
-    make_pregraph(model, features, output)
-
-    features[0].path['latent'].unlink()
-    features[1].path['latent'].unlink()
+    make_pregraph(model, h5_data, output)
 
     assert output.is_file()
 
@@ -101,14 +89,8 @@ def test_get_communities():
 
 def test_refine_clustering():
     model = generate_rd_model()
-    h5_files = [generate_h5_file(*[8]*5, n_samples=5, filename=k+'.h5')
-                for k in ['composition', 'coverage']]
-
-    features = [
-        CompositionFeature(path=dict(latent=h5_files[0])),
-        CoverageFeature(path=dict(latent=h5_files[1]))
-    ]
-
+    h5_data = [(k, generate_h5_file(*[8]*5, n_samples=5))
+               for k in ['composition', 'coverage']]
 
     files = ['singletons.txt', 'pre_graph.pkl', 'graph.pkl', 'assignments.csv']
 
@@ -133,7 +115,7 @@ def test_refine_clustering():
     (pd.DataFrame([['W0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
      .to_csv(files[0], sep='\t'))
 
-    refine_clustering(model, features, files[1],
+    refine_clustering(model, h5_data, files[1],
                       singletons_file=files[0],
                       graph_file=files[2],
                       assignments_file=files[3])
@@ -142,7 +124,7 @@ def test_refine_clustering():
 
     all_files = all(Path(f).is_file() for f in files)
 
-    for f in files + h5_files:
+    for f in files:
         Path(f).unlink()
 
     assert all_files
@@ -153,8 +135,8 @@ def test_refine_clustering():
 
 
 if __name__ == '__main__':
-    # test_pairwise_comparisons()
+    test_pairwise_comparisons()
     # test_contig_pair_iterator()
     # test_make_pregraph()
     # test_get_communities()
-    test_refine_clustering()
+    # test_refine_clustering()

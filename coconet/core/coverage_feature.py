@@ -14,19 +14,15 @@ class CoverageFeature(Feature):
         Feature.__init__(self, **kwargs)
         self.name = 'coverage'
 
-    def get_contigs(self, key='h5'):
-        handle = self.get_handle(key)
-        contigs = list(handle.keys())
-        handle.close()
-
+    def get_contigs(self, key='h5'):        
+        with h5py.File(self.path['h5'], 'r') as handle:
+            contigs = list(handle.keys())
         return np.array(contigs)
 
     def n_samples(self):
-        handle = self.get_handle('h5')
-        first_elt = list(handle.keys())[0]
-        n_samples = handle[first_elt].shape[0]
-        handle.close()
-
+        with h5py.File(self.path['h5'], 'r') as handle:
+            n_samples = next(iter(handle.values())).shape[0]
+        
         return n_samples
 
     @run_if_not_exists()
@@ -63,13 +59,13 @@ class CoverageFeature(Feature):
         return counts
 
     @run_if_not_exists()
-    def find_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
+    def remove_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
 
         singletons_ids = []
         with open(output, 'w') as writer:
             header = ['contigs', 'length'] + [f'sample_{i}' for i in range(self.n_samples())]
             writer.write('\t'.join(header))
-            h5_handle = self.get_handle('h5', 'r')
+            h5_handle = h5py.File(self.path['h5'], 'a')
 
             for ctg, data in h5_handle.items():
                 ctg_coverage = data[:].mean(axis=1)
@@ -78,13 +74,13 @@ class CoverageFeature(Feature):
                 if prevalence < min_prevalence:
                     info = map(str, [ctg, data.shape[1]] + ctg_coverage.astype(str).tolist())
                     singletons_ids.append(ctg)
+                    del h5_handle[ctg]
 
                     writer.write('\n{}'.format('\t'.join(info)))
-
         h5_handle.close()
 
     def filter_by_ids(self, ids=None, ids_file=None):
-        h5_handle = self.get_handle('h5', 'a')
+        h5_handle = h5py.File(self.path['h5'], 'a')  
 
         if ids_file is not None:
             ids = {x.strip().split()[0] for x in open(ids_file)}

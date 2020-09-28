@@ -15,7 +15,7 @@ import numpy as np
 
 
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
-logger = logging.getLogger('CoCoNet')
+logger = logging.getLogger('<CoCoNet>')
 
 def run_if_not_exists(keys=('output',)):
     """

@@ -28,9 +28,9 @@ class Configuration:
 
     def log(self, msg, level):
         try:
-            logger = setup_logger('CoCoNet', self.io['log'], self.loglvl)
+            logger = setup_logger('<CoCoNet>', self.io['log'], self.loglvl)
         except (KeyError, AttributeError):
-            logger = logging.getLogger('CoCoNet')
+            logger = logging.getLogger('<CoCoNet>')
         getattr(logger, level)(msg)
 
     @classmethod

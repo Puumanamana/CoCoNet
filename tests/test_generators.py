@@ -1,5 +1,5 @@
 '''
-Tests for data generators
+ts for data generators
 '''
 
 from itertools import product
@@ -88,7 +88,7 @@ def test_smoothing(wsize=3, wstep=2):
 def test_get_coverage(window_size=4):
 
     pairs = generate_pair_file(save=False)
-    data_h5 = generate_h5_file(30, 40)
+    data_h5 = generate_h5_file(30, 40, filename='coverage.h5')
 
     (X1, X2) = get_coverage(pairs, data_h5, window_size, window_size // 2)
     (T1, T2) = slow_coverage(pairs, data_h5, window_size, window_size // 2)
@@ -100,7 +100,7 @@ def test_get_coverage(window_size=4):
 def test_get_coverage_with_unmatched_ctg(window_size=4):
 
     pairs = generate_pair_file(save=False)
-    data_h5 = generate_h5_file(30)
+    data_h5 = generate_h5_file(30, filename='coverage.h5')
 
     with pytest.raises(KeyError):
         assert get_coverage(pairs, data_h5, window_size, window_size // 2)

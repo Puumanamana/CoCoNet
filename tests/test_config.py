@@ -72,7 +72,7 @@ def test_input_sizes():
     cfg = Configuration()
     cfg.init_config(output='test123', kmer=4, no_rc=False,
                     fragment_length=10, wsize=4, wstep=2)
-    cfg.io['h5'] = generate_h5_file(10)
+    cfg.io['h5'] = generate_h5_file(10, filename='coverage.h5')
 
     input_shapes = {'composition': 136,
                     'coverage': (4, 2)}

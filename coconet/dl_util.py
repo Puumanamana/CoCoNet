@@ -16,7 +16,7 @@ from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 
-logger = logging.getLogger('learning')
+logger = logging.getLogger('<learning>')
 
 def initialize_model(model_type, input_shapes, architecture):
     """

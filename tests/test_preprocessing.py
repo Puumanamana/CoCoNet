@@ -33,7 +33,7 @@ def test_composition_feature():
     assert filtered_lengths == [20, 15]
 
 def test_coverage_feature():
-    h5 = generate_h5_file(10, 20)
+    h5 = generate_h5_file(10, 20, filename='coverage.h5')
     f = CoverageFeature(path={'h5': h5})
     ctg = f.get_contigs()
 
@@ -71,15 +71,15 @@ def test_remove_singletons():
     lengths = [60, 100, 80]
     h5_data = generate_h5_file(*lengths, n_samples=3,
                                baselines=[20, 40, 30],
-                               empty_samples=[[False]*3, [True, True, False], [False]*3])
+                               empty_samples=[[False]*3, [True, True, False], [False]*3],
+                               filename='coverage.h5')
     fasta = generate_fasta_file(*lengths)
     singleton_file = Path('singletons.txt')
 
     compo = CompositionFeature(path=dict(filt_fasta=fasta))
     cover = CoverageFeature(path=dict(h5=h5_data))
 
-    cover.find_singletons(output=singleton_file, min_prevalence=2)
-    cover.filter_by_ids(ids_file=singleton_file)
+    cover.remove_singletons(output=singleton_file, min_prevalence=2)
     compo.filter_by_ids(output='filt.fasta', ids_file=singleton_file)
 
     singletons = pd.read_csv('singletons.txt', sep='\t').values

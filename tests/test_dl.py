@@ -83,7 +83,7 @@ def test_load_data_compo():
     Test composition generator
     '''
 
-    fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS)
+    fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, filename='coverage.h5')
     contigs = [(ctg.id, str(ctg.seq)) for ctg in SeqIO.parse(fasta_file, 'fasta')]
     pairs_file = Path('pairs.npy').resolve()
 
@@ -109,7 +109,7 @@ def test_load_data_cover():
     '''
 
     contigs = generate_fasta_file(*TEST_CTG_LENGTHS, save=False)
-    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
+    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS, filename='coverage.h5')
     pairs_file = Path('pairs.npy').resolve()
 
     contigs = [(seq.id, str(seq.seq)) for seq in contigs]
@@ -192,7 +192,7 @@ def test_learn_save_load_model():
     pair_files = {'train': Path('{}/pairs_train.npy'.format(LOCAL_DIR)),
                   'test': Path('{}/pairs_test.npy'.format(LOCAL_DIR))}
 
-    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS)
+    coverage_file = generate_h5_file(*TEST_CTG_LENGTHS, filename='coverage.h5')
     fasta_file = generate_fasta_file(*TEST_CTG_LENGTHS, save=True)
 
     fasta = [(seq.id, str(seq.seq)) for seq in SeqIO.parse(fasta_file, 'fasta')]
@@ -226,7 +226,7 @@ def test_load_model():
 
     cfg = Configuration()
     cfg.init_config(output='.', **args)
-    cfg.io['h5'] = generate_h5_file(FL)
+    cfg.io['h5'] = generate_h5_file(FL, filename='coverage.h5')
 
     model = initialize_model('CoCoNet', cfg.get_input_shapes(), cfg.get_architecture())
     model_path = Path('CoCoNet.pth')
@@ -249,7 +249,7 @@ def test_save_repr():
 
     model = initialize_model('CoCoNet', TEST_SHAPES, TEST_ARCHITECTURE)
     fasta = generate_fasta_file(*TEST_CTG_LENGTHS)
-    coverage = generate_h5_file(*TEST_CTG_LENGTHS)
+    coverage = generate_h5_file(*TEST_CTG_LENGTHS, filename='coverage.h5')
 
     output = {k: Path('repr_{}.h5'.format(k))
               for k in ['composition', 'coverage']}

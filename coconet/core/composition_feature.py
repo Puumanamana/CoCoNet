@@ -36,9 +36,8 @@ class CompositionFeature(Feature):
         if 'fasta' in key:
             contigs =  [title.split()[0] for (title, _) in self.get_iterator(key=key)]
         elif key == 'latent':
-            handle = self.get_handle(key)
-            contigs = list(handle.keys())
-            handle.close()
+            with h5py.File(self.path[key], 'r') as handle:
+                contigs = list(handle.keys())
         return np.array(contigs)
 
     @run_if_not_exists()
