@@ -187,6 +187,8 @@ def get_coverage(pairs, h5_file, window_size, window_step):
             logger.error('One contig seem to have a null coverage across all samples')
             raise RuntimeError
 
+    h5data.close()
+
     n_pairs = len(pairs)
     n_samples, _ = np.array(list(coverage.values())[0]).shape
     frag_len = pairs['end'][0, 0] - pairs['start'][0, 0]

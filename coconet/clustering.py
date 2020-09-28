@@ -305,7 +305,7 @@ def compute_pairwise_comparisons(
         for j, contig_pair in enumerate(pairs_buffer):
             edges[contig_pair] =  sum(probs[j*n_frags**2:(j+1)*n_frags**2])
 
-        if i % 10 == 0 and i > 0:
+        if i % 100 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')
 
     return edges
