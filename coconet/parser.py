@@ -120,7 +120,7 @@ def parse_args():
 
     preproc_parser.add_argument(
       '--min-ctg-len', type=int, default=2048,
-      help='Minimum contig length. Default is 2048'
+      help='Minimum contig length'
     )
     preproc_parser.add_argument(
       '--min-prevalence', type=int, default=2,
