@@ -52,7 +52,7 @@ class Feature:
             infos.append(f'{diff21.size:,} contigs are only present in the {other.name}')
 
         if infos:
-            info = f"{' and '.join(warning)}. Taking the intersection ({inter.size} contigs)"
+            info = f"{' and '.join(infos)}. Taking the intersection ({inter.size} contigs)"
             logger.info(info)
 
     def get_h5_data(self, key='latent'):
