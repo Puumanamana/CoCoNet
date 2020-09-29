@@ -30,8 +30,7 @@ class Feature:
     def check_paths(self):
         for p in self.path.values():
             if isinstance(p, list):
-                if all(pi.is_file() for pi in p):
-                    return True
+                return all(pi.is_file() for pi in p)
             if p is not None and p.is_file():
                 return True
 

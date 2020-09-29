@@ -120,7 +120,6 @@ class Configuration:
 
             if not src.is_file() and 'bam' not in self.io:
                 self.log(f'Could not find any coverage files', 'critical')
-                raise FileNotFoundError
 
             elif not dest.is_file():
                 shutil.copy(str(src), str(dest))
@@ -212,9 +211,8 @@ class Configuration:
             self.log(
                 ('Could not find the .fasta file. '
                  'Did you run coconet preprocess with the --fasta flag?'),
-                'critical'
+                'error'
             )
-            raise FileNotFoundError
 
         return composition
 
