@@ -5,10 +5,10 @@ Hyperparameters
 
 CoCoNet's parameters were set in order to put an emphasis on bin homogeneity. However, depending on the research goal, the user might want to emphasize on either one. Mainly, three parameters can be adjusted to improve bin completeness at the cost of possibly decreased homogeneity:
 
-1. The fragment length, `--fragment-length`
-2. The minimum prevalence `--min-prevalence` (i.e. the number of samples a given contig appear in)
-3. The minimum number matches between two contigs connected by an edge in the contig-contig graph (:math:`\theta`), `--theta`
-4. The minimum edge density required for a cluster to be considered as a coherent bin (:math:`\gamma`), `--gamma2`
+1. The fragment length, :code:`--fragment-length`
+2. The minimum prevalence :code:`--min-prevalence` (i.e. the number of samples a given contig appear in)
+3. The minimum number matches between two contigs connected by an edge in the contig-contig graph, :math:`\theta`, :code:`--theta`
+4. The minimum edge density required for a cluster to be considered as a coherent bin, :math:`\gamma`, :code:`--gamma2`
 
 Decreasing the values of :math:`\theta` or :math:`\gamma`  (respectively 80\% and 75\% by default) decreases the binning stringency. This can, therefore, improve the completeness of viruses with higher variance in their k-mer or coverage patterns, albeit at the cost of possibly decreased homogeneity. Similarly, increasing the fragment length can minimize the variance in the k-mer and coverage distributions between contigs of the same species and, consequently, improve completeness. Nevertheless, a longer fragment length (or greater prevalence) thresholds can result in more contigs being assigned to singleton bins simply because they were not long enough to be processed. In addition, increasing the minimum prevalence will results in selecting contigs that are more broadly present across samples. Intuitively, a high prevalence provides a more robust information for binning; indeed, two contigs co-occurring in two samples provide a less robust evidence than if they were co-occurring in 5 samples. 
 Naturally, decreasing the values of :math:`\theta`, :math:`\gamma`, the fragment length or the minimum prevalence can result in more homogeneous but less complete bins.
@@ -19,33 +19,33 @@ A few other parameters can be worth tuning. However, their effect has not yet be
 Preprocessing
 ^^^^^^^^^^^^^
 
-- `--min-ctg-length` (default: 2048): Discard short contigs. Shorter contig's composition can have local pattern that very different than the complete genome. As a result, they might generate more false positives. In CoCoNet, `--min-ctg-length` needs to be longer than the `--fragment-length` since contigs are split into fragments during the clustering phase.
-- `--min-prevalence` (default: 2): Contig that appear in few samples are harder to bin since less information can be leveraged from their co-occurrence with other contigs. Therefore increasing the `--min-prevalence` should increase the binning quality (but filter out more contigs).
-- `--flag` (default: 3596): Sam flag filtering (corresponds to `-F` flag in samtools). The flag  meaning can be explored `here https://broadinstitute.github.io/picard/explain-flags.html`_
-- `--min-mapping-quality` (default: 30): Discards any alignment with a low quality
-- `--min-aln-coverage` (default: 50): Discards any alignment with less than x % aligned nucleotides
-- `--tlen-range` (default: no filtering): Discards any paired alignments with a template length outside this range
+- :code:`--min-ctg-length` (default: 2048): Discard short contigs. Shorter contig's composition can have local pattern that very different than the complete genome. As a result, they might generate more false positives. In CoCoNet, :code:`--min-ctg-length` needs to be longer than the :code:`--fragment-length` since contigs are split into fragments during the clustering phase.
+- :code:`--min-prevalence` (default: 2): Contig that appear in few samples are harder to bin since less information can be leveraged from their co-occurrence with other contigs. Therefore increasing the :code:`--min-prevalence` should increase the binning quality (but filter out more contigs).
+- :code:`--flag` (default: 3596): Sam flag filtering (corresponds to :code:`-F` flag in samtools). The flag  meaning can be explored `here https://broadinstitute.github.io/picard/explain-flags.html`_
+- :code:`--min-mapping-quality` (default: 30): Discards any alignment with a low quality
+- :code:`--min-aln-coverage` (default: 50): Discards any alignment with less than x % aligned nucleotides
+- :code:`--tlen-range` (default: no filtering): Discards any paired alignments with a template length outside this range
 
 
 Learning
 ^^^^^^^^
   
-- `-k` (default 4, recommended range is between 3-6): kmer size. It will impact the composition feature. The longer the kmer and the more specific it will be to a particular genome. However, for short fragments, it might generate very sparse vectors that might prevent the network to learn appropriately. As such, for kmer of size 5 or greater, we recommend increasing the fragment length as well.
-- `--wsize` (default: 64) and `--wstep` (default: 32) control the smoothing of the coverage input. Coverage is smoothed using an averaging window of length `wsize` and step `wstep`. 
-- `--n-train` (default: 1M): Number of training examples. Training examples are generated by randomly pairing contigs' fragments. Because there are many potential pairs (depending on the number and length of the contigs), we usually can generates millions of example. In our tests, the training usually starts to plateau after a few hundred thousands examples. Therefore, we set the number of training examples to 1 million.
-- The neural network learning hyperparameters: `--batch-size` (default: 256) and `--learning-rate` (default: 1e-4).
-- The neural network architecture: These values were empiriclly chosen and should not require any tuning. They are the number of neurons in the composition layer `--compo-neurons` (default: [64, 32]), in the coverage layer `--cover-neurons` (default: [64, 32]) and in the merging layer `--merge-neurons` (default: 32). The convolution in the coverage network is controlled by the number of filters `--cover-filters` (default: 32), the kernel size `--cover-kernel` (default: 7) and stride `--cover-stride` (default: 3).
-- `--load-batch` (default: 200): does not affect the accuracy but simply controls how many examples are loaded at once in the memory. It should be used if the memory is very limited.
-- `--n-frags` (default: 30): Number of fragments to split the contigs in for the clustering phase. More fragments should make the contig-contig comparisons more trustworthy. The number of non-redundant fixed-size fragments in a contig is however limited, and the value of this variable will likely plateau or even be detrimental is this value becomes to high.
+- :code:`-k` (default 4, recommended range is between 3-6): kmer size. It will impact the composition feature. The longer the kmer and the more specific it will be to a particular genome. However, for short fragments, it might generate very sparse vectors that might prevent the network to learn appropriately. As such, for kmer of size 5 or greater, we recommend increasing the fragment length as well.
+- :code:`--wsize` (default: 64) and :code:`--wstep` (default: 32) control the smoothing of the coverage input. Coverage is smoothed using an averaging window of length :code:`wsize` and step :code:`wstep`. 
+- :code:`--n-train` (default: 1M): Number of training examples. Training examples are generated by randomly pairing contigs' fragments. Because there are many potential pairs (depending on the number and length of the contigs), we usually can generates millions of example. In our tests, the training usually starts to plateau after a few hundred thousands examples. Therefore, we set the number of training examples to 1 million.
+- The neural network learning hyperparameters: :code:`--batch-size` (default: 256) and :code:`--learning-rate` (default: 1e-4).
+- The neural network architecture: These values were empiriclly chosen and should not require any tuning. They are the number of neurons in the composition layer :code:`--compo-neurons` (default: [64, 32]), in the coverage layer :code:`--cover-neurons` (default: [64, 32]) and in the merging layer :code:`--merge-neurons` (default: 32). The convolution in the coverage network is controlled by the number of filters :code:`--cover-filters` (default: 32), the kernel size :code:`--cover-kernel` (default: 7) and stride :code:`--cover-stride` (default: 3).
+- :code:`--load-batch` (default: 200): does not affect the accuracy but simply controls how many examples are loaded at once in the memory. It should be used if the memory is very limited.
+- :code:`--n-frags` (default: 30): Number of fragments to split the contigs in for the clustering phase. More fragments should make the contig-contig comparisons more trustworthy. The number of non-redundant fixed-size fragments in a contig is however limited, and the value of this variable will likely plateau or even be detrimental is this value becomes to high.
 
 
 Clustering
 ^^^^^^^^^^
 
-- `--max-neighbors` (default: 100): The maximum number of neighbors to consider to compute the adjacency matrix. Increasing it should make the results more accurate but might also significantly increase computing time.
-- `--vote-threshold` (default: None): When set, contigs are compared against each other using a voting scheme. Instead of summing the network probabilities across all fragments pairs between the two contigs, a hard threshold is used to set each comparion to 0 or 1.
-- `--theta` (default: 0.8): Minimum percent of edges between two contigs to form an edge between them.
-- `--algorithm` (default: leiden): Community detection or clustering algorithm to perform the binning. If "spectral" is chosen, then `--n-clusters` needs to be set.
-- `--gamma1` (default: 0.1): CPM optimization value for the first run of the Leiden clustering.
-- `--gamma2` (default: 0.75): CPM optimization value for the final run of the Leiden clustering.
-- `--n-clusters` (no default): When spectral clustering is used, it corresponds to the maximum bins in the data.
+- :code:`--max-neighbors` (default: 100): The maximum number of neighbors to consider to compute the adjacency matrix. Increasing it should make the results more accurate but might also significantly increase computing time.
+- :code:`--vote-threshold` (default: None): When set, contigs are compared against each other using a voting scheme. Instead of summing the network probabilities across all fragments pairs between the two contigs, a hard threshold is used to set each comparion to 0 or 1.
+- :code:`--theta` (default: 0.8): Minimum percent of edges between two contigs to form an edge between them.
+- :code:`--algorithm` (default: leiden): Community detection or clustering algorithm to perform the binning. If "spectral" is chosen, then :code:`--n-clusters` needs to be set.
+- :code:`--gamma1` (default: 0.1): CPM optimization value for the first run of the Leiden clustering.
+- :code:`--gamma2` (default: 0.75): CPM optimization value for the final run of the Leiden clustering.
+- :code:`--n-clusters` (no default): When spectral clustering is used, it corresponds to the maximum bins in the data.

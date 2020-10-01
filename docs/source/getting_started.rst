@@ -36,6 +36,7 @@ Install the development version with pip
 You can also install the most up to date version with the following command:
 
 .. code-block:: bash
+                
     git clone https://github.com/Puumanamana/CoCoNet.git
     cd CoCoNet
     pip install .
