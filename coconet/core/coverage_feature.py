@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 import numpy as np
 import h5py
@@ -7,6 +8,9 @@ import pysam
 from coconet.core.feature import Feature
 from coconet.tools import run_if_not_exists
 
+
+
+logger = logging.getLogger('<preprocessing>')
 
 class CoverageFeature(Feature):
 

@@ -250,7 +250,7 @@ def parse_args():
             'from each pairwise comparison.')
     )
     cluster_parser.add_argument(
-      '--alg', type=str, default='leiden', choices=['leiden', 'label_propagation', 'spectral'],
+      '--algorithm', type=str, default='leiden', choices=['leiden', 'label_propagation', 'spectral'],
       help=('Algorithm for clustering the contig-contig graph. '
             'Note: the number of cluster is required if "spectral" is chosen.')
     )

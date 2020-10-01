@@ -311,9 +311,9 @@ def compute_pairwise_comparisons(
     return edges
 
 
-def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, **kwargs):
+def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=None, **kwargs):
     """
-    Find communities in `graph` using the `alg` algorithm. Edges with weights lower than `threshold` are
+    Find communities in `graph` using the `algorithm` algorithm. Edges with weights lower than `threshold` are
     removed and only edge presence/absence is used for clustering. The other parameters are used
     or not depending on which algorithm is chosen.
 
@@ -321,7 +321,7 @@ def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, 
         graph (igraph.Graph): contig-contig igraph object
         threshold (int): binary edge weight cutoff
         gamma (float): Resolution parameter for cluster density
-        alg (str): Community detection algorithm to use
+        algorithm (str): Community detection algorithm to use
         kwargs (dict): additional parameters passed to the underlying
           community detection algorithm
     Returns:
@@ -331,17 +331,17 @@ def get_communities(graph, threshold, gamma=0.5, alg='leiden', n_clusters=None, 
     bin_graph = graph.copy()
     bin_graph.es.select(weight_lt=threshold).delete()
 
-    if alg == 'leiden':
+    if algorithm == 'leiden':
         communities = bin_graph.community_leiden(
             objective_function="CPM",
             resolution_parameter=gamma,
             n_iterations=-1,
             **kwargs
         )
-    elif alg == 'label_propagation':
+    elif algorithm == 'label_propagation':
         communities = bin_graph.community_label_propagation(**kwargs)
 
-    elif alg == 'spectral':
+    elif algorithm == 'spectral':
         if 'cluster' in bin_graph.vs.attribute_names():
             # Pre-clustering
             n_clusters = int(n_clusters*gamma)

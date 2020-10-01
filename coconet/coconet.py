@@ -287,7 +287,7 @@ def cluster(cfg):
     latent_vectors = [(feature.name, feature.get_h5_data()) for feature in cfg.get_features()]
 
     logger.info('Pre-clustering contigs')
-    logger.info(f'Parameters: alg={cfg.alg}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
+    logger.info(f'Parameters: alg={cfg.algorithm}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
     make_pregraph(
         model, latent_vectors, output=cfg.io['pre_graph'],
         vote_threshold=cfg.vote_threshold,
@@ -296,7 +296,7 @@ def cluster(cfg):
     )
 
     logger.info('Refining graph')
-    logger.info(f'Parameters: alg={cfg.alg}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')
+    logger.info(f'Parameters: alg={cfg.algorithm}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')
     refine_clustering(
         model,
         latent_vectors,
@@ -305,7 +305,7 @@ def cluster(cfg):
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         vote_threshold=cfg.vote_threshold,
-        alg=cfg.alg,
+        algorithm=cfg.algorithm,
         n_clusters=cfg.n_clusters,
         theta=cfg.theta,
         gamma1=cfg.gamma1,
