@@ -21,7 +21,7 @@ Preprocessing
 
 - :code:`--min-ctg-length` (default: 2048): Discard short contigs. Shorter contig's composition can have local pattern that very different than the complete genome. As a result, they might generate more false positives. In CoCoNet, :code:`--min-ctg-length` needs to be longer than the :code:`--fragment-length` since contigs are split into fragments during the clustering phase.
 - :code:`--min-prevalence` (default: 2): Contig that appear in few samples are harder to bin since less information can be leveraged from their co-occurrence with other contigs. Therefore increasing the :code:`--min-prevalence` should increase the binning quality (but filter out more contigs).
-- :code:`--flag` (default: 3596): Sam flag filtering (corresponds to :code:`-F` flag in samtools). The flag  meaning can be explored `here https://broadinstitute.github.io/picard/explain-flags.html`_
+- :code:`--flag` (default: 3596): Sam flag filtering (corresponds to :code:`-F` flag in samtools). The flag  meaning can be explored `here <https://broadinstitute.github.io/picard/explain-flags.html>`_
 - :code:`--min-mapping-quality` (default: 30): Discards any alignment with a low quality
 - :code:`--min-aln-coverage` (default: 50): Discards any alignment with less than x % aligned nucleotides
 - :code:`--tlen-range` (default: no filtering): Discards any paired alignments with a template length outside this range
