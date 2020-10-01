@@ -10,9 +10,10 @@
    :caption: Contents
 
    self
-   getting_started
-   basic_usage
+   getting-started
+   basic-usage
    hyperparameters
+   example-workflow
 
 Indices and tables
 ==================
