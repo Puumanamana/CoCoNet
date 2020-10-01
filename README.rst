@@ -15,7 +15,7 @@ CoCoNet documentation
 Citation (Work in progress)
 ---------------------------
 Arisdakessian C., Nigro O., Steward G., Poisson G., Belcaid M.
-Binning viral metagenomes using a deep neural network
+CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
 
 Description
 -----------
@@ -38,9 +38,9 @@ CoCoNet is available as the command line program. For a list of all the options,
 
 .. code-block:: bash
 
-    coconet -h
+    coconet run -h
 
-For more details, please see the documentation on `ReadTheDocs <https://coconet.readthedocs.io/en/latest/index.html>`_
+For more details, please see the documentation on `ReadTheDocs <https://coconet.readthedocs.io>`_
 
 Contribute
 ----------
