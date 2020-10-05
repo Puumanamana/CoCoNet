@@ -314,7 +314,9 @@ def parse_args():
     if args.action is None:
         return parser.parse_known_args(['run'])[0]
 
-    if args.algorithm == 'spectral' and not isinstance(args.n_clusters, int):
+    if (isinstance(algorithm, 'args')
+        and args.algorithm == 'spectral'
+        and not isinstance(args.n_clusters, int)):
         print('--n-clusters needs to be set when --algorithm is "spectral"')
         raise ValueError
 
