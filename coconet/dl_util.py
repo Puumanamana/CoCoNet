@@ -170,7 +170,7 @@ def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=Non
 
 @run_if_not_exists()
 def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
-          output=None, batch_size=None, **kwargs):
+          output=None, batch_size=None, test_batch=500, patience=5, **kwargs):
     """
     Train neural network:
     - Generate feature vectors (composition, coverage)
@@ -187,6 +187,8 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         test_output (str): filename to save neural network test results
         output (str): filename to save neural network model
         batch_size (int): Mini-batch for learning
+        test_batch (int): Test network every {test_batch} mini-batches
+        patience (int): Stop training if test accuracy does not improve for {patience}*{test_batch}
         kwargs (dict): Additional learning parameters
     Returns:
         None
@@ -196,14 +198,13 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
                   mode=mode, batch_size=batch_size, **kwargs)
         for mode in ['test', 'train']
     )
-    (y_train, y_test) = (
-        get_labels(pairs['train']), get_labels(pairs['test']
-        ).detach().numpy().astype(int)[:, 0])
+    (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']))
 
     optimizer = optim.Adam(model.parameters(), lr=kwargs['learning_rate'])
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
-    losses_buffer = deque(maxlen=500)
+    loss_buffer = dict(train=deque(maxlen=test_batch),
+                       test=deque(maxlen=patience))
 
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
@@ -211,22 +212,31 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         loss.backward()
         optimizer.step()
 
-        losses_buffer.append(loss.item())
+        loss_buffer['train'].append(loss.item())
 
         # Get test results
-        if (i % (n_batches//10) == 0) or (i == n_batches):
-            predictions = run_test(model, x_test)
+        if (i % test_batch == 0) or (i == n_batches):
+            model.eval()
+            predictions = model(*x_test)
             scores = get_test_scores(predictions, y_test)
 
-            train_msg = f"Loss<{np.mean(losses_buffer):.3f}>"
-            test_msg = ', '.join(f"{name}<{score['acc']:.1%}>"
-                                 for (name, score) in scores.items())
-            if logger is not None:
-                logger.info((
-                    f'Batch #{i:,}/{n_batches:,} - '
-                    f'Training loss: {train_msg}, '
-                    f'Test accuracy: {test_msg}'
-                ))
+            if 'combined' in scores:
+                test_loss = model.loss_op(predictions['combined'], y_test).mean().item()
+            else:
+                test_loss = model.loss_op(next(iter(predictions.values())), y_test).mean().item()
+            loss_buffer['test'].append(test_loss)
+
+            (train_loss, test_loss) = map(np.mean, [loss_buffer["train"], loss_buffer["test"]])
+            test_acc = ', '.join(f'{name}<{score["acc"]:.1%}>' for (name, score) in scores.items())
+            logger.info((
+                f'Batch #{i:,} - train loss<{train_loss:.3g}>, test loss<{test_loss:.3g}>, '
+                f'test accuracy: {test_acc}'
+            ))
+
+            if i > patience and np.mean(loss_buffer['test']) < loss_buffer['test'][-1]:
+                logger.info('Early stopping')
+                break
+
 
     torch.save({
         'state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'loss': loss,
@@ -234,24 +244,8 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
 
     # Save last test performance to file
     predictions.update({'truth': y_test})
+    predictions = {feature: pred.detach().numpy()[:, 0] for (feature, pred) in predictions.items()}
     pd.DataFrame(predictions).to_csv(test_output, index=False)
-
-def run_test(model, x_test):
-    """
-    Run model on test data
-
-    Args:
-        model (CompositionModel, CoverageNodel or CoCoNet)
-        x_test (list): Test inputs
-    Returns
-        dict: predictions from model for each feature
-    """
-
-    model.eval()
-    outputs_test = model(*x_test)
-    model.train()
-
-    return {key: val.detach().numpy()[:, 0] for (key, val) in outputs_test.items()}
 
 def get_test_scores(preds, truth):
     """
@@ -266,11 +260,12 @@ def get_test_scores(preds, truth):
     """
     scores = {}
 
+    y_true = truth.detach().numpy()[:, 0]
     for key, pred in preds.items():
-        pred_bin = (np.array(pred) > 0.5).astype(int)
+        pred_bin = (np.array(pred.detach().numpy()[:, 0]) > 0.5).astype(int)
 
         conf_df = pd.DataFrame(
-            confusion_matrix(truth, pred_bin, labels=[0, 1]),
+            confusion_matrix(y_true, pred_bin, labels=[0, 1]),
             columns=["0 (Pred)", "1 (Pred)"],
             index=["0 (True)", "1 (True)"]
         )

@@ -99,7 +99,7 @@ def kmer_rc_idx(k=4):
     uniq_idx = set()
 
     for i in range(4**k):
-        kmer_rev = ''.join(wrap('{:08b}'.format(4**k-1-i), 2)[::-1])
+        kmer_rev = ''.join(wrap(f'{4**k-1-i:0{2*k}b}', 2)[::-1])
         i_rev = int(kmer_rev, 2)
 
         if i_rev not in uniq_idx:

@@ -129,24 +129,6 @@ def test_load_data_cover():
     assert X1.shape == X2.shape
     assert X1.shape == (TEST_LEARN_PRMS['batch_size'], 2, 9)
 
-def test_run_test():
-    '''
-    Check if run_test works
-    '''
-
-    # TO IMPLEMENT
-
-def test_confusion_table():
-    '''
-    Check if confusion table works
-    '''
-
-    pred = {'fake': np.array([0.5, 0.6, 0.7, 0.3]),
-            'other': [1, 0.3, 0.2, 0.1]}
-    truth = np.array([0, 0, 1, 0])
-
-    get_test_scores(pred, truth)
-
 def test_composition_model():
     '''
     Test if composition model can compute an output

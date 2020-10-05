@@ -163,20 +163,28 @@ def parse_args():
       help='Ratio for train / test split'
     )
     dl_parser.add_argument(
-      '--n-train', type=int, default=int(1e6),
-      help='Number of training examples'
+      '--n-train', type=int, default=int(2e6),
+      help='Maximum number of training examples'
     )
     dl_parser.add_argument(
       '--n-test', type=int, default=int(1e4),
       help='Number of test examples'
     )
     dl_parser.add_argument(
+      '--learning-rate', type=float, default=1e-4,
+      help='Learning rate for gradient descent'
+    )
+    dl_parser.add_argument(
       '--batch-size', type=int, default=256,
       help='Batch size for training'
     )
     dl_parser.add_argument(
-      '--learning-rate', type=float, default=1e-4,
-      help='Learning rate for gradient descent'
+      '--test-batch', type=int, default=500,
+      help='Run test every %(default)s batches'
+    )
+    dl_parser.add_argument(
+      '--patience', type=int, default=5,
+      help='Early stopping if test accuracy does not improve for %(default)s consecutive tests'
     )
     dl_parser.add_argument(
       '--load-batch', type=int, default=200,
@@ -306,8 +314,8 @@ def parse_args():
     if args.action is None:
         return parser.parse_known_args(['run'])[0]
 
-    if args.alg == 'spectral' and not isinstance(args.n_clusters, int):
-        print('--n-clusters needs to be set when --alg is "spectral"')
+    if args.algorithm == 'spectral' and not isinstance(args.n_clusters, int):
+        print('--n-clusters needs to be set when --algorithm is "spectral"')
         raise ValueError
 
     os.environ['COCONET_CONTINUE'] = 'Y' if getattr(args, 'continue') else 'N'

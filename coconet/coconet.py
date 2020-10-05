@@ -215,7 +215,7 @@ def learn(cfg):
 
     logger.info((
         f'Parameters: batch size={cfg.batch_size}, learning rate={cfg.learning_rate}, '
-        f'kmer size={cfg.kmer}, canonical={not cfg.no_rc}, '
+        f'patience={cfg.patience}, kmer size={cfg.kmer}, canonical={not cfg.no_rc}, '
         f'coverage smoothing=(wsize={cfg.wsize}, wstep={cfg.wstep}).'
     ))
 
@@ -225,6 +225,8 @@ def learn(cfg):
         test_output=cfg.io['nn_test'],
         output=cfg.io['model'],
         batch_size=cfg.batch_size,
+        test_batch=cfg.test_batch,
+        patience=cfg.patience,
         learning_rate=cfg.learning_rate,
         kmer=cfg.kmer,
         rc=not cfg.no_rc,
