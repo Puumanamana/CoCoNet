@@ -42,7 +42,9 @@ def main(**kwargs):
     cfg.to_yaml()
 
     logger.info(f'Using {cfg.threads} threads')
-    logger.info(f'Features: {", ".join(args.features)}')
+
+    if hasattr(cfg, 'features'):
+        logger.info(f'Features: {", ".join(cfg.features)}')
 
     torch.set_num_threads(cfg.threads)
 
