@@ -21,6 +21,7 @@ setup(name='coconet-binning',
       python_requires='>=3.6',
       install_requires=[
           'argparse',
+          'psutil',
           'pyyaml==5.1.0',
           'numpy',
           'pandas>=1.0',
