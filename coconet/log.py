@@ -1,8 +1,21 @@
 import logging
+import psutil
 from pathlib import Path
 
 
-def setup_logger(name, log_file, level=logging.INFO):
+class MemoryTracer(logging.Filter):
+    def filter(self, record):
+        current_process = psutil.Process()
+        vmem = current_process.memory_full_info().rss
+
+        for child in current_process.children(recursive=True):
+            vmem += child.memory_full_info().rss
+        
+        record.vmem = f'{int(vmem/2**20):,} MB'
+        return True
+
+
+def setup_logger(name, log_file, level=logging.INFO, pid=None):
     """
     Setup logging if not set, or return logger if already exists
 
@@ -16,6 +29,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 
     # Create the Logger
     logger = logging.getLogger(name)
+    logger.addFilter(MemoryTracer())
 
     logger.setLevel(logging.DEBUG)
 
@@ -26,7 +40,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 
         # Create a Formatter for formatting the log messages
         formatter = logging.Formatter(
-            '{asctime} {name:^15} {levelname}: {message}',
+            '{asctime} (Mem: {vmem}) {name:^15} {levelname}: {message}',
             '%Y-%m-%d %H:%M:%S',
             style="{"
         )
