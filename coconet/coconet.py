@@ -85,7 +85,7 @@ def preprocess(cfg):
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
 
-    indent = ' ' * 42 # For logging multiline-formatting
+    indent = ' ' * 46 # For logging multiline-formatting
     if 'bam' in cfg.io:
         logger.info('Processing alignments and converting to h5 format')
 

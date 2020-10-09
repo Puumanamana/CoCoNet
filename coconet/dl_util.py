@@ -198,6 +198,7 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
                   mode=mode, batch_size=batch_size, **kwargs)
         for mode in ['test', 'train']
     )
+
     (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']))
 
     optimizer = optim.Adam(model.parameters(), lr=kwargs['learning_rate'])
@@ -205,7 +206,6 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     n_batches = n_examples // batch_size
     loss_buffer = dict(train=deque(maxlen=test_batch),
                        test=deque(maxlen=patience))
-
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])

@@ -8,7 +8,10 @@ class CompositionModel(nn.Module):
     def __init__(self, input_size, neurons=None):
         super(CompositionModel, self).__init__()
 
-        self.compo_shared = nn.Linear(input_size, neurons[0])
+        try:
+            self.compo_shared = nn.Linear(input_size, neurons[0])
+        except:
+            import ipdb;ipdb.set_trace()
         self.compo_siam = nn.Linear(2*neurons[0], neurons[1])
         self.compo_prob = nn.Linear(neurons[1], 1)
 

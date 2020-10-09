@@ -26,7 +26,7 @@ class MemoryTracer(logging.Filter):
             total_vms += vms
 
         record.vms = f'{total_vms/2**30:>5.1f} GB'
-        record.rss = f'{total_rss/2**30:>4.1f} GB'
+        record.rss = f'{total_rss/2**30:>5.1f} GB'
 
         return True
 
@@ -56,7 +56,7 @@ def setup_logger(name, log_file, level=logging.INFO, pid=None):
 
         # Create a Formatter for formatting the log messages
         formatter = logging.Formatter(
-            '{asctime} (VM:{vms}, RS:{rss}) {name:^15} {levelname}: {message}',
+            '{asctime} (RSS:{rss}) {name:^15} {levelname}: {message}',
             '%H:%M:%S',
             style="{"
         )

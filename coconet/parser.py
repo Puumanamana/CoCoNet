@@ -163,7 +163,7 @@ def parse_args():
       help='Ratio for train / test split'
     )
     dl_parser.add_argument(
-      '--n-train', type=int, default=int(2e6),
+      '--n-train', type=int, default=int(4e6),
       help='Maximum number of training examples'
     )
     dl_parser.add_argument(
@@ -171,7 +171,7 @@ def parse_args():
       help='Number of test examples'
     )
     dl_parser.add_argument(
-      '--learning-rate', type=float, default=1e-4,
+      '--learning-rate', type=float, default=1e-3,
       help='Learning rate for gradient descent'
     )
     dl_parser.add_argument(
@@ -179,7 +179,7 @@ def parse_args():
       help='Batch size for training'
     )
     dl_parser.add_argument(
-      '--test-batch', type=int, default=500,
+      '--test-batch', type=int, default=400,
       help='Run test every %(default)s batches'
     )
     dl_parser.add_argument(
@@ -192,23 +192,23 @@ def parse_args():
             'Consider lowering this value if your RAM is limited.')
     )
     dl_parser.add_argument(
-      '--compo-neurons', type=int, default=[64, 32], nargs=2,
+      '--compo-neurons', type=int, default=[128, 64], nargs=2,
       help='Number of neurons for the composition dense layers (x2)'
     )
     dl_parser.add_argument(
-      '--cover-neurons', type=int, default=[64, 32], nargs=2,
+      '--cover-neurons', type=int, default=[128, 64], nargs=2,
       help='Number of neurons for the coverage dense layers (x2)'
     )
     dl_parser.add_argument(
-      '--cover-filters', type=int, default=32,
+      '--cover-filters', type=int, default=16,
       help='Number of filters for convolution layer of coverage network.'
     )
     dl_parser.add_argument(
-      '--cover-kernel', type=int, default=7,
+      '--cover-kernel', type=int, default=4,
       help='Kernel size for convolution layer of coverage network.'
     )
     dl_parser.add_argument(
-      '--cover-stride', type=int, default=3,
+      '--cover-stride', type=int, default=2,
       help='Convolution stride for convolution layer of coverage network.'
     )
     dl_parser.add_argument(
