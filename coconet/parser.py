@@ -263,7 +263,7 @@ def parse_args():
             'Note: the number of cluster is required if "spectral" is chosen.')
     )
     cluster_parser.add_argument(
-      '--theta', type=float, default=0.8,
+      '--theta', type=float, default=0.7,
       help='(leiden) Minimum percent of edges between two contigs to form an edge between them'
     )
     cluster_parser.add_argument(
@@ -271,7 +271,7 @@ def parse_args():
       help='(leiden) CPM optimization value for the first run of the Leiden clustering'
     )
     cluster_parser.add_argument(
-      '--gamma2', type=float, default=0.75,
+      '--gamma2', type=float, default=0.6,
       help='(leiden) CPM optimization value for the second run of the Leiden clustering'
     )
     cluster_parser.add_argument(
