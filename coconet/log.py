@@ -4,15 +4,11 @@ from pathlib import Path
 
 
 class MemoryTracer(logging.Filter):
-    def mem_info(p):
-        info = child.memory_full_info()
-        return (info)
-
     def filter(self, record):
         process = psutil.Process()
-        rss = proc.memory_full_info().rss
+        rss = process.memory_full_info().rss
 
-        for child in self.process.children(recursive=True):
+        for child in process.children(recursive=True):
             rss += child.memory_full_info().rss
 
         record.rss = f'{rss/2**30:>5.1f} GB'

@@ -125,7 +125,7 @@ def refine_clustering(
 
     get_communities(graph, edge_threshold, gamma=gamma2, **kwargs)
     graph.write_pickle(graph_file)
-    
+
     # Write the cluster in .csv format
     communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])
     communities.to_csv(assignments_file, header=False)
