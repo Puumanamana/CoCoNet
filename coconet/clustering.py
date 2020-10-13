@@ -66,7 +66,7 @@ def make_pregraph(
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
 def refine_clustering(
         model, latent_vectors, pre_graph_file,
-        singletons_file=None, graph_file=None, assignments_file=None,
+        graph_file=None, assignments_file=None,
         theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None,
         **kwargs
 ):
@@ -79,7 +79,6 @@ def refine_clustering(
         latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs,
           and values are the latent representations of the fragments in the contig
         pre_graph_file (str): Path to graph of pre-clustered contigs
-        singletons_file (str): Path to singleton contigs that were excluded for the analysis
         assignments_file (str): Path to output bin assignments
         theta (int): binary threshold to draw an edge between contigs
         gamma1 (float): Resolution parameter for leiden clustering in 1st iteration
@@ -94,26 +93,26 @@ def refine_clustering(
     (n_frags, _) = next(iter(latent_vectors[0][1].values())).shape
 
     # Pre-clustering
-    pre_graph = igraph.Graph.Read_Pickle(pre_graph_file)
+    graph = igraph.Graph.Read_Pickle(pre_graph_file)
     edge_threshold = theta * n_frags**2
 
-    get_communities(pre_graph, edge_threshold, gamma=gamma1, **kwargs)
+    get_communities(graph, edge_threshold, gamma=gamma1, **kwargs)
 
     # Refining the clusters
-    clusters = np.unique(pre_graph.vs['cluster'])
+    clusters = np.unique(graph.vs['cluster'])
 
     logger.info(f'Processing {clusters.size} clusters')
 
     # Get contig-contig pair generator
     comparisons = []
     for cluster in clusters:
-        contigs_c = pre_graph.vs.select(cluster=cluster)['name']
+        contigs_c = graph.vs.select(cluster=cluster)['name']
         n_c = len(contigs_c)
 
         if n_c <= 2:
             continue
 
-        combs = [c for c in combinations(contigs_c, 2) if not pre_graph.are_connected(*c)]
+        combs = [c for c in combinations(contigs_c, 2) if not graph.are_connected(*c)]
         indices = np.random.choice(len(combs), min(len(combs), int(1e5)))
         comparisons.append([combs[i] for i in indices])
 
@@ -121,30 +120,14 @@ def refine_clustering(
 
     # Add edges to graph
     if edges:
-        pre_graph.add_edges(list(edges.keys()))
-        pre_graph.es['weight'] = list(edges.values())
+        graph.add_edges(list(edges.keys()))
+        graph.es['weight'] = list(edges.values())
 
-    get_communities(pre_graph, edge_threshold, gamma=gamma2, **kwargs)
-    assignments = pd.Series(dict(zip(pre_graph.vs['name'], pre_graph.vs['cluster'])))
-
-    # Add the rest of the contigs (singletons) set aside at the beginning
-    ignored = pd.read_csv(singletons_file, sep='\t', usecols=['contigs'], index_col='contigs')
-    ignored['clusters'] = np.arange(len(ignored)) + assignments.values.max() + 1
-
-    if np.intersect1d(ignored.index.values, pre_graph.vs['name']).size > 0:
-        logger.error('Something went wrong: singleton contigs are already in the graph.')
-        raise RuntimeError
-
-    pre_graph.add_vertices(ignored.index.values)
-
-    assignments = pd.concat([assignments, ignored.clusters]).loc[pre_graph.vs['name']]
-
-    # Update the graph
-    pre_graph.vs['cluster'] = assignments.tolist()
-    pre_graph.write_pickle(graph_file)
-
+    get_communities(graph, edge_threshold, gamma=gamma2, **kwargs)
+    graph.write_pickle(graph_file)
+    
     # Write the cluster in .csv format
-    communities = pd.Series(pre_graph.vs['cluster'], index=pre_graph.vs['name'])
+    communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])
     communities.to_csv(assignments_file, header=False)
 
 

@@ -104,13 +104,13 @@ class Configuration:
 
         output_files = dict(
             log='CoCoNet.log',
-            filt_fasta='assembly_filtered.fasta',
+            filt_fasta='assembly-filtered.fasta',
             h5='coverage.h5',
-            singletons='singletons.txt',
-            pairs={'test': 'pairs_test.npy', 'train': 'pairs_train.npy'},
-            model='CoCoNet.pth',
-            nn_test='CoCoNet_test.csv',
-            repr={feature: f'latent_{feature}.h5' for feature in self.features}
+            exclude='exclude.tsv',
+            pairs={'test': 'pairs-test.npy', 'train': 'pairs-train.npy'},
+            model='coconet.pth',
+            nn_test='coconet-test.csv',
+            repr={feature: f'latent-{feature}.h5' for feature in self.features}
         )
 
         # if coverage_h5 already exists, copy it to the output folder
@@ -148,6 +148,13 @@ class Configuration:
 
         if not hasattr(self, 'min_ctg_len'):
             self.min_ctg_len = 2*self.fragment_length
+
+        if hasattr(self, 'fragment_step'):
+            if self.fragment_length % self.fragment_step != 0:
+                self.fragment_length = (self.fragment_length // self.fragment_step) * self.fragment_step
+                logging.warning(
+                    f'fragment_length is not a multiple of fragment step. Setting fragment length to {self.fragment_length}'
+                )
 
     def to_yaml(self):
         '''

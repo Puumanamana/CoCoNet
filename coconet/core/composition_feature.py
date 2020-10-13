@@ -41,13 +41,21 @@ class CompositionFeature(Feature):
         return np.array(contigs)
 
     @run_if_not_exists()
-    def filter_by_length(self, output=None, min_length=None):
+    def filter_by_length(self, output=None, summary_output=None, min_length=None):
+        summary_handle = open(summary_output, 'w')
+        summary_handle.write('\t'.join(['contig', 'reason', 'value'])+'\n')
+
         with open(str(output), 'w') as writer:
             for (ctg_id, seq) in self.get_iterator('fasta'):
                 ctg_no_n = seq.upper().replace('N', '')
 
                 if len(ctg_no_n) >= min_length:
                     writer.write(f'>{ctg_id}\n{ctg_no_n}\n')
+                else:
+                    entry = '\t'.join([ctg_id, 'length', str(len(ctg_no_n))])
+                    summary_handle.write(f'{entry}\n')
+
+        summary_handle.close()
 
         self.path['filt_fasta'] = Path(output)
 
@@ -80,4 +88,3 @@ class CompositionFeature(Feature):
             if ctg_id in filt_ids:
                 positions = np.fromiter(seq, (np.unicode, 1)) != 'N'
                 yield (ctg_id, positions)
-

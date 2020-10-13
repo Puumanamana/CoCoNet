@@ -62,13 +62,11 @@ class CoverageFeature(Feature):
         counts[1:] /= counts[0]
         return counts
 
-    @run_if_not_exists()
     def remove_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
-
-        singletons_ids = []
-        with open(output, 'w') as writer:
-            header = ['contigs', 'length'] + [f'sample_{i}' for i in range(self.n_samples())]
-            writer.write('\t'.join(header))
+        if Path(output).is_file() and any('prevalence' in line for line in open(output)):
+            return
+        
+        with open(output, 'a') as writer:
             h5_handle = h5py.File(self.path['h5'], 'a')
 
             for ctg, data in h5_handle.items():
@@ -76,11 +74,11 @@ class CoverageFeature(Feature):
                 prevalence = sum(ctg_coverage > noise_level)
 
                 if prevalence < min_prevalence:
-                    info = map(str, [ctg, data.shape[1]] + ctg_coverage.astype(str).tolist())
-                    singletons_ids.append(ctg)
+                    cov_info = ctg_coverage.round(1).astype(str).tolist()
+                    info = '\t'.join([ctg, 'prevalence', ','.join(cov_info)])
                     del h5_handle[ctg]
 
-                    writer.write('\n{}'.format('\t'.join(info)))
+                    writer.write(f'{info}\n')
         h5_handle.close()
 
     def filter_by_ids(self, ids=None, ids_file=None):

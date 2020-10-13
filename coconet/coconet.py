@@ -78,7 +78,9 @@ def preprocess(cfg):
     composition = cfg.get_composition_feature()
 
     logger.info(f'Processing {composition.count("fasta"):,} contigs')
-    composition.filter_by_length(output=cfg.io['filt_fasta'], min_length=cfg.min_ctg_len)
+    composition.filter_by_length(output=cfg.io['filt_fasta'],
+                                 summary_output=cfg.io['exclude'],
+                                 min_length=cfg.min_ctg_len)
     logger.info((f'Length filter (L>{cfg.min_ctg_len} bp) -> '
                  f'{composition.count("filt_fasta"):,} contigs remaining'))
 
@@ -116,7 +118,7 @@ def preprocess(cfg):
 
     if cfg.io['h5'].is_file():
         # remove singletons
-        coverage.remove_singletons(output=cfg.io['singletons'], min_prevalence=cfg.min_prevalence)
+        coverage.remove_singletons(output=cfg.io['exclude'], min_prevalence=cfg.min_prevalence)
         # Make sure the contig IDs are the same for both coverage and composition.
         # Take the intersection otherwise
         composition.synchronize(coverage, ['filt_fasta', 'h5'])
@@ -165,8 +167,8 @@ def make_train_test(cfg):
     logger.info((
         f'Parameters: fragment_step={cfg.fragment_step}, '
         f'fragment_length={cfg.fragment_length}, '
-        f'#examples (train)={n_examples["train"]}, '
-        f'#examples (test)={n_examples["test"]}'
+        f'#training_samples={n_examples["train"]}, '
+        f'#test_samples={n_examples["test"]}'
     ))
     for mode, pair_file in cfg.io['pairs'].items():
         make_pairs([assembly[idx] for idx in assembly_idx[mode]],
@@ -305,7 +307,6 @@ def cluster(cfg):
         model,
         latent_vectors,
         cfg.io['pre_graph'],
-        singletons_file=cfg.io['singletons'],
         graph_file=cfg.io['graph'],
         assignments_file=cfg.io['assignments'],
         vote_threshold=cfg.vote_threshold,

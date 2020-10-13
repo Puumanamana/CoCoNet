@@ -204,48 +204,60 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     optimizer = optim.Adam(model.parameters(), lr=kwargs['learning_rate'])
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
-    loss_buffer = dict(train=deque(maxlen=test_batch),
-                       test=deque(maxlen=patience))
+    loss_buffer = deque(maxlen=patience)
+    
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
         loss.backward()
         optimizer.step()
 
-        loss_buffer['train'].append(loss.item())
+        if (i % test_batch != 0) and (i != n_batches):
+            continue
 
-        # Get test results
-        if (i % test_batch == 0) or (i == n_batches):
-            model.eval()
-            predictions = model(*x_test)
-            scores = get_test_scores(predictions, y_test)
+        # Get test results and save if improvements
+        metrics = run_test(model, x_test, y_test, loss_buffer, output, test_output)
 
-            if 'combined' in scores:
-                test_loss = model.loss_op(predictions['combined'], y_test).mean().item()
-            else:
-                test_loss = model.loss_op(next(iter(predictions.values())), y_test).mean().item()
-            loss_buffer['test'].append(test_loss)
+        test_acc = ', '.join(f'{name}<{scores["acc"]:.1%}>' for (name, scores) in metrics.items())
+        logger.info(f'Test accuracy after {i:,} batches (max={n_batches:,}): {test_acc}')
 
-            (train_loss, test_loss) = map(np.mean, [loss_buffer["train"], loss_buffer["test"]])
-            test_acc = ', '.join(f'{name}<{score["acc"]:.1%}>' for (name, score) in scores.items())
-            logger.info((
-                f'Batch #{i:,} - train loss<{train_loss:.3g}>, test loss<{test_loss:.3g}>, '
-                f'test accuracy: {test_acc}'
-            ))
+        # Stop if there are no significant improvement for {patience} test batches
+        if len(loss_buffer) > patience and np.min(loss_buffer) == loss_buffer[0]:
+            logger.info('Early stopping')
+            return
+        
+def run_test(model, x, y, test_losses, model_output=None, test_output=None):
+    """
+    Args:
+        model (CompositionModel, CoverageNodel or CoCoNet)
+        x (list of torch.Tensor): input test features
+        y (torch.Tensor): output test features
+        test_output (str): filename to save neural network test results
+        model_output (str): filename to save neural network model        
+    """
+    model.eval()
+    pred = model(*x)
+    model.train()
+    
+    scores = get_test_scores(pred, y)
 
-            if i > patience and np.mean(loss_buffer['test']) < loss_buffer['test'][-1]:
-                logger.info('Early stopping')
-                break
+    if 'combined' in scores:
+        loss = model.loss_op(pred['combined'], y).mean().item()
+    else:
+        loss = model.loss_op(next(iter(pred.values())), y).mean().item()
 
+    test_losses.append(loss)
 
-    torch.save({
-        'state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'loss': loss,
-    }, output)
+    # Save model if best so far
+    if loss <= min(test_losses):
+        torch.save(dict(state=model.state_dict()), model_output)
 
-    # Save last test performance to file
-    predictions.update({'truth': y_test})
-    predictions = {feature: pred.detach().numpy()[:, 0] for (feature, pred) in predictions.items()}
-    pd.DataFrame(predictions).to_csv(test_output, index=False)
+        pred.update(dict(truth=y))
+        pred = pd.DataFrame({key: vec.detach().numpy()[:, 0] for (key, vec) in pred.items()})
+        pred.to_csv(test_output, index=False)
+
+    return scores
+    
 
 def get_test_scores(preds, truth):
     """

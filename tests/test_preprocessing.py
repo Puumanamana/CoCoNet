@@ -24,11 +24,12 @@ def test_composition_feature():
     fasta_raw = generate_fasta_file(20, 10, 15)
     
     f = CompositionFeature(path=dict(fasta=fasta_raw))
-    f.filter_by_length('filtered.fasta', 12)
+    f.filter_by_length('filtered.fasta', summary_output='exclude.txt', min_length=12)
 
     filtered_lengths = [len(seq.seq) for seq in SeqIO.parse(f.path['filt_fasta'], 'fasta')]
     fasta_raw.unlink()
     f.path['filt_fasta'].unlink()
+    Path('exclude.txt').unlink()
 
     assert filtered_lengths == [20, 15]
 
@@ -82,15 +83,15 @@ def test_remove_singletons():
     cover.remove_singletons(output=singleton_file, min_prevalence=2)
     compo.filter_by_ids(output='filt.fasta', ids_file=singleton_file)
 
-    singletons = pd.read_csv('singletons.txt', sep='\t').values
+    singletons = pd.read_csv('singletons.txt', sep='\t', header=None).values
     n_filt = sum(1 for _ in SeqIO.parse('filt.fasta', 'fasta'))
 
     for f in [fasta, h5_data, 'singletons.txt', 'filt.fasta']:
         Path(f).unlink()
 
-    assert singletons.shape == (1, 2+3)
+    assert singletons.shape == (1, 3)
     assert n_filt == 2
         
 
 if __name__ == '__main__':
-    test_bam_to_h5()
+    test_remove_singletons()

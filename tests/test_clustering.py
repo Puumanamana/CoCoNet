@@ -92,7 +92,7 @@ def test_refine_clustering():
     h5_data = [(k, generate_h5_file(*[8]*5, n_samples=5))
                for k in ['composition', 'coverage']]
 
-    files = ['singletons.txt', 'pre_graph.pkl', 'graph.pkl', 'assignments.csv']
+    files = ['pre_graph.pkl', 'graph.pkl', 'assignments.csv']
 
     adj = np.array([[25, 24,  0, -1,  0],
                     [24, 25, -1,  0, -1],
@@ -109,18 +109,13 @@ def test_refine_clustering():
     for i, j, w in edges:
         graph.add_edge(i, j, weight=w)
 
-    graph.write_pickle(files[1])
+    graph.write_pickle(files[0])
 
-    # Singleton to be included in the end
-    (pd.DataFrame([['W0', 5, 10, 0, 0]], columns=['contigs', 'length'] + list(range(3)))
-     .to_csv(files[0], sep='\t'))
+    refine_clustering(model, h5_data, files[0],
+                      graph_file=files[1],
+                      assignments_file=files[2])
 
-    refine_clustering(model, h5_data, files[1],
-                      singletons_file=files[0],
-                      graph_file=files[2],
-                      assignments_file=files[3])
-
-    clustering = pd.read_csv(files[3], header=None, index_col=0)[1]
+    clustering = pd.read_csv(files[2], header=None, index_col=0)[1]
 
     all_files = all(Path(f).is_file() for f in files)
 
@@ -131,8 +126,6 @@ def test_refine_clustering():
     assert clustering.loc['V0'] == clustering.loc['V1']
     assert clustering.loc['V2'] == clustering.loc['V3']
     assert clustering.loc['V3'] == clustering.loc['V4']
-    assert len(clustering[clustering == clustering.loc['W0']]) == 1
-
 
 if __name__ == '__main__':
     test_pairwise_comparisons()

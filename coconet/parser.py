@@ -192,11 +192,11 @@ def parse_args():
             'Consider lowering this value if your RAM is limited.')
     )
     dl_parser.add_argument(
-      '--compo-neurons', type=int, default=[128, 64], nargs=2,
+      '--compo-neurons', type=int, default=[64, 32], nargs=2,
       help='Number of neurons for the composition dense layers (x2)'
     )
     dl_parser.add_argument(
-      '--cover-neurons', type=int, default=[128, 64], nargs=2,
+      '--cover-neurons', type=int, default=[64, 32], nargs=2,
       help='Number of neurons for the coverage dense layers (x2)'
     )
     dl_parser.add_argument(
@@ -317,7 +317,7 @@ def parse_args():
     if (hasattr(args, 'algorithm')
         and args.algorithm == 'spectral'
         and not isinstance(args.n_clusters, int)):
-        print('--n-clusters needs to be set when --algorithm is "spectral"')
+        logging.warning('--n-clusters needs to be set when --algorithm is "spectral"')
         raise ValueError
 
     os.environ['COCONET_CONTINUE'] = 'Y' if getattr(args, 'continue') else 'N'
