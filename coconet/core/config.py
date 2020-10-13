@@ -103,13 +103,13 @@ class Configuration:
         '''
 
         output_files = dict(
-            log='CoCoNet.log',
+            log='.log',
             filt_fasta='assembly-filtered.fasta',
             h5='coverage.h5',
             exclude='exclude.tsv',
             pairs={'test': 'pairs-test.npy', 'train': 'pairs-train.npy'},
             model='coconet.pth',
-            nn_test='coconet-test.csv',
+            nn_test='nn-test.csv',
             repr={feature: f'latent-{feature}.h5' for feature in self.features}
         )
 

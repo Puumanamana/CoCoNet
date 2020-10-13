@@ -3,30 +3,19 @@ import psutil
 from pathlib import Path
 
 
-def get_mem(proc):
-    info = proc.memory_full_info()
-
-    return (info.rss, info.vms)
-
 class MemoryTracer(logging.Filter):
-    def __init__(self, process, *args, **kwargs):
-        logging.Filter.__init__(self, *args, **kwargs)
-        self.process = process
-
     def mem_info(p):
         info = child.memory_full_info()
         return (info)
 
     def filter(self, record):
-        (total_rss, total_vms) = get_mem(self.process)
+        process = psutil.Process()
+        rss = proc.memory_full_info().rss
 
         for child in self.process.children(recursive=True):
-            (rss, vms) = get_mem(child)
-            total_rss += rss
-            total_vms += vms
+            rss += child.memory_full_info().rss
 
-        record.vms = f'{total_vms/2**30:>5.1f} GB'
-        record.rss = f'{total_rss/2**30:>5.1f} GB'
+        record.rss = f'{rss/2**30:>5.1f} GB'
 
         return True
 
@@ -45,7 +34,7 @@ def setup_logger(name, log_file, level=logging.INFO, pid=None):
 
     # Create the Logger
     logger = logging.getLogger(name)
-    logger.addFilter(MemoryTracer(psutil.Process()))
+    logger.addFilter(MemoryTracer())
 
     logger.setLevel(logging.DEBUG)
 
