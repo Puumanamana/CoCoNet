@@ -78,6 +78,7 @@ def preprocess(cfg):
     composition = cfg.get_composition_feature()
 
     logger.info(f'Processing {composition.count("fasta"):,} contigs')
+    
     composition.filter_by_length(output=cfg.io['filt_fasta'],
                                  summary_output=cfg.io['exclude'],
                                  min_length=cfg.min_ctg_len)

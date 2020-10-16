@@ -154,7 +154,8 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs), frag_steps,
                                          encoding_len=max_encoding)
 
-    all_pairs = vstack_recarrays([positive_pairs, negative_pairs])
+    all_pairs = vstack_recarrays([positive_pairs[:n_examples//2],
+                                  negative_pairs[:n_examples//2]])
 
     np.random.shuffle(all_pairs)
 
