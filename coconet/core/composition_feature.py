@@ -1,5 +1,6 @@
 from pathlib import Path
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+import skbio
 import numpy as np
 
 from coconet.core.feature import Feature
@@ -76,6 +77,34 @@ class CompositionFeature(Feature):
         with open(str(output), 'w') as writer:
             for (ctg_id, seq) in filtered_fasta:
                 writer.write(f'>{ctg_id}\n{seq}\n')
+
+    @run_if_not_exists()
+    def flag_dtr(self, output=None, key='filt_fasta', min_size=10, max_size=300, min_id=.95):
+        handle = open(output, 'w')
+
+        count = 0
+        for ctg in skbio.io.read(str(self.path[key]), format='fasta', constructor=skbio.DNA):
+            (aln, _, pos) = skbio.alignment.local_pairwise_align_ssw(
+                ctg[:max_size], ctg[-max_size:], match_score=1, mismatch_score=-5
+            )
+
+            matches = sum(x==y for (x, y) in aln.iter_positions())
+            
+            if (aln.shape.position > min_size and
+                matches / aln.shape.position >= min_id and
+                min(pos[0][0], pos[1][0]) == 0 and max(pos[0][1], pos[1][1]) >= max_size-1):
+                # DTR found
+                entry = [contig.metadata["id"],
+                         '-'.join(map(str, pos[0])),
+                         '-'.join(map(str, pos[1]))]
+                handle.write('\t'.join(entry) + '\n')                
+            else:
+                count += 1
+
+        handle.close()
+
+        return count
+        
 
     def get_valid_nucl_pos(self):
         '''

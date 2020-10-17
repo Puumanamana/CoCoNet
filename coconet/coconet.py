@@ -84,6 +84,9 @@ def preprocess(cfg):
                                  min_length=cfg.min_ctg_len)
     logger.info((f'Length filter (L>{cfg.min_ctg_len} bp) -> '
                  f'{composition.count("filt_fasta"):,} contigs remaining'))
+    n_ctg = composition.flag_dtr(output=cfg.io['dtr'], min_size=cfg.min_dtr_size)
+    logger.info((f'Complete contigs filtering (DTR > {cfg.min_dtr_size} bp) -> '
+                 f'{n_ctg} contigs remaining'))    
 
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()
@@ -262,6 +265,7 @@ def precompute_latent_repr(cfg):
     save_repr_all(model,
                   fasta=cfg.io['filt_fasta'],
                   coverage=cfg.io['h5'],
+                  dtr=cfg.io['dtr'],
                   output={feature: cfg.io['repr'][feature] for feature in cfg.features},
                   n_frags=cfg.n_frags,
                   frag_len=cfg.fragment_length,

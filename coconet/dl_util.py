@@ -291,7 +291,7 @@ def get_test_scores(preds, truth):
     return scores
 
 @run_if_not_exists()
-def save_repr_all(model, fasta=None, coverage=None, output=None,
+def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
                   n_frags=30, frag_len=1024,
                   rc=True, kmer=4, wsize=64, wstep=32):
     """
@@ -302,6 +302,7 @@ def save_repr_all(model, fasta=None, coverage=None, output=None,
         model (CompositionModel, CoverageNodel or CoCoNet)
         fasta (str): path to fasta file
         coverage (str): path to .h5 coverage file
+        dtr (str): path to DTR contig list (to exclude)
         output (dict): filename to save latent representations for each feature
         n_frags (int): number of equal size fragments to split contigs
         frag_len (int): size of fragments
@@ -319,9 +320,16 @@ def save_repr_all(model, fasta=None, coverage=None, output=None,
     if 'coverage' in output:
         cov_h5 = h5py.File(coverage, 'r')
 
+    dtr_contigs = set()
+    if dtr is not None and dtr.is_file():
+        dtr_contigs |= set(ctg.split('\t')[0].strip() for ctg in open(dtr))
+        
     repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
 
     for contig in SeqIO.parse(fasta, "fasta"):
+        if contig.id in dtr_contigs:
+            continue
+
         step = int((len(contig)-frag_len) / n_frags)
 
         fragment_boundaries = [(step*i, step*i+frag_len) for i in range(n_frags)]

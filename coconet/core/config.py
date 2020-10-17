@@ -56,7 +56,7 @@ class Configuration:
         '''
 
         for (name, value) in kwargs.items():
-            if name not in {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}:
+            if name not in {'fasta', 'h5', 'bam', 'output'}:
                 setattr(self, name, value)
             else:
                 self.set_input(name, value)
@@ -92,7 +92,7 @@ class Configuration:
             filepath = Path(val)
             self.cov_type = '.h5'
 
-        if name in ['tmp_dir', 'output']:
+        if name == 'output':
             filepath = Path(val)
 
         self.io[name] = filepath
@@ -107,6 +107,7 @@ class Configuration:
             filt_fasta='assembly-filtered.fasta',
             h5='coverage.h5',
             exclude='exclude.tsv',
+            dtr='dtr.tsv',
             pairs={'test': 'pairs-test.npy', 'train': 'pairs-train.npy'},
             model='coconet.pth',
             nn_test='nn-test.csv',
@@ -171,7 +172,7 @@ class Configuration:
             complete_conf = {key: val for (key, val) in self.__dict__.items()}
 
         io_to_keep = {k: v for (k, v) in self.io.items() if k in
-                      {'fasta', 'h5', 'bam', 'tmp_dir', 'output'}}
+                      {'fasta', 'h5', 'bam', 'output'}}
         complete_conf['io'] = io_to_keep
 
         with open(config_file, 'w') as handle:
