@@ -205,7 +205,7 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
     loss_buffer = deque(maxlen=patience)
-    
+
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
@@ -225,7 +225,7 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         if len(loss_buffer) > patience and np.min(loss_buffer) == loss_buffer[0]:
             logger.info('Early stopping')
             return
-        
+
 def run_test(model, x, y, test_losses, model_output=None, test_output=None):
     """
     Args:
@@ -233,12 +233,12 @@ def run_test(model, x, y, test_losses, model_output=None, test_output=None):
         x (list of torch.Tensor): input test features
         y (torch.Tensor): output test features
         test_output (str): filename to save neural network test results
-        model_output (str): filename to save neural network model        
+        model_output (str): filename to save neural network model
     """
     model.eval()
     pred = model(*x)
     model.train()
-    
+
     scores = get_test_scores(pred, y)
 
     if 'combined' in scores:
@@ -257,7 +257,7 @@ def run_test(model, x, y, test_losses, model_output=None, test_output=None):
         pred.to_csv(test_output, index=False)
 
     return scores
-    
+
 
 def get_test_scores(preds, truth):
     """
@@ -323,7 +323,7 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
     dtr_contigs = set()
     if dtr is not None and dtr.is_file():
         dtr_contigs |= set(ctg.split('\t')[0].strip() for ctg in open(dtr))
-        
+
     repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
 
     for contig in SeqIO.parse(fasta, "fasta"):

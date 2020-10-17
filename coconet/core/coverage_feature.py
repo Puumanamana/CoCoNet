@@ -65,7 +65,7 @@ class CoverageFeature(Feature):
     def remove_singletons(self, output=None, min_prevalence=0, noise_level=0.1):
         if Path(output).is_file() and any('prevalence' in line for line in open(output)):
             return
-        
+
         with open(output, 'a') as writer:
             h5_handle = h5py.File(self.path['h5'], 'a')
 

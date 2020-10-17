@@ -89,7 +89,7 @@ class CompositionFeature(Feature):
             )
 
             matches = sum(x==y for (x, y) in aln.iter_positions())
-            
+
             if (aln.shape.position > min_size and
                 matches / aln.shape.position >= min_id and
                 min(pos[0][0], pos[1][0]) == 0 and max(pos[0][1], pos[1][1]) >= max_size-1):
@@ -97,14 +97,14 @@ class CompositionFeature(Feature):
                 entry = [contig.metadata["id"],
                          '-'.join(map(str, pos[0])),
                          '-'.join(map(str, pos[1]))]
-                handle.write('\t'.join(entry) + '\n')                
+                handle.write('\t'.join(entry) + '\n')
             else:
                 count += 1
 
         handle.close()
 
         return count
-        
+
 
     def get_valid_nucl_pos(self):
         '''

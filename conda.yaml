@@ -1,0 +1,21 @@
+name: coconet
+channels:
+  - defaults
+  - conda-forge
+  - bioconda
+  - pytorch
+dependencies:
+  - python >=3.6
+  - argparse
+  - psutil
+  - pyyaml==5.1.0
+  - numpy
+  - pandas>=1.0
+  - h5py
+  - scikit-learn
+  - scikit-bio
+  - pytorch>=1.0
+  - Biopython
+  - python-igraph>=0.8
+  - pysam>=0.16
+  - pybind11

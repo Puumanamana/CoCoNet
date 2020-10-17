@@ -78,7 +78,7 @@ def preprocess(cfg):
     composition = cfg.get_composition_feature()
 
     logger.info(f'Processing {composition.count("fasta"):,} contigs')
-    
+
     composition.filter_by_length(output=cfg.io['filt_fasta'],
                                  summary_output=cfg.io['exclude'],
                                  min_length=cfg.min_ctg_len)
@@ -86,7 +86,7 @@ def preprocess(cfg):
                  f'{composition.count("filt_fasta"):,} contigs remaining'))
     n_ctg = composition.flag_dtr(output=cfg.io['dtr'], min_size=cfg.min_dtr_size)
     logger.info((f'Complete contigs filtering (DTR > {cfg.min_dtr_size} bp) -> '
-                 f'{n_ctg} contigs remaining'))    
+                 f'{n_ctg} contigs remaining'))
 
     if 'bam' in cfg.io or cfg.io['h5'].is_file():
         coverage = cfg.get_coverage_feature()

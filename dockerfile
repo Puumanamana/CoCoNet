@@ -6,8 +6,11 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY conda.yaml .
+
+RUN conda env update -n base --file conda.yaml
+
 RUN git clone https://github.com/Puumanamana/CoCoNet.git \
     && cd CoCoNet \
     && pip install . \
     && rm -rf CoCoNet
-
