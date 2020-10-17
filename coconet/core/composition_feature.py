@@ -94,7 +94,7 @@ class CompositionFeature(Feature):
                 matches / aln.shape.position >= min_id and
                 min(pos[0][0], pos[1][0]) == 0 and max(pos[0][1], pos[1][1]) >= max_size-1):
                 # DTR found
-                entry = [contig.metadata["id"],
+                entry = [ctg.metadata["id"],
                          '-'.join(map(str, pos[0])),
                          '-'.join(map(str, pos[1]))]
                 handle.write('\t'.join(entry) + '\n')
