@@ -13,7 +13,7 @@ dependencies:
   - pandas>=1.0
   - h5py
   - scikit-learn
-  - scikit-bio
+  - scikit-bio >=0.5.6
   - pytorch>=1.0
   - Biopython
   - python-igraph>=0.8
