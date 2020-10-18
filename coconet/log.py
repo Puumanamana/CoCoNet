@@ -9,7 +9,10 @@ class MemoryTracer(logging.Filter):
         rss = process.memory_full_info().rss
 
         for child in process.children(recursive=True):
-            rss += child.memory_full_info().rss
+            try:
+                rss += child.memory_full_info().rss
+            except psutil.NoSuchProcess:
+                pass
 
         record.rss = f'{rss/2**30:>5.1f} GB'
 
