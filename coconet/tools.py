@@ -177,16 +177,16 @@ def get_coverage(pairs, h5_file, window_size, window_step):
 
     try:
         coverage = {ctg: h5data[ctg][:] for ctg in contigs}
-    except TypeError:
+    except TypeError as error:
         diff = set(contigs).difference(set(h5data.keys()))
         if diff:
             logger.error((f'{len(diff)} contigs are in the fasta sequences '
                           'but not in the coverage data. '
                           f'For example, {diff.pop()} generates an error.'))
-            raise KeyError
-        else:
-            logger.error('One contig seem to have a null coverage across all samples')
-            raise RuntimeError
+            raise KeyError from error
+
+        logger.error('One contig seem to have a null coverage across all samples')
+        raise RuntimeError from error
 
     h5data.close()
 
@@ -205,7 +205,7 @@ def get_coverage(pairs, h5_file, window_size, window_step):
 
     for i, (sp, start, end) in enumerate(pairs[sorted_idx]):
         cov_sp = seen.get((sp, start))
-        
+
         if cov_sp is None:
             cov_sp = avg_window(coverage[sp][:, start:end], window_size, window_step, axis=1)
             seen[(sp, start)] = cov_sp
@@ -248,6 +248,6 @@ def chunk(*it, size=2):
 
     if not it:
         return []
-    
+
     it = chain(*it)
     return iter(lambda: tuple(islice(it, size)), ())

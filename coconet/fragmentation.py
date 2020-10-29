@@ -49,7 +49,7 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
         (fppc, 2),
         dtype=[('sp', f'<U{encoding_len}'), ('start', 'uint32'), ('end', 'uint32')]
     )
- 
+
     k = 0
     for i, j in combinations(range(contig_frags), 2):
         if k == fppc:
@@ -152,7 +152,7 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     all_pairs['end'] *= step
 
     all_pairs = all_pairs.view(np.recarray)
-    
+
     if output is not None:
         np.save(output, all_pairs)
 

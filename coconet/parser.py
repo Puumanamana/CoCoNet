@@ -1,6 +1,6 @@
-'''
+"""
 CoCoNet parser information and documentation
-'''
+"""
 
 from pathlib import Path
 import argparse
@@ -11,14 +11,19 @@ import os
 SUB_COMMANDS = ['preprocess', 'learn', 'cluster']
 
 def get_version():
+    """
+    Return CoCoNet version
+    """
+
     from coconet import __version__
     return 'CoCoNet v{version}'.format(version=__version__)
 
 
 class ToPathAction(argparse.Action):
-    '''
+    """
     argparse action to convert string to Path objects
-    '''
+    """
+
     def __init__(self, option_strings, dest, required=False, **kwargs):
 
         argparse.Action.__init__(self,
@@ -35,9 +40,9 @@ class ToPathAction(argparse.Action):
         setattr(namespace, self.dest, values_ok)
 
 def parse_args():
-    '''
+    """
     Command line parser for CoCoNet algorithm
-    '''
+    """
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
@@ -104,7 +109,7 @@ def parse_args():
     )
     global_parser.add_argument(
         '--features', type=str, default=['coverage', 'composition'],
-        choices=['composition', 'coverage'], nargs='+',
+        choices=['coverage', 'composition'], nargs='+',
         help='Features for binning (composition, coverage, or both)'
     )
 
@@ -247,7 +252,7 @@ def parse_args():
     cluster_parser = argparse.ArgumentParser(add_help=False)
 
     cluster_parser.add_argument(
-        '--max-neighbors', type=int, default=150,
+        '--max-neighbors', type=int, default=250,
         help='Maximum number of neighbors to consider to compute the adjacency matrix.'
     )
     cluster_parser.add_argument(
@@ -264,7 +269,7 @@ def parse_args():
               'Note: the number of cluster is required if "spectral" is chosen.')
     )
     cluster_parser.add_argument(
-        '--theta', type=float, default=0.9,
+        '--theta', type=float, default=0.8,
         help='(leiden) Minimum percent of edges between two contigs to form an edge between them'
     )
     cluster_parser.add_argument(
@@ -272,12 +277,12 @@ def parse_args():
         help='(leiden) CPM optimization value for the first run of the Leiden clustering'
     )
     cluster_parser.add_argument(
-        '--gamma2', type=float, default=0.5,
+        '--gamma2', type=float, default=0.4,
         help='(leiden) CPM optimization value for the second run of the Leiden clustering'
     )
     cluster_parser.add_argument(
         '--n-clusters', type=int,
-        help='(spectral) Estimated number of clusters.'
+        help='(spectral clustering) Maximum number of clusters'
     )
     #========================================================#
     #====================== Subparsers ======================#

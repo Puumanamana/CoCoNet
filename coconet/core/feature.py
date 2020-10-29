@@ -1,3 +1,7 @@
+"""
+Abstract feature class
+"""
+
 import logging
 import h5py
 import numpy as np
@@ -6,15 +10,18 @@ import numpy as np
 logger = logging.getLogger('<preprocessing>')
 
 class Feature:
+    """
+    Abstract class for composition and coverage features
+    """
 
     def __init__(self, name=None, path=None):
-        '''
+        """
         Extract the latent representation of each contig's fragments in the h5 file
         ftype: Feature type (composition or coverage)
         data: {dtype: path} dictionnary
 
         Returns: list of neighbors for each contigs
-        '''
+        """
         self.name = name
         self.path = path
 

@@ -1,9 +1,17 @@
+"""
+Logging configuration and initialization
+"""
+
+from pathlib import Path
 import logging
 import psutil
-from pathlib import Path
 
 
 class MemoryTracer(logging.Filter):
+    """
+    To track memory usage at different steps
+    """
+
     def filter(self, record):
         process = psutil.Process()
         rss = process.memory_full_info().rss
@@ -19,7 +27,7 @@ class MemoryTracer(logging.Filter):
         return True
 
 
-def setup_logger(name, log_file, level=logging.INFO, pid=None):
+def setup_logger(name, log_file, level=logging.INFO):
     """
     Setup logging if not set, or return logger if already exists
 
@@ -38,7 +46,7 @@ def setup_logger(name, log_file, level=logging.INFO, pid=None):
     logger.setLevel(logging.DEBUG)
 
     if not any(isinstance(hdl, logging.FileHandler) for hdl in logger.handlers):
-        if (logger.hasHandlers()):
+        if logger.hasHandlers():
             logger.handlers.clear()
         logger.propagate = False
 

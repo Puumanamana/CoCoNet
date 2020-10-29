@@ -1,13 +1,21 @@
+"""
+Composition feature manipulation
+"""
+
 from pathlib import Path
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 import skbio
 import numpy as np
+import h5py
 
 from coconet.core.feature import Feature
 from coconet.tools import run_if_not_exists
 
 
 class CompositionFeature(Feature):
+    """
+    Composition object routines
+    """
 
     def __init__(self, **kwargs):
         Feature.__init__(self, **kwargs)
@@ -107,10 +115,10 @@ class CompositionFeature(Feature):
 
 
     def get_valid_nucl_pos(self):
-        '''
+        """
         Return position of ACGT only in fasta
         (useful to clean coverage data since N are discarded from the fasta)
-        '''
+        """
         filt_ids = set(self.get_contigs('filt_fasta'))
 
         for (ctg_id, seq) in self.get_iterator('fasta'):

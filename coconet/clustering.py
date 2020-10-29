@@ -11,7 +11,6 @@ import sklearn.neighbors
 import hnswlib
 import torch
 import igraph
-
 from coconet.tools import run_if_not_exists, chunk
 
 
@@ -33,7 +32,12 @@ def make_pregraph(
         latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs,
           and values are the latent representations of the fragments in the contig
         output (str): path to save igraph object
-        kw (dict): additional parameters to pass to contig_pair_iterator()
+        vote_threshold (float): hard threshold for voting scheme. If set to none, the 
+          probabilities are summed
+        max_neighbors (int): maximum number of neighbor contigs to compare each query contig with
+        buffer_size (int): maximum number of contigs to compute in one batch. Consider lowering
+          this value if you have limited RAM.
+        threads (int): number of thread to use
     Returns:
         None
     """
@@ -79,6 +83,7 @@ def refine_clustering(
         latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs,
           and values are the latent representations of the fragments in the contig
         pre_graph_file (str): Path to graph of pre-clustered contigs
+        graph_file (str): Path to output graph
         assignments_file (str): Path to output bin assignments
         dtr_file (str): path to DTR contig list (to include as singleton bins)
         theta (int): binary threshold to draw an edge between contigs
@@ -117,7 +122,9 @@ def refine_clustering(
         indices = np.random.choice(len(combs), min(len(combs), int(1e5)))
         comparisons.append([combs[i] for i in indices])
 
-    edges = compute_pairwise_comparisons(model, latent_vectors, comparisons)
+    edges = compute_pairwise_comparisons(
+        model, latent_vectors, comparisons, vote_threshold=vote_threshold
+    )
 
     # Add edges to graph
     if edges:
@@ -125,8 +132,8 @@ def refine_clustering(
         graph.es['weight'] = list(edges.values())
 
     # Add complete genomes
-    if dtr_file is not None and dtr.is_file():
-        dtr_contigs = set(ctg.split('\t')[0].strip() for ctg in open(dtr))
+    if dtr_file is not None and dtr_file.is_file():
+        dtr_contigs = set(ctg.split('\t')[0].strip() for ctg in open(dtr_file))
         cur_assignments = graph.es['cluster']
         graph.add_vertices(dtr_contigs)
         cl_max = max(cur_assignments)
@@ -143,13 +150,13 @@ def get_neighbors(latent_vectors, threads=1):
     """
     Returns contigs within a radius in both dimensions for each contig.
     Ordered by distance in first dimension.
-    TODO: use the dimension with the best test scores during learning
 
     Args:
         latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs,
           and values are the latent representations of the fragments in the contig
+        threads (int): Number of threads to use
     Returns:
-        list: closest {max_neighbors} neighbors of each contig
+        int list: closest {max_neighbors} neighbors of each contig
     """
 
     n_contigs = len(latent_vectors[0][1])
@@ -187,9 +194,9 @@ def get_neighbors(latent_vectors, threads=1):
             indices = new_indices
         else:
             # Get common neighbors with previous feature(s)
-            for i, (idx1, idx2) in enumerate(zip(indices, new_indices)):
+            for j, (idx1, idx2) in enumerate(zip(indices, new_indices)):
                 valid = np.isin(idx1, idx2)
-                indices[i] = idx1[valid]
+                indices[j] = idx1[valid]
 
     return indices
 
@@ -232,12 +239,13 @@ def compute_pairwise_comparisons(
         vote_threshold=None, buffer_size=500
 ):
     """
-    Computes all comparisons between contig pairs produced by `pairs generator` using the provided `model`.
-    A given contig-contig comparison involves comparing all n_frag*(n_frag-1)/2 pairs of fragments from
-    both contigs. When set, `vote_threshold` imposed a hard threshold on each fragment-fragment comparison
-    and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold and 0 otherwise.
-    To save some memory, all comparisons are done in batches and at most `buffer_size`
-    contig pairs are compared at once.
+    Computes all comparisons between contig pairs produced by `pairs generator`
+    using the provided `model`. A given contig-contig comparison involves
+    comparing all n_frag*(n_frag-1)/2 pairs of fragments from both contigs.
+    When set, `vote_threshold` imposed a hard threshold on each fragment-fragment
+    comparison and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold 
+    and 0 otherwise. To save some memory, all comparisons are done in batches 
+    and at most `buffer_size` contig pairs are compared at once.
 
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet): PyTorch deep learning model
@@ -304,15 +312,16 @@ def compute_pairwise_comparisons(
 
 def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=None, **kwargs):
     """
-    Find communities in `graph` using the `algorithm` algorithm. Edges with weights lower than `threshold` are
-    removed and only edge presence/absence is used for clustering. The other parameters are used
-    or not depending on which algorithm is chosen.
+    Find communities in `graph` using the `algorithm` algorithm. Edges with weights lower 
+    than `threshold` are removed and only edge presence/absence is used for clustering. 
+    The other parameters are used or not depending on which algorithm is chosen.
 
     Args:
         graph (igraph.Graph): contig-contig igraph object
         threshold (int): binary edge weight cutoff
         gamma (float): Resolution parameter for cluster density
         algorithm (str): Community detection algorithm to use
+        n_clusters (int): If spectral clustering is used, maximum number of cluster to allow
         kwargs (dict): additional parameters passed to the underlying
           community detection algorithm
     Returns:

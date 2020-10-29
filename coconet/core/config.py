@@ -1,11 +1,12 @@
-'''
+"""
 Configuration object to handle CLI, loading/resuming runs
-'''
+"""
 
 from pathlib import Path
 from math import ceil
 import logging
 import shutil
+import copy
 
 import yaml
 import h5py
@@ -27,6 +28,9 @@ class Configuration:
         self.verbosity = 'INFO'
 
     def log(self, msg, level):
+        """
+        Useful wrapper for logging
+        """
         try:
             logger = setup_logger('<CoCoNet>', self.io['log'], self.loglvl)
         except (KeyError, AttributeError):
@@ -35,9 +39,9 @@ class Configuration:
 
     @classmethod
     def from_yaml(cls, filepath):
-        '''
+        """
         Load config from saved file
-        '''
+        """
 
         config = Configuration()
 
@@ -51,9 +55,9 @@ class Configuration:
         return config
 
     def init_config(self, **kwargs):
-        '''
+        """
         Make configuration from CLI
-        '''
+        """
 
         for (name, value) in kwargs.items():
             if name not in {'fasta', 'h5', 'bam', 'output'}:
@@ -67,9 +71,9 @@ class Configuration:
         self.set_outputs()
 
     def set_input(self, name, val):
-        '''
+        """
         Check inputs are well formatted before setting them
-        '''
+        """
 
         if name == 'fasta':
             filepath = Path(val)
@@ -98,12 +102,12 @@ class Configuration:
         self.io[name] = filepath
 
     def set_outputs(self):
-        '''
+        """
         Define output file path for all steps
-        '''
+        """
 
         output_files = dict(
-            log='.log',
+            log='coconet.log',
             filt_fasta='assembly-filtered.fasta',
             h5='coverage.h5',
             exclude='exclude.tsv',
@@ -120,7 +124,7 @@ class Configuration:
             dest = Path(self.io['output'], output_files['h5'])
 
             if not src.is_file() and 'bam' not in self.io:
-                self.log(f'Could not find any coverage files', 'critical')
+                self.log('Could not find any coverage files', 'critical')
 
             elif not dest.is_file():
                 shutil.copy(str(src), str(dest))
@@ -142,6 +146,9 @@ class Configuration:
         self.io.update(output_files)
 
     def init_values_if_not_set(self):
+        """
+        Set some parameters with not valid default values (e.g. -1)
+        """
         if not hasattr(self, 'fragment_length') or self.fragment_length < 0:
             if not hasattr(self, 'min_ctg_len'):
                 self.min_ctg_len = 2048
@@ -152,15 +159,17 @@ class Configuration:
 
         if hasattr(self, 'fragment_step'):
             if self.fragment_length % self.fragment_step != 0:
-                self.fragment_length = (self.fragment_length // self.fragment_step) * self.fragment_step
-                logging.warning(
-                    f'fragment_length is not a multiple of fragment step. Setting fragment length to {self.fragment_length}'
-                )
+                self.fragment_length = ((self.fragment_length // self.fragment_step)
+                                        * self.fragment_step)
+                logging.warning((
+                    ('fragment_length is not a multiple of fragment step. '
+                     f'Setting fragment length to {self.fragment_length}')
+                ))
 
     def to_yaml(self):
-        '''
+        """
         Save configuration to YAML file
-        '''
+        """
 
         to_save = self.__dict__
         config_file = Path(self.io['output'], 'config.yaml')
@@ -169,7 +178,7 @@ class Configuration:
             complete_conf = Configuration.from_yaml(config_file).__dict__
             complete_conf.update(to_save)
         else:
-            complete_conf = {key: val for (key, val) in self.__dict__.items()}
+            complete_conf = copy.deepcopy(self.__dict__)
 
         io_to_keep = {k: v for (k, v) in self.io.items() if k in
                       {'fasta', 'h5', 'bam', 'output'}}
@@ -179,9 +188,9 @@ class Configuration:
             yaml.dump(complete_conf, handle)
 
     def get_input_shapes(self):
-        '''
+        """
         Return input shapes for neural network
-        '''
+        """
 
         with h5py.File(self.io['h5'], 'r') as handle:
             n_samples = handle.get(list(handle.keys())[0]).shape[0]
@@ -194,9 +203,9 @@ class Configuration:
         return input_shapes.get(''.join(self.features), input_shapes)
 
     def get_architecture(self):
-        '''
+        """
         Format neural network architecture
-        '''
+        """
 
         architecture = dict(
             composition=dict(neurons=self.compo_neurons),
@@ -210,6 +219,10 @@ class Configuration:
         return architecture.get(''.join(self.features), architecture)
 
     def get_composition_feature(self):
+        """
+        Make CompositionFeature object
+        """
+
         composition = CompositionFeature(
             path=dict(fasta=self.io['fasta'],
                       filt_fasta=self.io['filt_fasta'],
@@ -225,6 +238,10 @@ class Configuration:
         return composition
 
     def get_coverage_feature(self):
+        """
+        Make CoverageFeature object
+        """
+
         coverage = CoverageFeature(
             path=dict(bam=self.io.get('bam', None),
                       h5=self.io.get('h5', None),
@@ -241,6 +258,10 @@ class Configuration:
         return coverage
 
     def get_features(self):
+        """
+        Extract all features from self.features
+        """
+
         features = []
         if 'coverage' in self.features:
             features.append(self.get_coverage_feature())

@@ -7,6 +7,7 @@ channels:
 dependencies:
   - python >=3.6
   - argparse
+  - multiprocessing
   - psutil
   - pyyaml==5.1.0
   - numpy
@@ -19,3 +20,5 @@ dependencies:
   - python-igraph>=0.8
   - pysam>=0.16
   - pybind11
+  - pip:
+      - hnswlib

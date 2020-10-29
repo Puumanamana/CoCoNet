@@ -1,17 +1,17 @@
-'''
+"""
 Setup config for coconet-binning package
-'''
+"""
 
 from setuptools import setup, find_packages
 
 setup(name='coconet-binning',
-      version='0.54',
+      version='0.6',
       description='A contig binning tool from viral metagenomes',
       long_description=open('README.rst').read(),
       keywords='binning metagenomics deep learning virus clustering',
       license='Apache License 2.0',
       url='https://github.com/Puumanamana/CoCoNet',
-      author='Arisdakessian Cedric',
+      author='Cedric Arisdakessian',
       author_email='carisdak@hawaii.edu',
       zip_safe=False,
       packages=find_packages(),
@@ -21,6 +21,7 @@ setup(name='coconet-binning',
       python_requires='>=3.6',
       install_requires=[
           'argparse',
+          'multiprocessing',
           'psutil',
           'pyyaml==5.1.0',
           'numpy',

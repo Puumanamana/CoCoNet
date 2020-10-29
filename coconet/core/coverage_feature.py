@@ -1,3 +1,7 @@
+"""
+Coverage feature manipulation
+"""
+
 from pathlib import Path
 import logging
 
@@ -13,6 +17,9 @@ from coconet.tools import run_if_not_exists
 logger = logging.getLogger('<preprocessing>')
 
 class CoverageFeature(Feature):
+    """
+    Coverage object routines
+    """
 
     def __init__(self, **kwargs):
         Feature.__init__(self, **kwargs)
@@ -30,7 +37,11 @@ class CoverageFeature(Feature):
         return n_samples
 
     @run_if_not_exists()
-    def to_h5(self, valid_nucleotides, output=None, logger=None, **filtering):
+    def to_h5(self, valid_nucleotides, output=None, **filtering):
+        """
+        Convert bam coverage to h5 format
+        """
+
         if self.path.get('bam', None) is None:
             return
 

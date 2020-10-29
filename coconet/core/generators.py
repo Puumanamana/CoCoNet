@@ -1,3 +1,7 @@
+"""
+Generator for neural network training
+"""
+
 from multiprocessing.pool import Pool
 from functools import partial
 
@@ -8,8 +12,11 @@ import torch
 from coconet.tools import get_kmer_frequency, get_coverage
 
 
-
 class CompositionGenerator:
+    """
+    kmer frequencies generator
+    """
+
     def __init__(self, pairs_file, fasta=None,
                  batch_size=64, kmer=4, rc=False, norm=False, ncores=10):
         self.i = 0
@@ -57,7 +64,7 @@ class CompositionGenerator:
 
 class CoverageGenerator:
     """
-    Genearator for coverage data
+    Genearator for coverage feature
     It loads the coverage every [load_batch] batches.
     """
     def __init__(self, pairs_file, coverage_h5=None,
@@ -78,9 +85,9 @@ class CoverageGenerator:
         return self.n_batches
 
     def load(self):
-        '''
+        """
         Extract coverage for next pair batch
-        '''
+        """
 
         pairs = self.pairs[self.i*self.batch_size : (self.i + self.load_batch)*self.batch_size]
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-'''
+"""
 Root script to run CoCoNet
-'''
+"""
 
 from pathlib import Path
 import numpy as np
@@ -215,7 +215,7 @@ def learn(cfg):
 
     if not all(f.is_file() for f in cfg.io['pairs'].values()):
         logger.critical(
-            (f'Train/test sets not found at {path}.'
+            (f'Train/test sets not found in {cfg.io["output"]}.'
              'Did you delete the pair files?')
         )
         raise FileNotFoundError
@@ -297,7 +297,10 @@ def cluster(cfg):
     latent_vectors = [(feature.name, feature.get_h5_data()) for feature in cfg.get_features()]
 
     logger.info('Pre-clustering contigs')
-    logger.info(f'Parameters: alg={cfg.algorithm}, max neighbors={cfg.max_neighbors}, theta={cfg.theta}, gamma={cfg.gamma1}')
+    logger.info((
+        f'Parameters: alg={cfg.algorithm}, max neighbors={cfg.max_neighbors}, '
+        f'theta={cfg.theta}, gamma={cfg.gamma1}'
+    ))
     make_pregraph(
         model, latent_vectors, output=cfg.io['pre_graph'],
         vote_threshold=cfg.vote_threshold,
@@ -306,7 +309,10 @@ def cluster(cfg):
     )
 
     logger.info('Refining graph')
-    logger.info(f'Parameters: alg={cfg.algorithm}, theta={cfg.theta}, gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}')
+    logger.info((
+        f'Parameters: alg={cfg.algorithm}, theta={cfg.theta}, '
+        f'gamma={cfg.gamma2}, n_clusters={cfg.n_clusters}'
+    ))
     refine_clustering(
         model,
         latent_vectors,

@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.8.2
+FROM pytorch/pytorch
 LABEL author="carisdak@hawaii.edu"
 
 RUN apt-get update \
@@ -14,3 +14,5 @@ RUN git clone https://github.com/Puumanamana/CoCoNet.git \
     && cd CoCoNet \
     && pip install . \
     && rm -rf CoCoNet
+
+WORKDIR /workspace

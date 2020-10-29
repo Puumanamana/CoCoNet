@@ -1,3 +1,7 @@
+"""
+Functions to train the neural networks
+"""
+
 from collections import deque
 import re
 import logging
@@ -24,7 +28,8 @@ def initialize_model(model_type, input_shapes, architecture):
 
     Args:
         model_type (string): Either 'composition' or 'coverage'. Anything else will use both
-        input_shapes (list or dict): Input shapes for the model. Needs to be a dictionary if both features are used.
+        input_shapes (list or dict): Input shapes for the model. 
+          Needs to be a dictionary if both features are used.
         architecture (dict): Network architecture for each model type
     Returns:
         CompositionModel, CoverageNodel or CoCoNet
@@ -38,8 +43,12 @@ def initialize_model(model_type, input_shapes, architecture):
         model = CoverageModel(*input_shapes, **architecture)
 
     else:
-        compo_model = initialize_model("composition", input_shapes['composition'], architecture['composition'])
-        cover_model = initialize_model("coverage", input_shapes['coverage'], architecture['coverage'])
+        compo_model = initialize_model("composition",
+                                       input_shapes['composition'],
+                                       architecture['composition'])
+        cover_model = initialize_model("coverage",
+                                       input_shapes['coverage'],
+                                       architecture['coverage'])
         model = CoCoNet(compo_model, cover_model, **architecture['merge'])
 
     model.to(device)
@@ -67,18 +76,18 @@ def load_model(config, from_checkpoint=False):
             checkpoint = torch.load(str(config.io['model']))
             model.load_state_dict(checkpoint['state'])
             model.eval()
-        except RuntimeError:
+        except RuntimeError as err:
             logger.critical(
                 ('Could not load network model. '
                  'Is the model checkpoint corrupted?')
             )
-            raise RuntimeError
-        except FileNotFoundError:
+            raise RuntimeError from err
+        except FileNotFoundError as err:
             logger.critical(
                 ('Could not load network model. '
                  f'File {config.io["model"]} not found')
             )
-            raise FileNotFoundError
+            raise FileNotFoundError from err
 
     return model
 
@@ -211,16 +220,16 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
         loss.backward()
         optimizer.step()
-        
+
         if (i % test_batch != 0) and (i != n_batches):
             continue
 
         # Get test results and save if improvements
         metrics = run_test(model, x_test, y_test, test_scores, output, test_output)
-        
+
         test_acc = ', '.join(f'{name}<{scores["acc"]:.1%}>' for (name, scores) in metrics.items())
         logger.info(f'Test accuracy after {i:,} batches (max={n_batches:,}): {test_acc}')
-        
+
         # Stop if there are no significant improvement for {patience} test batches
         if len(test_scores) == patience and np.min(test_scores) == test_scores[0]:
             logger.info('Early stopping')
