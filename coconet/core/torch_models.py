@@ -66,7 +66,7 @@ class CompositionModel(nn.Module):
 
 class CoverageModel(nn.Module):
     """
-    Submodel for coverage feature    
+    Submodel for coverage feature
     """
 
     def __init__(self, input_size, n_samples, neurons=None,

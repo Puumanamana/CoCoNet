@@ -28,7 +28,7 @@ def initialize_model(model_type, input_shapes, architecture):
 
     Args:
         model_type (string): Either 'composition' or 'coverage'. Anything else will use both
-        input_shapes (list or dict): Input shapes for the model. 
+        input_shapes (list or dict): Input shapes for the model.
           Needs to be a dictionary if both features are used.
         architecture (dict): Network architecture for each model type
     Returns:

@@ -32,7 +32,7 @@ def make_pregraph(
         latent_vectors (tuple list): items are (feature name, dict) where dict keys are contigs,
           and values are the latent representations of the fragments in the contig
         output (str): path to save igraph object
-        vote_threshold (float): hard threshold for voting scheme. If set to none, the 
+        vote_threshold (float): hard threshold for voting scheme. If set to none, the
           probabilities are summed
         max_neighbors (int): maximum number of neighbor contigs to compare each query contig with
         buffer_size (int): maximum number of contigs to compute in one batch. Consider lowering
@@ -143,7 +143,7 @@ def refine_clustering(
     graph.write_pickle(graph_file)
 
     # Write the cluster in .csv format
-    communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])    
+    communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])
     communities.to_csv(assignments_file, header=False)
 
 def get_neighbors(latent_vectors, threads=1):
@@ -243,8 +243,8 @@ def compute_pairwise_comparisons(
     using the provided `model`. A given contig-contig comparison involves
     comparing all n_frag*(n_frag-1)/2 pairs of fragments from both contigs.
     When set, `vote_threshold` imposed a hard threshold on each fragment-fragment
-    comparison and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold 
-    and 0 otherwise. To save some memory, all comparisons are done in batches 
+    comparison and converts it to a binary valuye - 1 if P(frag, frag) > vote_threshold
+    and 0 otherwise. To save some memory, all comparisons are done in batches
     and at most `buffer_size` contig pairs are compared at once.
 
     Args:
@@ -312,8 +312,8 @@ def compute_pairwise_comparisons(
 
 def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=None, **kwargs):
     """
-    Find communities in `graph` using the `algorithm` algorithm. Edges with weights lower 
-    than `threshold` are removed and only edge presence/absence is used for clustering. 
+    Find communities in `graph` using the `algorithm` algorithm. Edges with weights lower
+    than `threshold` are removed and only edge presence/absence is used for clustering.
     The other parameters are used or not depending on which algorithm is chosen.
 
     Args:
