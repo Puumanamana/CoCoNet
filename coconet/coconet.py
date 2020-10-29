@@ -15,7 +15,6 @@ from coconet.dl_util import load_model, train, save_repr_all
 from coconet.clustering import make_pregraph, refine_clustering
 
 
-
 def main(**kwargs):
     """
     Arisdakessian C., Nigro O., Stewart G., Poisson G., Belcaid M.

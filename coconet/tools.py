@@ -159,6 +159,7 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
 
     return occurrences
 
+
 def get_coverage(pairs, h5_file, window_size, window_step):
     """
     - Extracting coverage from h5 for all pairs of contigs in pairs
@@ -204,11 +205,9 @@ def get_coverage(pairs, h5_file, window_size, window_step):
 
     for i, (sp, start, end) in enumerate(pairs[sorted_idx]):
         cov_sp = seen.get((sp, start))
-
+        
         if cov_sp is None:
-            cov_sp = np.apply_along_axis(
-                lambda x: avg_window(x, window_size, window_step), 1, coverage[sp][:, start:end]
-            )
+            cov_sp = avg_window(coverage[sp][:, start:end], window_size, window_step, axis=1)
             seen[(sp, start)] = cov_sp
 
         coverage_feature[sorted_idx[i]] = cov_sp
@@ -216,10 +215,9 @@ def get_coverage(pairs, h5_file, window_size, window_step):
     return (coverage_feature[:n_pairs, :, :],
             coverage_feature[n_pairs:, :, :])
 
-def avg_window(x, window_size, window_step):
+def avg_window(x, window_size, window_step, axis=1):
     """
     Averaging window with subsampling
-
     Args:
         x (np.array): Values to process
         window_size (int): Smoothing window size
@@ -227,9 +225,14 @@ def avg_window(x, window_size, window_step):
     Returns:
         np.array
     """
-    x_conv = np.convolve(x, np.ones(window_size)/window_size, mode="valid")
-    return x_conv[::window_step]
+    cumsum = np.cumsum(np.insert(x, 0, 0, axis=axis), axis=axis)
 
+    x_avg = (
+        np.take(cumsum, range(window_size, x.shape[axis]+1), axis=axis)
+        - np.take(cumsum, range(0, x.shape[axis]+1-window_size), axis=axis)
+    ) / float(window_size)
+
+    return np.take(x_avg, range(0, x_avg.shape[axis], window_step), axis=axis)
 
 def chunk(*it, size=2):
     """
@@ -242,5 +245,9 @@ def chunk(*it, size=2):
     Returns:
         Iterator over the chunks of size `size` of it
     """
+
+    if not it:
+        return []
+    
     it = chain(*it)
     return iter(lambda: tuple(islice(it, size)), ())

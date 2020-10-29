@@ -1,7 +1,7 @@
 Analysis workflow
 -----------------
 
-Here is an example for running CoCoNet from the raw reads to final bins. Here, we assume that you have paired-end illumina reads available in the :code:`data/` directory. Each sample is named with the convention :code:`<sample>_R{1,2}.fastq.gz`.
+Here we present a full pipeline example for running CoCoNet from the raw reads to final bins. We assume that you have paired-end illumina reads available in the :code:`data/` directory. Each sample is named with the convention :code:`<sample>_R{1,2}.fastq.gz`.
 
 
 Trimming
@@ -26,7 +26,7 @@ The first step consists in quality trimming and filtering your reads. Many tools
 Assembly
 ^^^^^^^^
 
-To assemble your reads, you have a choice many choices. One of the most efficient for metagenomics is `metaSPAdes <https://cab.spbu.ru/software/meta-spades>`_. However if you have a significant amount of samples or coverage, metaSPAdes requires a large amount of time and memory, in which case `Megahit <https://github.com/voutcn/megahit>`_ can be a good alternative.
+To assemble your reads, you have many choices. One of the most accurate for metagenomics is `metaSPAdes <https://cab.spbu.ru/software/meta-spades>`_. However if you have a lot of samples and/or high coverage, metaSPAdes will require a significant amount of time and memory, in which case `Megahit <https://github.com/voutcn/megahit>`_ can be a good alternative.
 
 .. code-block:: bash
 
@@ -68,3 +68,5 @@ You can finally use CoCoNet and bin your contigs:
 .. code-block:: bash
 
     coconet run --fasta assembly-outputs/scaffolds.fasta --bam coverage/*.bam --output binning
+
+The binning assignment are then available in the file `binning/bins-*.csv`.

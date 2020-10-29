@@ -37,7 +37,7 @@ def slow_kmer_freq(seq, k=4, rc=False):
 def slow_coverage(pairs, h5file, window_size, window_step):
 
     def smooth(x):
-        return avg_window(x, window_size, window_step)
+        return avg_window(x, window_size, window_step, 0)
 
     h5data = h5py.File(h5file, 'r')
 
@@ -81,7 +81,7 @@ def test_get_kmer_frequency_with_rc(k=4, n_repeat=10):
 
 def test_smoothing(wsize=3, wstep=2):
     x_in = np.array([1, 2, 3, 4, 5])
-    result = avg_window(x_in, wsize, wstep)
+    result = avg_window(x_in, wsize, wstep, 0)
 
     assert np.mean(result - np.array([2, 4])) < 1e-10
 

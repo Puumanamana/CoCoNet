@@ -187,7 +187,7 @@ def parse_args():
         help='Early stopping if test accuracy does not improve for %(default)s consecutive tests'
     )
     dl_parser.add_argument(
-        '--load-batch', type=int, default=200,
+        '--load-batch', type=int, default=100,
         help=('Number of coverage batch to load in memory. '
               'Consider lowering this value if your RAM is limited.')
     )

@@ -48,7 +48,7 @@ def test_negative_pairs(n_examples=10):
     fragments = np.array([200, 100, 100, 90, 200])
     result = make_negative_pairs(fragments, n_examples, 3)
 
-    assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
+    assert sum(result['sp'][:, 0] != result['sp'][:, 1]) == n_examples
     assert np.array(result.tolist()).shape == (n_examples, 2, 3)
 
 def test_negative_pairs_with_few_ctg(n_examples=100):
@@ -59,7 +59,7 @@ def test_negative_pairs_with_few_ctg(n_examples=100):
     fragments = np.array([200, 100, 100, 90])
     result = make_negative_pairs(fragments, n_examples, 3)
 
-    assert sum(result.sp[:, 0] != result.sp[:, 1]) == n_examples
+    assert sum(result['sp'][:, 0] != result['sp'][:, 1]) == n_examples
     assert np.array(result.tolist()).shape == (n_examples, 2, 3)
 
 def test_positive_pairs(fppc=30, contig_frags=100):
@@ -70,9 +70,9 @@ def test_positive_pairs(fppc=30, contig_frags=100):
     min_dist = calculate_optimal_dist(contig_frags, fppc)
     result = make_positive_pairs(0, 4, contig_frags, fppc, encoding_len=8)
 
-    assert sum(result.sp[:, 0] == result.sp[:, 1]) == fppc
-    assert sum(np.abs(result.start[:, 0].astype(int)
-                      - result.start[:, 1].astype(int)) < min_dist) == 0
+    assert sum(result['sp'][:, 0] == result['sp'][:, 1]) == fppc
+    assert sum(np.abs(result['start'][:, 0].astype(int)
+                      - result['start'][:, 1].astype(int)) < min_dist) == 0
     assert np.array(result.tolist()).shape == (fppc, 2, 3)
 
 def test_all_pairs(n_examples=50):
@@ -88,6 +88,6 @@ def test_all_pairs(n_examples=50):
 
     result = make_pairs(contigs, step, frag_len, n_examples=n_examples)
 
-    assert 0.4 < np.mean(result.sp[:, 0] == result.sp[:, 1]) < 0.6
+    assert 0.4 < np.mean(result['sp'][:, 0] == result['sp'][:, 1]) < 0.6
     assert np.array(result.tolist()).shape[1:] == (2, 3)
     assert len(result) >= n_examples

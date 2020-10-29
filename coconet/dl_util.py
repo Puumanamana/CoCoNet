@@ -204,34 +204,35 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     optimizer = optim.Adam(model.parameters(), lr=kwargs['learning_rate'])
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
-    loss_buffer = deque(maxlen=patience)
+    test_scores = deque(maxlen=patience)
 
     for i, batch_x in enumerate(x_train_gen, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
         loss.backward()
         optimizer.step()
-
+        
         if (i % test_batch != 0) and (i != n_batches):
             continue
 
         # Get test results and save if improvements
-        metrics = run_test(model, x_test, y_test, loss_buffer, output, test_output)
-
+        metrics = run_test(model, x_test, y_test, test_scores, output, test_output)
+        
         test_acc = ', '.join(f'{name}<{scores["acc"]:.1%}>' for (name, scores) in metrics.items())
         logger.info(f'Test accuracy after {i:,} batches (max={n_batches:,}): {test_acc}')
-
+        
         # Stop if there are no significant improvement for {patience} test batches
-        if len(loss_buffer) > patience and np.min(loss_buffer) == loss_buffer[0]:
+        if len(test_scores) == patience and np.min(test_scores) == test_scores[0]:
             logger.info('Early stopping')
             return
 
-def run_test(model, x, y, test_losses, model_output=None, test_output=None):
+def run_test(model, x, y, test_scores, model_output=None, test_output=None):
     """
     Args:
         model (CompositionModel, CoverageNodel or CoCoNet)
         x (list of torch.Tensor): input test features
         y (torch.Tensor): output test features
+        test_scores (Queue): previous test results
         test_output (str): filename to save neural network test results
         model_output (str): filename to save neural network model
     """
@@ -242,14 +243,16 @@ def run_test(model, x, y, test_losses, model_output=None, test_output=None):
     scores = get_test_scores(pred, y)
 
     if 'combined' in scores:
-        loss = model.loss_op(pred['combined'], y).mean().item()
+        # score = scores['combined']['acc']
+        score = model.loss_op(pred['combined'], y).mean().item()
     else:
-        loss = model.loss_op(next(iter(pred.values())), y).mean().item()
+        # score = next(iter(scores.values()))['acc']
+        score = model.loss_op(next(iter(pred.values())), y).mean().item()
 
-    test_losses.append(loss)
+    test_scores.append(score)
 
     # Save model if best so far
-    if loss <= min(test_losses):
+    if score <= min(test_scores):
         torch.save(dict(state=model.state_dict()), model_output)
 
         pred.update(dict(truth=y))
@@ -351,9 +354,8 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
             coverage_genome = np.swapaxes(coverage_genome, 1, 0)
 
             x_coverage = torch.from_numpy(
-                np.apply_along_axis(
-                    lambda x: avg_window(x, wsize, wstep), 2, coverage_genome
-                ).astype(np.float32))
+                avg_window(coverage_genome, wsize, wstep, axis=2).astype(np.float32)
+            )
 
             feature_arrays.append(x_coverage)
 

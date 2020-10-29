@@ -13,20 +13,6 @@ from coconet.tools import run_if_not_exists
 
 logger = logging.getLogger('<learning>')
 
-def vstack_recarrays(arrays):
-    """
-    numpy.vstack destructures the recarray.
-    Solution taken from Stackoverflow:
-    stackoverflow.com/questions/1791791/stacking-numpy-recarrays-without-losing-their-recarrayness/14613280
-
-    Args:
-        arrays (list of np.recarray): list of recarrays to vstack
-    Returns:
-        np.recarray
-    """
-
-    return arrays[0].__array_wrap__(np.vstack(arrays))
-
 def calculate_optimal_dist(n_frags, fppc):
     """
     For a given contig, get the maximum distance between fragments/
@@ -54,15 +40,16 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
         fppc (int): Number of fragments to generate
         encoding_len (int): contig name encoding length (to save space)
     Returns:
-        np.recarray: fragment pairs for contig label
+        np.array: fragment pairs for contig label
     """
 
     min_dist_in_step = calculate_optimal_dist(contig_frags, fppc)
 
-    pairs = np.recarray([fppc, 2],
-                        dtype=[('sp', '<U{}'.format(encoding_len)),
-                               ('start', 'uint32'),
-                               ('end', 'uint32')])
+    pairs = np.zeros(
+        (fppc, 2),
+        dtype=[('sp', f'<U{encoding_len}'), ('start', 'uint32'), ('end', 'uint32')]
+    )
+ 
     k = 0
     for i, j in combinations(range(contig_frags), 2):
         if k == fppc:
@@ -72,9 +59,9 @@ def make_positive_pairs(label, frag_steps, contig_frags, fppc, encoding_len=128)
             k += 1
 
     if k < fppc:
-        pairs.sp = np.tile(label, [fppc, 2])
-        pairs.start = np.random.choice(contig_frags, [fppc, 2])
-        pairs.end = pairs.start + frag_steps
+        pairs['sp'] = np.tile(label, [fppc, 2])
+        pairs['start'] = np.random.choice(contig_frags, [fppc, 2])
+        pairs['end'] = pairs['start'] + frag_steps
 
     return pairs
 
@@ -89,13 +76,13 @@ def make_negative_pairs(n_frags_all, n_examples, frag_steps, encoding_len=128):
         frag_steps (int): number of steps in a fragment
         encoding_len (int): contig name encoding length (to save space)
     Returns:
-        np.recarray: fragment pairs for each distinct contig pair
+        np.array: fragment pairs for each distinct contig pair
     """
 
-    pairs = np.recarray([n_examples, 2],
-                        dtype=[('sp', '<U{}'.format(encoding_len)),
-                               ('start', 'uint32'),
-                               ('end', 'uint32')])
+    pairs = np.zeros(
+        [n_examples, 2],
+        dtype=[('sp', f'<U{encoding_len}'), ('start', 'u4'), ('end', 'u4')]
+    )
 
     pair_idx = np.random.choice(len(n_frags_all),
                                 [5*n_examples, 2])
@@ -146,16 +133,16 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     pairs_per_ctg = ceil(n_examples / 2 / len(contig_frags))
     frag_steps = frag_len // step
 
-    positive_pairs = vstack_recarrays([
+    positive_pairs = np.vstack([
         make_positive_pairs(idx, frag_steps, genome_frags, pairs_per_ctg, encoding_len=max_encoding)
         for idx, genome_frags in enumerate(contig_frags)
     ])
 
-    negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs), frag_steps,
-                                         encoding_len=max_encoding)
+    negative_pairs = make_negative_pairs(contig_frags, len(positive_pairs),
+                                         frag_steps, encoding_len=max_encoding)
 
-    all_pairs = vstack_recarrays([positive_pairs[:n_examples//2],
-                                  negative_pairs[:n_examples//2]])
+    all_pairs = np.vstack([positive_pairs[:n_examples//2],
+                           negative_pairs[:n_examples//2]])
 
     np.random.shuffle(all_pairs)
 
@@ -164,6 +151,8 @@ def make_pairs(contigs, step, frag_len, output=None, n_examples=1e6):
     all_pairs['start'] *= step
     all_pairs['end'] *= step
 
+    all_pairs = all_pairs.view(np.recarray)
+    
     if output is not None:
         np.save(output, all_pairs)
 

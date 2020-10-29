@@ -66,7 +66,7 @@ def make_pregraph(
 @run_if_not_exists(keys=('assignments_file', 'graph_file'))
 def refine_clustering(
         model, latent_vectors, pre_graph_file,
-        graph_file=None, assignments_file=None,
+        graph_file=None, assignments_file=None, dtr_file=None,
         theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None,
         **kwargs
 ):
@@ -80,6 +80,7 @@ def refine_clustering(
           and values are the latent representations of the fragments in the contig
         pre_graph_file (str): Path to graph of pre-clustered contigs
         assignments_file (str): Path to output bin assignments
+        dtr_file (str): path to DTR contig list (to include as singleton bins)
         theta (int): binary threshold to draw an edge between contigs
         gamma1 (float): Resolution parameter for leiden clustering in 1st iteration
         gamma2 (float): Resolution parameter for leiden clustering in 2nd iteration
@@ -123,13 +124,20 @@ def refine_clustering(
         graph.add_edges(list(edges.keys()))
         graph.es['weight'] = list(edges.values())
 
+    # Add complete genomes
+    if dtr_file is not None and dtr.is_file():
+        dtr_contigs = set(ctg.split('\t')[0].strip() for ctg in open(dtr))
+        cur_assignments = graph.es['cluster']
+        graph.add_vertices(dtr_contigs)
+        cl_max = max(cur_assignments)
+        graph.es['cluster'] = cur_assignments + [cl_max+1+i for (i, _) in enumerate(dtr_contigs)]
+
     get_communities(graph, edge_threshold, gamma=gamma2, **kwargs)
     graph.write_pickle(graph_file)
 
     # Write the cluster in .csv format
-    communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])
+    communities = pd.Series(graph.vs['cluster'], index=graph.vs['name'])    
     communities.to_csv(assignments_file, header=False)
-
 
 def get_neighbors(latent_vectors, threads=1):
     """

@@ -7,6 +7,8 @@ import torch
 
 from coconet.tools import get_kmer_frequency, get_coverage
 
+
+
 class CompositionGenerator:
     def __init__(self, pairs_file, fasta=None,
                  batch_size=64, kmer=4, rc=False, norm=False, ncores=10):
@@ -34,7 +36,6 @@ class CompositionGenerator:
         return self.n_batches
 
     def __next__(self):
-
         if self.i < self.n_batches:
             pairs_batch = self.pairs[self.i*self.batch_size:(self.i+1)*self.batch_size]
 
