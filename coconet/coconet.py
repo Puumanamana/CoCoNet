@@ -28,7 +28,7 @@ def main(**kwargs):
     if kwargs:
         params.update(kwargs)
 
-    logger = setup_logger('<CoCoNet>', Path(params['output'], 'CoCoNet.log'), params['loglvl'])
+    logger = setup_logger('<CoCoNet>', Path(params['output'], 'coconet.log'), params['loglvl'])
     action = params.pop('action')
 
     prev_config = Path(args.output, 'config.yaml')
@@ -237,10 +237,10 @@ def learn(cfg):
         learning_rate=cfg.learning_rate,
         kmer=cfg.kmer,
         rc=not cfg.no_rc,
-        norm=cfg.norm,
         load_batch=cfg.load_batch,
         wsize=cfg.wsize,
-        wstep=cfg.wstep
+        wstep=cfg.wstep,
+        threads=cfg.threads
     )
     logger.info('Training finished')
 
@@ -305,7 +305,8 @@ def cluster(cfg):
         model, latent_vectors, output=cfg.io['pre_graph'],
         vote_threshold=cfg.vote_threshold,
         max_neighbors=cfg.max_neighbors,
-        threads=cfg.threads
+        threads=cfg.threads,
+        buffer_size=cfg.load_batch
     )
 
     logger.info('Refining graph')
@@ -324,7 +325,8 @@ def cluster(cfg):
         n_clusters=cfg.n_clusters,
         theta=cfg.theta,
         gamma1=cfg.gamma1,
-        gamma2=cfg.gamma2
+        gamma2=cfg.gamma2,
+        buffer_size=cfg.load_batch
     )
 
 if __name__ == '__main__':

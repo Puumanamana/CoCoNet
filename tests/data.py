@@ -22,7 +22,7 @@ WSIZE = 3
 WSTEP = 2
 
 TEST_LEARN_PRMS = {'batch_size': 4, 'learning_rate': 1e-3,
-                   'kmer': 4, 'rc': True, 'norm': False,
+                   'kmer': 4, 'rc': True,
                    'wsize': WSIZE, 'wstep': WSTEP, 'load_batch': 30}
 TEST_CTG_LENGTHS = [60, 100, 80]
 

@@ -126,7 +126,7 @@ def get_kmer_number(sequence, k=4):
 
     return kmer_indices
 
-def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
+def get_kmer_frequency(sequence, kmer=4, rc=False, index=False):
     """
     - Compute kmer occurrences in sequence
     - If kmer index are provided, skip the first part (faster)
@@ -136,7 +136,6 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
         kmer (int): kmer size for composition
         rc (bool): Use canonical k-mers
         index (bool): whether kmer indexes are provided instead of char sequence
-        norm (bool): whether to normalize composition into ratios
 
     Returns:
         np.array: `kmer` frequencies for sequence
@@ -154,8 +153,6 @@ def get_kmer_frequency(sequence, kmer=4, rc=False, index=False, norm=False):
     if rc:
         occurrences[rev_mapping[:, 0]] += occurrences[rev_mapping[:, 1]]
         occurrences = occurrences[uniq_idx]
-    if norm:
-        occurrences = occurrences / np.sum(occurrences)
 
     return occurrences
 

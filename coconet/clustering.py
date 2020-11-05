@@ -49,6 +49,7 @@ def make_pregraph(
     # Initialize graph
     graph = igraph.Graph()
     graph.add_vertices(contigs)
+    graph.es['weight'] = []
 
     # Get contig-contig pair generator
     pairs_generators = (contig_pair_iterator(ctg, neighb_ctg, graph, max_neighbors=max_neighbors)
@@ -72,7 +73,7 @@ def refine_clustering(
         model, latent_vectors, pre_graph_file,
         graph_file=None, assignments_file=None, dtr_file=None,
         theta=0.9, gamma1=0.1, gamma2=0.75, vote_threshold=None,
-        **kwargs
+        buffer_size=500, **kwargs
 ):
     """
     Refines graph by computing remaining edges within each cluster
@@ -90,6 +91,8 @@ def refine_clustering(
         gamma1 (float): Resolution parameter for leiden clustering in 1st iteration
         gamma2 (float): Resolution parameter for leiden clustering in 2nd iteration
         vote_threshold (float or None): Voting scheme to compare fragments. (Default: disabled)
+        buffer_size (int): maximum number of contigs to compute in one batch. Consider lowering
+          this value if you have limited RAM.
         kwargs (dict): additional clustering parameters passed to get_communities
     Returns:
         None
@@ -123,7 +126,8 @@ def refine_clustering(
         comparisons.append([combs[i] for i in indices])
 
     edges = compute_pairwise_comparisons(
-        model, latent_vectors, comparisons, vote_threshold=vote_threshold
+        model, latent_vectors, comparisons, vote_threshold=vote_threshold,
+        buffer_size=buffer_size
     )
 
     # Add edges to graph

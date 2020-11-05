@@ -221,10 +221,6 @@ def parse_args():
         help='Number of neurons for the merging layer (x1)'
     )
     dl_parser.add_argument(
-        '--norm', action='store_true', default=False,
-        help='Normalize the k-mer occurrences to frequencies'
-    )
-    dl_parser.add_argument(
         '-k', '--kmer', type=int, default=4,
         help='k-mer size for composition vector'
     )

@@ -129,57 +129,10 @@ def get_npy_lines(filename):
 
     return n_lines
 
-def load_data(fasta=None, coverage=None, pairs=None, mode='test', batch_size=None, **kwargs):
-    """
-    Setup data generators from the raw data and computed pairs.
-
-    Args:
-        fasta (str): path to fasta file
-        coverage (str): path to .h5 coverage file
-        pairs (str): path to .npy pair file
-        mode (str): test or train mode
-        batch_size (int): neural network batch size
-        kwargs (dict): Additional parameters passed to the generator
-    Returns:
-        One of the following:
-        zip(CompositionGenerator, CoverageGenerator)
-        CompositionGenerator
-        CoverageGenerator
-        list (when `mode` is test)
-
-    """
-
-    if mode == 'test':
-        batch_size = get_npy_lines(pairs)
-
-    generators = []
-
-    if fasta is not None:
-        generators.append(CompositionGenerator(pairs, fasta,
-                                               batch_size=batch_size,
-                                               kmer=kwargs['kmer'],
-                                               rc=kwargs['rc'],
-                                               norm=kwargs['norm']))
-    if coverage is not None:
-        generators.append(CoverageGenerator(pairs, coverage,
-                                            batch_size=batch_size,
-                                            load_batch=kwargs['load_batch'],
-                                            wsize=kwargs['wsize'],
-                                            wstep=kwargs['wstep']))
-
-    if len(generators) > 1:
-        generators = zip(*generators)
-    else:
-        generators = generators[0]
-
-    if mode == 'test':
-        generators = list(generators)[0]
-
-    return generators
-
 @run_if_not_exists()
 def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
-          output=None, batch_size=None, test_batch=500, patience=5, **kwargs):
+          output=None, test_batch=500, patience=5, load_batch=200, learning_rate=1e-3,
+          batch_size=256, kmer=4, rc=True, wsize=64, wstep=32, threads=1):
     """
     Train neural network:
     - Generate feature vectors (composition, coverage)
@@ -198,19 +151,48 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         batch_size (int): Mini-batch for learning
         test_batch (int): Test network every {test_batch} mini-batches
         patience (int): Stop training if test accuracy does not improve for {patience}*{test_batch}
-        kwargs (dict): Additional learning parameters
+        batch_size (int): neural network batch size
+        load_batch (int): number of training batches to load simulaneously
+        learning_rate (float): learning rate for AdamOptimizer
+        kmer (int): kmer size for composition vector
+        rc (bool): whether to add the reverse complement to the composition count (canonical kmers)
+        wsize (int): window size for coverage smoothing
+        wstep (int): subsampling step for coverage smoothing
+        threads (int): number of threads to use
     Returns:
         None
     """
-    (x_test, x_train_gen) = (
-        load_data(fasta=fasta, coverage=coverage, pairs=pairs[mode],
-                  mode=mode, batch_size=batch_size, **kwargs)
-        for mode in ['test', 'train']
+
+    # Setting up data generators
+    generators = dict(
+        composition={mode: CompositionGenerator(
+            pair_file, fasta, batch_size=batch_size*(mode=='train'),
+            kmer=kmer, rc=rc, threads=threads
+        ) for (mode, pair_file) in pairs.items()},
+        coverage={mode: CoverageGenerator(
+            pair_file, coverage, batch_size=batch_size*(mode=='train'),
+            load_batch=load_batch, wsize=wsize, wstep=wstep
+        ) for (mode, pair_file) in pairs.items()}
     )
+
+    x_train_gen = []
+    x_test = []
+    for (name, feature) in [('composition', fasta), ('coverage', coverage)]:
+        if feature is not None:
+            x_train_gen.append(generators[name]['train'])
+            x_test.append(generators[name]['test'])
+
+    if len(x_train_gen) == 1:
+        x_train_gen = x_train_gen[0]
+        x_test = next(x_test)[0]
+    else:
+        x_train_gen = zip(*x_train_gen)
+        x_test = next(zip(*x_test))
 
     (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']))
 
-    optimizer = optim.Adam(model.parameters(), lr=kwargs['learning_rate'])
+    # Training start
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     n_examples = get_npy_lines(pairs['train'])
     n_batches = n_examples // batch_size
     test_scores = deque(maxlen=patience)

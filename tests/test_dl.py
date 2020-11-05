@@ -92,8 +92,7 @@ def test_load_data_compo():
     gen = CompositionGenerator(pairs_file, fasta_file,
                                batch_size=TEST_LEARN_PRMS['batch_size'],
                                kmer=TEST_LEARN_PRMS['kmer'],
-                               rc=TEST_LEARN_PRMS['rc'],
-                               norm=TEST_LEARN_PRMS['norm'])
+                               rc=TEST_LEARN_PRMS['rc'])
 
     X1, X2 = next(gen)
 
