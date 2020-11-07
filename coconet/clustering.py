@@ -173,9 +173,7 @@ def get_neighbors(latent_vectors, threads=1):
         distance_to_resp_center = np.sqrt(np.sum(
             (components - contig_centers[:, None, :])**2, axis=2
         ))
-        # Radius=q75+1.5*IQR
-        (q75, q25) = np.percentile(distance_to_resp_center, [75, 25])
-        radius = q75 + 1.5*(q75-q25)
+        radius = np.percentile(distance_to_resp_center, 90)
 
         if n_contigs < 20000:
             tree = sklearn.neighbors.NearestNeighbors(
