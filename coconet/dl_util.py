@@ -163,31 +163,33 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
         None
     """
 
-    # Setting up data generators
-    generators = dict(
-        composition={mode: CompositionGenerator(
-            pair_file, fasta, batch_size=batch_size*(mode=='train'),
+    x_train = dict()
+    x_test = dict()
+    if fasta is not None:
+        x_test['composition'] = next(CompositionGenerator(
+            pairs['test'], fasta, batch_size=0,
             kmer=kmer, rc=rc, threads=threads
-        ) for (mode, pair_file) in pairs.items()},
-        coverage={mode: CoverageGenerator(
-            pair_file, coverage, batch_size=batch_size*(mode=='train'),
+        ))
+        x_train['composition'] = CompositionGenerator(
+            pairs['train'], fasta, batch_size=batch_size,
+            kmer=kmer, rc=rc, threads=threads
+        )
+    if coverage is not None:
+        x_test['coverage']=next(CoverageGenerator(
+            pairs['test'], coverage, batch_size=0,
             load_batch=load_batch, wsize=wsize, wstep=wstep
-        ) for (mode, pair_file) in pairs.items()}
-    )
+        ))
+        x_train['coverage'] = CoverageGenerator(
+            pairs['train'], coverage, batch_size=batch_size,
+            load_batch=load_batch, wsize=wsize, wstep=wstep
+        )
 
-    x_train_gen = []
-    x_test = []
-    for (name, feature) in [('composition', fasta), ('coverage', coverage)]:
-        if feature is not None:
-            x_train_gen.append(generators[name]['train'])
-            x_test.append(generators[name]['test'])
-
-    if len(x_train_gen) == 1:
-        x_train_gen = x_train_gen[0]
-        x_test = next(x_test)[0]
+    if len(x_train) == 1:
+        x_train = next(iter(x_train.values()))
+        x_test = next(iter(x_test.values()))
     else:
-        x_train_gen = zip(*x_train_gen)
-        x_test = next(zip(*x_test))
+        x_train = zip(*x_train.values())
+        x_test = list(x_test.values())
 
     (y_train, y_test) = (get_labels(pairs['train']), get_labels(pairs['test']))
 
@@ -197,7 +199,7 @@ def train(model, fasta=None, coverage=None, pairs=None, test_output=None,
     n_batches = n_examples // batch_size
     test_scores = deque(maxlen=patience)
 
-    for i, batch_x in enumerate(x_train_gen, 1):
+    for i, batch_x in enumerate(x_train, 1):
         optimizer.zero_grad()
         loss = model.compute_loss(model(*batch_x), y_train[(i-1)*batch_size:i*batch_size])
         loss.backward()

@@ -6,11 +6,10 @@ from multiprocessing.pool import Pool
 from functools import partial
 
 import numpy as np
-from Bio import SeqIO
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 import torch
 
 from coconet.tools import get_kmer_frequency, get_coverage
-
 
 class CompositionGenerator:
     """
@@ -31,10 +30,14 @@ class CompositionGenerator:
             self.pool = Pool(threads)
 
     def set_genomes(self, fasta):
-        contigs = np.unique(self.pairs['sp'].flatten())
-        self.genomes = {contig.id: str(contig.seq)
-                        for contig in SeqIO.parse(fasta, "fasta")
-                        if contig.id in contigs}
+        contigs = set(self.pairs['sp'].flatten())
+        self.genomes = dict()
+
+        with open(fasta, 'r') as handle:
+            for (name, seq) in SimpleFastaParser(handle):
+                ctg_id = name.split()[0]
+                if ctg_id in contigs:
+                    self.genomes[ctg_id] = seq
 
     def __iter__(self):
         return self
@@ -57,9 +60,11 @@ class CompositionGenerator:
 
             self.i += 1
 
+            if self.i >= self.n_batches:
+                self.pool.close()
+
             return torch.FloatTensor(x1), torch.FloatTensor(x2)
 
-        self.pool.close()
         raise StopIteration()
 
 class CoverageGenerator:
