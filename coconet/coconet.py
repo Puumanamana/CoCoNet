@@ -12,7 +12,7 @@ from coconet.core.config import Configuration
 from coconet.parser import parse_args
 from coconet.fragmentation import make_pairs
 from coconet.dl_util import load_model, train, save_repr_all
-from coconet.clustering import make_pregraph, refine_clustering
+from coconet.clustering import make_pregraph, refine_clustering, salvage_contigs
 
 
 def main(**kwargs):
@@ -328,6 +328,18 @@ def cluster(cfg):
         gamma2=cfg.gamma2,
         buffer_size=cfg.load_batch
     )
+
+    if cfg.min_ctg_len < 2048:
+        logger.warning((
+            'Small contigs recruitment has not yet been fully tested '
+            'and results should be manually validated.'
+        ))
+        salvage_contigs(
+            cfg.io['assignments'],
+            cfg.io['h5'],
+            min_bin_size=3,
+            output=cfg.io['recruits']
+        )
 
 if __name__ == '__main__':
     main()

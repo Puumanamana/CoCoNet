@@ -112,6 +112,7 @@ class Configuration:
             h5='coverage.h5',
             exclude='exclude.tsv',
             dtr='dtr.tsv',
+            recruits='recruits.tsv',
             pairs={'test': 'pairs-test.npy', 'train': 'pairs-train.npy'},
             model='coconet.pth',
             nn_test='nn-test.csv',
@@ -152,7 +153,7 @@ class Configuration:
         if not hasattr(self, 'fragment_length') or self.fragment_length < 0:
             if not hasattr(self, 'min_ctg_len'):
                 self.min_ctg_len = 2048
-            self.fragment_length = self.min_ctg_len // 2
+            self.fragment_length = max(1024, self.min_ctg_len // 2)
 
         if not hasattr(self, 'min_ctg_len'):
             self.min_ctg_len = 2*self.fragment_length

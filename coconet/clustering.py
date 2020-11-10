@@ -7,6 +7,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+import h5py
 import sklearn.neighbors
 import hnswlib
 import torch
@@ -340,9 +341,6 @@ def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=
             n_iterations=-1,
             **kwargs
         )
-    elif algorithm == 'label_propagation':
-        communities = bin_graph.community_label_propagation(**kwargs)
-
     elif algorithm == 'spectral':
         if 'cluster' in bin_graph.vs.attribute_names():
             # Pre-clustering
@@ -359,3 +357,66 @@ def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=
 
     # Set the "bin" attribute
     graph.vs['cluster'] = communities.sort_values().index
+
+
+def salvage_contigs(bins, coverage, min_bin_size=3, output='recruits.csv'):
+    """
+    Recruits contigs shorter than 2048 in the existing bins. 
+    Write the new assignments in a separate file.
+    Args:
+        bins (str): Path to output bin assignments
+        coverage (str): Path to h5 coverage
+    Returns:
+        None
+    """
+
+    handle = h5py.File(coverage, 'r')
+
+    min_bin_size=2
+    bin_assignments = pd.read_csv(bins, header=None, names=['contigs', 'bins'])
+    bin_assignments = bin_assignments.groupby('bins').filter(lambda x: len(x) >= min_bin_size)
+
+    # Compute intra cluster pearson's correlation
+    qlevels = np.arange(0, 1, 0.1)
+    coverage_ref = {ctg: np.quantile(handle[ctg][:], qlevels, axis=0)
+                    for ctg in bin_assignments.contigs}
+
+    intra_corr = dict()
+    ctg_in_bins = bin_assignments.groupby('bins').contigs.agg(list).to_dict()
+
+    for bin_id in bin_assignments.bins.unique():
+        contigs = ctg_in_bins.loc[bin_id]
+        intra_corr_bin = np.zeros((len(contigs), len(contigs)))
+        coverages = np.stack([coverage_ref[ctg] for ctg in contigs])
+
+        for coverage_sample in coverages:
+            intra_corr_bin += np.corrcoef(coverage_sample)
+
+        intra_corr_bin /= len(coverages)
+        intra_corr['bin_id'] = np.mean(intra_corr_bin)
+
+    n_small = 0
+
+    # Start recruiting contigs
+    recruits = dict()
+    for (ctg, cov) in handle.items():
+        if cov.shape[1] >= 2048 or cov.shape[1] < 1000:
+            continue
+
+        n_small += 1
+        coverage_query = np.quantile(cov[:], qlevels, axis=0)
+
+        for bin_id, contigs in ctg_in_bins.items():
+            inter_corr = np.mean([
+                np.mean([np.corrcoef(cov_s, ref_s)[0, 1]
+                         for (cov_s, ref_s) in zip(coverage_query, coverage_ref[ctg])])
+                for ctg in contigs
+            ])
+            if inter_corr > intra_corr[bin_id]:
+                recruits[ctg] = bin_id
+                break
+
+        if n_small % 100 == 0:
+            logger.debug(f'{len(recruits):,}/{n_small:,} small contigs recruited')
+
+    pd.Series(recruits).to_csv(output)

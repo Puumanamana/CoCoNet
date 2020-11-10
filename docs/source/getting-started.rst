@@ -8,9 +8,8 @@ CoCoNet was tested on both MacOS and Ubuntu 18.04.
 To install and run CoCoNet, you will need:
 
 #. `python` (>=3.5)
-#. `pip3`, the python package manager
+#. `pip3`, the python package manager or the `conda` installer.
    
-
 Install with bioconda
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -20,10 +19,10 @@ CoCoNet is available in bioconda. You will need `miniconda <https://docs.conda.i
 
     conda install -c bioconda coconet-binning              
 
-Install with pip
+Install with the latest version with pip
 ^^^^^^^^^^^^^^^^
 
-To install CoCoNet, open you need to run (you can omit --user if you're working in a vitualenv):
+You can also install CoCoNet, from the `Python Package Index <https://pypi.org/project/coconet-binning/>`_ where the latest release are available. To install it, you simply need to run the following command (you can omit --user if you're working in a vitualenv):
 
 .. code-block:: bash
 

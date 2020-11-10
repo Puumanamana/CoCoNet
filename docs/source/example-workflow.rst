@@ -3,7 +3,6 @@ Analysis workflow
 
 Here we present a full pipeline example for running CoCoNet from the raw reads to final bins. We assume that you have paired-end illumina reads available in the :code:`data/` directory. Each sample is named with the convention :code:`<sample>_R{1,2}.fastq.gz`.
 
-
 Trimming
 ^^^^^^^^
 
