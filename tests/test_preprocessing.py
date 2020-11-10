@@ -31,7 +31,7 @@ def test_composition_feature():
     f.path['filt_fasta'].unlink()
     Path('exclude.txt').unlink()
 
-    assert filtered_lengths == [20, 15]
+    assert filtered_lengths == []
 
 def test_coverage_feature():
     h5 = generate_h5_file(10, 20, filename='coverage.h5')

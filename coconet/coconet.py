@@ -329,7 +329,7 @@ def cluster(cfg):
         buffer_size=cfg.load_batch
     )
 
-    if cfg.min_ctg_len < 2048:
+    if cfg.min_ctg_len < 2048 and cfg.recruit_small_contigs:
         logger.warning((
             'Small contigs recruitment has not yet been fully tested '
             'and results should be manually validated.'

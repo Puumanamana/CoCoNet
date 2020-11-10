@@ -280,6 +280,10 @@ def parse_args():
         '--n-clusters', type=int,
         help='(spectral clustering) Maximum number of clusters'
     )
+    cluster_parser.add_argument(
+        '--recruit-small-contigs', action='store_true',
+        help='Salvage short contigs (<2048)'
+    )
     #========================================================#
     #====================== Subparsers ======================#
     #========================================================#
