@@ -37,6 +37,7 @@ def main(**kwargs):
         cfg = Configuration.from_yaml(prev_config)
     else:
         cfg = Configuration()
+
     cfg.init_config(mkdir=True, **params)
     cfg.to_yaml()
 
@@ -157,7 +158,8 @@ def make_train_test(cfg):
                 f"the minimum length ({cfg.min_ctg_len}). Aborting"
             ))
             raise RuntimeError
-        assembly.append((name, contig))
+        if len(contig) > 2*cfg.fragment_length:
+            assembly.append((name, contig))
 
     n_ctg = len(assembly)
     n_ctg_for_test = max(2, int(cfg.test_ratio*n_ctg))

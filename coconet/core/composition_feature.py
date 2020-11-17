@@ -58,7 +58,7 @@ class CompositionFeature(Feature):
             for (ctg_id, seq) in self.get_iterator('fasta'):
                 ctg_no_n = seq.upper().replace('N', '')
 
-                if len(ctg_no_n) >= max(2048, min_length):
+                if len(ctg_no_n) >= min_length:
                     writer.write(f'>{ctg_id}\n{ctg_no_n}\n')
                 else:
                     entry = '\t'.join([ctg_id, 'length', str(len(ctg_no_n))])

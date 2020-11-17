@@ -288,7 +288,7 @@ def get_test_scores(preds, truth):
 
 @run_if_not_exists()
 def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
-                  n_frags=30, frag_len=1024,
+                  n_frags=30, frag_len=1024, min_ctg_len=2048,
                   rc=True, kmer=4, wsize=64, wstep=32):
     """
     - Calculate intermediate representation for all fragments of all contigs
@@ -323,7 +323,7 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
     repr_h5 = {key: h5py.File(filename, 'w') for key, filename in output.items()}
 
     for contig in SeqIO.parse(fasta, "fasta"):
-        if contig.id in dtr_contigs:
+        if contig.id in dtr_contigs or len(contig.seq) < min_ctg_len:
             continue
 
         step = int((len(contig)-frag_len) / n_frags)

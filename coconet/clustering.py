@@ -7,6 +7,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+import scipy
 import h5py
 import sklearn.neighbors
 import hnswlib
@@ -372,51 +373,62 @@ def salvage_contigs(bins, coverage, min_bin_size=3, output='recruits.csv'):
 
     handle = h5py.File(coverage, 'r')
 
-    min_bin_size=2
-    bin_assignments = pd.read_csv(bins, header=None, names=['contigs', 'bins'])
-    bin_assignments = bin_assignments.groupby('bins').filter(lambda x: len(x) >= min_bin_size)
+    min_bin_size = 3
+    n_samples = next(iter(handle.values())).shape[0]
+    percentiles = np.arange(0, 100, 1)
 
-    # Compute intra cluster pearson's correlation
-    qlevels = np.arange(0, 1, 0.1)
-    coverage_ref = {ctg: np.quantile(handle[ctg][:], qlevels, axis=0)
-                    for ctg in bin_assignments.contigs}
+    assignments = pd.read_csv(bins, header=None, names=['contigs', 'bins'])
+    assignments = assignments.groupby('bins').filter(lambda x: len(x) >= min_bin_size)
+    contigs_per_bin = assignments.groupby('bins').contigs.agg(list)
 
-    intra_corr = dict()
-    ctg_in_bins = bin_assignments.groupby('bins').contigs.agg(list).to_dict()
+    queries_cov = [(ctg, np.percentile(handle[ctg][:], percentiles, axis=1).T)
+                   for ctg in handle.keys()
+                   if 1024 < handle[ctg].shape[1] < 2048]
 
-    for bin_id in bin_assignments.bins.unique():
-        contigs = ctg_in_bins.loc[bin_id]
-        intra_corr_bin = np.zeros((len(contigs), len(contigs)))
-        coverages = np.stack([coverage_ref[ctg] for ctg in contigs])
-
-        for coverage_sample in coverages:
-            intra_corr_bin += np.corrcoef(coverage_sample)
-
-        intra_corr_bin /= len(coverages)
-        intra_corr['bin_id'] = np.mean(intra_corr_bin)
-
-    n_small = 0
-
-    # Start recruiting contigs
     recruits = dict()
-    for (ctg, cov) in handle.items():
-        if cov.shape[1] >= 2048 or cov.shape[1] < 1000:
+    scores = dict()
+
+    for bin_id, contigs in contigs_per_bin.iteritems():
+        if len(contigs) < min_bin_size:
             continue
 
-        n_small += 1
-        coverage_query = np.quantile(cov[:], qlevels, axis=0)
+        logger.info(f'Checking bin {bin_id}')
 
-        for bin_id, contigs in ctg_in_bins.items():
-            inter_corr = np.mean([
-                np.mean([np.corrcoef(cov_s, ref_s)[0, 1]
-                         for (cov_s, ref_s) in zip(coverage_query, coverage_ref[ctg])])
-                for ctg in contigs
-            ])
-            if inter_corr > intra_corr[bin_id]:
-                recruits[ctg] = bin_id
-                break
+        # Raw coverage values for bin
+        rcov_bin = [[np.percentile(handle[ctg][s, :], percentiles) for ctg in contigs]
+                    for s in range(n_samples)]
+        # print(np.stack([np.mean(x, axis=1) for x in rcov_bin]))
+        intra_dist = np.zeros(n_samples)
 
-        if n_small % 100 == 0:
-            logger.debug(f'{len(recruits):,}/{n_small:,} small contigs recruited')
+        # Compute intra-bin similarities
+        for i, ref in enumerate(rcov_bin):
+            intra_dist[i] = np.nanmean(scipy.spatial.distance.pdist(ref, metric='euclidean'))
 
-    pd.Series(recruits).to_csv(output)
+        # Compute bin-query similarities
+        for (query_id, query_cov) in queries_cov:
+            score_query = 0
+            for s in range(n_samples):
+                dist = np.nanmean(scipy.spatial.distance.cdist(
+                    query_cov[s][None, :], rcov_bin[s],
+                    metric='euclidean'
+                ))
+
+                score_query += dist
+
+                if dist > intra_dist[s]:
+                    break
+
+            else:
+                score_query /= n_samples
+                prev_score = scores.get(query_id, np.inf)
+
+                if score_query < prev_score:
+                    recruits[query_id] = bin_id
+                    scores[query_id] = score_query
+
+    if recruits:
+        recruits = pd.Series(recruits).rename('bin_id')
+        recruits.index.name = 'contig'
+        recruits.to_csv(output, index=True, header=True, sep='\t')
+    else:
+        logger.info('No contig <2048bp recruited in bins')

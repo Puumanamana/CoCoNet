@@ -236,7 +236,7 @@ def test_save_repr():
               for k in ['composition', 'coverage']}
 
     save_repr_all(model, fasta, coverage, n_frags=5, frag_len=FL, output=output,
-                  wsize=WSIZE, wstep=WSTEP)
+                  min_ctg_len=0, wsize=WSIZE, wstep=WSTEP)
 
     assert all(out.is_file() for out in output.values())
 
