@@ -21,6 +21,8 @@ class MemoryTracer(logging.Filter):
                 rss += child.memory_full_info().rss
             except psutil.NoSuchProcess:
                 pass
+            except psutil.AccessDenied:
+                pass
 
         record.rss = f'{rss/2**30:>5.1f} GB'
 
