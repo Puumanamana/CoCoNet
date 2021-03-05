@@ -1,3 +1,5 @@
+VERSION ?= 0.8.0
+
 test:
 	pytest
 
@@ -10,5 +12,5 @@ publish:
 	twine upload dist/*
 
 container:
-	sudo docker build --no-cache -f dockerfile -t nakor/coconet . \
-	&& sudo docker push nakor/coconet
+	sudo docker build --no-cache -f dockerfile -t nakor/coconet:$(VERSION) . \
+	&& sudo docker push nakor/coconet:$(VERSION)
