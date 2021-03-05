@@ -362,7 +362,7 @@ def get_communities(graph, threshold, gamma=0.5, algorithm='leiden', n_clusters=
 
 def salvage_contigs(bins, coverage, min_bin_size=3, output='recruits.csv'):
     """
-    Recruits contigs shorter than 2048 in the existing bins. 
+    Recruits contigs shorter than 2048 in the existing bins.
     Write the new assignments in a separate file.
     Args:
         bins (str): Path to output bin assignments
