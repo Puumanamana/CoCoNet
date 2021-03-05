@@ -19,7 +19,7 @@ CoCoNet is available in bioconda. You will need `miniconda <https://docs.conda.i
 
     conda install -c bioconda coconet-binning              
 
-Install with the latest version with pip
+Install the latest release on PyPi
 ^^^^^^^^^^^^^^^^
 
 You can also install CoCoNet, from the `Python Package Index <https://pypi.org/project/coconet-binning/>`_ where the latest release are available. To install it, you simply need to run the following command (you can omit --user if you're working in a vitualenv):
@@ -35,9 +35,18 @@ Install the development version with pip
 You can also install the most up to date version with the following command:
 
 .. code-block:: bash
-                
-    git clone https://github.com/Puumanamana/CoCoNet.git
-    cd CoCoNet
-    pip install .
+    # Install numpy until scikit-bio issue #1690 is resolved
+    pip install --user numpy
+    # Install CoCoNet
+    git clone https://github.com/Puumanamana/CoCoNet.git && cd CoCoNet
+    pip install --user .
 
 If you encounter any issue with the development version, you should try with the latest release as the development version might not have been thoroughly checked.
+
+Using Docker
+^^^^^^^^^^^^
+
+Alternatively, CoCoNet can be pulled directly from DockerHub:
+
+.. code-block:: bash
+    docker run nakor/coconet coconet run -h                

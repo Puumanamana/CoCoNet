@@ -24,12 +24,22 @@ CoCoNet (Composition and Coverage Network) is a binning method for viral metagen
 Install
 -------
 
-CoCoNet is available on PyPi and can be installed with pip:
+Install latest PyPi release (recommended)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
-   pip3 install coconet-binning --user
+   pip3 install --user coconet-binning
 
+Or a specific version:
+
+.. code-block:: bash
+
+   # install CoCoNet v0.8.0
+   pip3 install --user coconet-binning==0.8.0
+
+For more installation options, see the `documentation <https://coconet.readthedocs.io/getting-started.html>`_
+   
 Basic usage
 -----------
 
