@@ -47,8 +47,8 @@ If you encounter any issue with the development version, you should try with the
 Using Docker
 ^^^^^^^^^^^^
 
-Alternatively, CoCoNet can be pulled directly from DockerHub:
+Alternatively, CoCoNet can be pulled directly from DockerHub. Assuming your contigs are located in /data/contigs.fasta and your indexed bam files are in /data/*.bam and /data/*.bai, then you can run CoCoNet with the following command:
 
 .. code-block:: bash
                
-    docker run nakor/coconet coconet run -h                
+    docker run -v /data:/workspace nakor/coconet coconet run --fasta contigs.fasta --bam *.bam
