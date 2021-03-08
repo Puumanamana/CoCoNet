@@ -5,7 +5,7 @@ Setup config for coconet-binning package
 from setuptools import setup, find_packages
 
 setup(name='coconet-binning',
-      version='0.8.0',
+      version='0.9.0',
       description='A contig binning tool from viral metagenomes',
       long_description_content_type='text/x-rst',
       long_description=open('README.rst').read(),
