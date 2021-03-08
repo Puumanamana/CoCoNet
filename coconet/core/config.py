@@ -252,7 +252,7 @@ class Configuration:
         if not coverage.check_paths():
             self.log(
                 ('Could not find the coverage information. '
-                 'Did you run coconet preprocess with the --bam flag?'),
+                 'Did you run coconet with the --bam flag?'),
                 'critical'
             )
             raise FileNotFoundError
