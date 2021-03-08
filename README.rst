@@ -25,7 +25,7 @@ Install
 -------
 
 Install latest PyPi release (recommended)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 

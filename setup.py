@@ -7,6 +7,7 @@ from setuptools import setup, find_packages
 setup(name='coconet-binning',
       version='0.8.0',
       description='A contig binning tool from viral metagenomes',
+      long_description_content_type='text/x-rst',
       long_description=open('README.rst').read(),
       keywords='binning metagenomics deep learning virus clustering',
       license='Apache License 2.0',
