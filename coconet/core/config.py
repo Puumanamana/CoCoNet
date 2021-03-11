@@ -46,7 +46,7 @@ class Configuration:
         config = Configuration()
 
         with open(str(filepath), 'r') as handle:
-            kwargs = yaml.load(handle, Loader=yaml.FullLoader)
+            kwargs = yaml.safe_load(handle)
 
         # Reset output in case the folder was moved
         kwargs['io']['output'] = Path(filepath).parent
@@ -60,10 +60,10 @@ class Configuration:
         """
 
         for (name, value) in kwargs.items():
-            if name not in {'fasta', 'h5', 'bam', 'output'}:
-                setattr(self, name, value)
-            else:
+            if name in {'fasta', 'h5', 'bam', 'output'}:
                 self.set_input(name, value)
+            else:
+                setattr(self, name, value)
 
         self.init_values_if_not_set()
 
@@ -121,7 +121,7 @@ class Configuration:
 
         # if coverage_h5 already exists, copy it to the output folder
         if 'h5' in self.io:
-            src = self.io['h5']
+            src = Path(self.io['h5'])
             dest = Path(self.io['output'], output_files['h5'])
 
             if not src.is_file() and 'bam' not in self.io:
@@ -184,6 +184,8 @@ class Configuration:
         io_to_keep = {k: v for (k, v) in self.io.items() if k in
                       {'fasta', 'h5', 'bam', 'output'}}
         complete_conf['io'] = io_to_keep
+
+        complete_conf = path_to_str(complete_conf)
 
         with open(config_file, 'w') as handle:
             yaml.dump(complete_conf, handle)
@@ -270,3 +272,12 @@ class Configuration:
             features.append(self.get_composition_feature())
 
         return features
+
+def path_to_str(obj):
+    if isinstance(obj, Path):
+        return str(Path)
+    if isinstance(obj, list):
+        return [path_to_str(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: path_to_str(v) for k, v in obj.items()}
+    return obj
