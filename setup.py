@@ -21,7 +21,6 @@ setup(name='coconet-binning',
                      'pytest-cov'],
       python_requires='>=3.6',
       install_requires=[
-          'argparse',
           'psutil',
           'pyyaml==5.1.0',
           'numpy',
