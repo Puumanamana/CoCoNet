@@ -16,7 +16,7 @@ from coconet.clustering import (compute_pairwise_comparisons,
                                 make_pregraph,
                                 refine_clustering,
                                 get_communities)
-from .data import generate_h5_file, generate_rd_model
+from tests.data import generate_h5_file, generate_rd_model
 
 
 LOCAL_DIR = Path(__file__).parent

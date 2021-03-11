@@ -9,7 +9,8 @@ import numpy as np
 import h5py
 
 from coconet.tools import get_kmer_frequency, get_coverage, avg_window, kmer_rc_idx
-from .data import generate_pair_file, generate_h5_file
+from tests.data import generate_pair_file, generate_h5_file
+
 
 def slow_kmer_freq(seq, k=4, rc=False):
 

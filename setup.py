@@ -22,7 +22,7 @@ setup(name='coconet-binning',
       python_requires='>=3.6',
       install_requires=[
           'psutil',
-          'pyyaml==5.1.0',
+          'pyyaml',
           'numpy',
           'pandas>=1.0',
           'h5py',

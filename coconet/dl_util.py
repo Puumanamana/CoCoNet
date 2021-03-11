@@ -20,6 +20,7 @@ from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logger = logging.getLogger('<learning>')
 
 def initialize_model(model_type, input_shapes, architecture):
@@ -34,8 +35,6 @@ def initialize_model(model_type, input_shapes, architecture):
     Returns:
         CompositionModel, CoverageNodel or CoCoNet
     """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     if model_type == 'composition':
         model = CompositionModel(input_shapes, **architecture)
 

@@ -17,11 +17,12 @@ from coconet.dl_util import get_npy_lines, get_labels, get_test_scores
 from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.core.generators import CompositionGenerator, CoverageGenerator
 
-from .data import generate_fasta_file, generate_h5_file, generate_pair_file
-from .data import FL, STEP, WSIZE, WSTEP
-from .data import TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
+from tests.data import generate_fasta_file, generate_h5_file, generate_pair_file
+from tests.data import FL, STEP, WSIZE, WSTEP
+from tests.data import TEST_LEARN_PRMS, TEST_CTG_LENGTHS, TEST_ARCHITECTURE, TEST_SHAPES
 
 LOCAL_DIR = Path(__file__).parent
+
 
 def test_init_composition_model():
     '''

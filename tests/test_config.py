@@ -7,7 +7,8 @@ import shutil
 
 from coconet.core.config import Configuration
 
-from .data import generate_h5_file
+from tests.data import generate_h5_file
+
 
 def test_init():
     '''
@@ -112,4 +113,5 @@ def test_architecture():
     assert architecture == cfg.get_architecture()
 
 if __name__ == '__main__':
+    test_init_config()
     test_load_save()

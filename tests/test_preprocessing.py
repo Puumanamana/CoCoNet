@@ -11,9 +11,10 @@ from coconet.core.feature import Feature
 from coconet.core.composition_feature import CompositionFeature
 from coconet.core.coverage_feature import CoverageFeature
 
-from .data import generate_fasta_file, generate_h5_file
+from tests.data import generate_fasta_file, generate_h5_file
 
 LOCAL_DIR = Path(__file__).parent
+
 
 def test_feature_obj_is_created():
     f = Feature(name='x')
