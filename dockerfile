@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:1.8.0
+FROM pytorch/pytorch
 LABEL author="carisdak@hawaii.edu"
 
 RUN apt-get update \
