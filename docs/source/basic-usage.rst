@@ -24,7 +24,7 @@ To run CoCoNet with the default parameters, you simply need to provide the assem
 
 .. code-block:: bash
 
-   coconet --fasta scaffolds.fasta --coverage cov/*.bam --output binning_results
+   coconet --fasta scaffolds.fasta --bam cov/*.bam --output binning_results
 
 
 You can see the usage information for each subcommand by typing :code:`coconet <subcommand> -h`, where `<subcommand>` is either `preprocess`, `learn`, `cluster` or `run`. For more details about the options, see the :ref:`hyperparameters` section
@@ -41,4 +41,4 @@ The output data folder contains many files. The ones you might be interested in 
 - The log file, `coconet.log`, that contains all of the runtime information, run parameters and filtering information.  
 - The run configuration `config.yaml` with the run parameters.
 - The filtered alignments (both .bam and .h5 formats) and the filtered assembly (.fasta).
-- The list of contigs that were set aside because they didn't pass the prevalence or minimum lenggth filter, `exclude.tsv`. The first column is the contig name, the second is the reason why the contig was excluded, and the remaining field is the values corresponding to the filtering criteria (length or list of coverage values).
+- The list of contigs that were set aside because they didn't pass the prevalence or minimum length filter, `exclude.tsv`. The first column is the contig name, the second is the reason why the contig was excluded, and the remaining field is the values corresponding to the filtering criteria (length or list of coverage values).

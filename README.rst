@@ -29,14 +29,8 @@ Install latest PyPi release (recommended)
 
 .. code-block:: bash
 
+   pip3 install --user numpy
    pip3 install --user coconet-binning
-
-Or a specific version:
-
-.. code-block:: bash
-
-   # install CoCoNet v0.8.0
-   pip3 install --user coconet-binning==0.8.0
 
 For more installation options, see the `documentation <https://coconet.readthedocs.io/getting-started.html>`_
    
@@ -50,6 +44,17 @@ CoCoNet is available as the command line program. For a list of all the options,
     coconet run -h
 
 For more details, please see the documentation on `ReadTheDocs <https://coconet.readthedocs.io>`_
+
+Checking the installation
+-------------------------
+
+A test dataset is provided in this repository in tests/sim_data. To quickly verify the installation worked, you can simply download the repository and run the test command as follows:
+
+.. code-block:: bash
+
+   git clone https://github.com/Puumanamana/CoCoNet
+   cd CoCoNet
+   make test
 
 Contribute
 ----------

@@ -42,7 +42,7 @@ To assemble your reads, you have many choices. One of the most accurate for meta
 Coverage
 ^^^^^^^^
 
-To compute the contig coverage, we can align the trimmed reads on the assembled contigs with tools such as `bwa <http://bio-bwa.sourceforge.net/bwa.shtml>`_ or `bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml>`_:
+To compute contig coverage, we can align the trimmed reads on the assembled contigs with tools such as `bwa <http://bio-bwa.sourceforge.net/bwa.shtml>`_ or `bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml>`_:
 
 .. code-block:: bash
 

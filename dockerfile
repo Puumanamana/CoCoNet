@@ -13,6 +13,5 @@ RUN conda env update -n base --file conda.yaml
 WORKDIR /workspace
 
 RUN git clone https://github.com/Puumanamana/CoCoNet.git \
-    && cd CoCoNet \
-    && pip install . \
+    && pip install /workspace/CoCoNet/ \
     && rm -rf CoCoNet
