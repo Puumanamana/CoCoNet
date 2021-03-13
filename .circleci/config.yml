@@ -14,7 +14,7 @@ jobs:
           name: Build 
       - python/save-cache
       - run:
-          command: ./manage.py test
+          command: pytest
           name: Test
 
 workflows:
