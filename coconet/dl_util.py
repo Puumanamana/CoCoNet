@@ -20,7 +20,7 @@ from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logger = logging.getLogger('<learning>')
 
 def initialize_model(model_type, input_shapes, architecture):
@@ -50,7 +50,7 @@ def initialize_model(model_type, input_shapes, architecture):
                                        architecture['coverage'])
         model = CoCoNet(compo_model, cover_model, **architecture['merge'])
 
-    model.to(device)
+    model.to(DEVICE)
 
     return model
 
@@ -105,7 +105,7 @@ def get_labels(pairs_file):
     ctg_names = np.load(pairs_file)['sp']
     labels = (ctg_names[:, 0] == ctg_names[:, 1]).astype(np.float32)[:, None]
 
-    return torch.from_numpy(labels)
+    return torch.from_numpy(labels).to(DEVICE)
 
 def get_npy_lines(filename):
     """
@@ -248,7 +248,7 @@ def run_test(model, x, y, test_scores, model_output=None, test_output=None):
         torch.save(dict(state=model.state_dict()), model_output)
 
         pred.update(dict(truth=y))
-        pred = pd.DataFrame({key: vec.detach().numpy()[:, 0] for (key, vec) in pred.items()})
+        pred = pd.DataFrame({key: vec.detach().cpu().numpy()[:, 0] for (key, vec) in pred.items()})
         pred.to_csv(test_output, index=False)
 
     return scores
@@ -267,9 +267,9 @@ def get_test_scores(preds, truth):
     """
     scores = {}
 
-    y_true = truth.detach().numpy()[:, 0]
+    y_true = truth.detach().cpu().numpy()[:, 0]
     for key, pred in preds.items():
-        pred_bin = (np.array(pred.detach().numpy()[:, 0]) > 0.5).astype(int)
+        pred_bin = (np.array(pred.detach().cpu().numpy()[:, 0]) > 0.5).astype(int)
 
         conf_df = pd.DataFrame(
             confusion_matrix(y_true, pred_bin, labels=[0, 1]),
@@ -337,7 +337,7 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
                 for (start, stop) in fragment_boundaries
             ]).astype(np.float32)) # Shape = (n_frags, 4**k)
 
-            feature_arrays.append(x_composition)
+            feature_arrays.append(x_composition.to(DEVICE))
 
         if 'coverage' in repr_h5:
             fragment_slices = np.array([np.arange(start, stop)
@@ -349,12 +349,12 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
                 avg_window(coverage_genome, wsize, wstep, axis=2).astype(np.float32)
             )
 
-            feature_arrays.append(x_coverage)
+            feature_arrays.append(x_coverage.to(DEVICE))
 
         x_repr = model.compute_repr(*feature_arrays)
 
         for key, handle in repr_h5.items():
-            handle.create_dataset(contig.id, data=x_repr[key].detach().numpy(), dtype=np.float32)
+            handle.create_dataset(contig.id, data=x_repr[key].detach().cpu().numpy(), dtype=np.float32)
 
     for handle in repr_h5.values():
         handle.close()

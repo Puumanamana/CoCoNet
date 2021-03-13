@@ -11,6 +11,9 @@ import torch
 
 from coconet.tools import get_kmer_frequency, get_coverage
 
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 class CompositionGenerator:
     """
     kmer frequencies generator
@@ -63,7 +66,8 @@ class CompositionGenerator:
             if self.i >= self.n_batches:
                 self.pool.close()
 
-            return torch.FloatTensor(x1), torch.FloatTensor(x2)
+            return (torch.FloatTensor(x1).to(DEVICE),
+                    torch.FloatTensor(x2).to(DEVICE))
 
         raise StopIteration()
 
@@ -109,8 +113,8 @@ class CoverageGenerator:
             self.i += 1
 
             return (
-                torch.from_numpy(self.x1[idx_inf:idx_sup, :, :]),
-                torch.from_numpy(self.x2[idx_inf:idx_sup, :, :])
+                torch.from_numpy(self.x1[idx_inf:idx_sup, :, :]).to(DEVICE),
+                torch.from_numpy(self.x2[idx_inf:idx_sup, :, :]).to(DEVICE)
             )
 
         raise StopIteration()
