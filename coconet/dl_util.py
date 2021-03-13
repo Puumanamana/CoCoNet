@@ -20,8 +20,8 @@ from coconet.core.generators import CompositionGenerator, CoverageGenerator
 from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
 
 
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logger = logging.getLogger('<learning>')
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def initialize_model(model_type, input_shapes, architecture):
     """
@@ -50,9 +50,7 @@ def initialize_model(model_type, input_shapes, architecture):
                                        architecture['coverage'])
         model = CoCoNet(compo_model, cover_model, **architecture['merge'])
 
-    model.to(DEVICE)
-
-    return model
+    return model.to(DEVICE)
 
 def load_model(config, from_checkpoint=False):
     """
@@ -105,7 +103,7 @@ def get_labels(pairs_file):
     ctg_names = np.load(pairs_file)['sp']
     labels = (ctg_names[:, 0] == ctg_names[:, 1]).astype(np.float32)[:, None]
 
-    return torch.from_numpy(labels).to(DEVICE)
+    return torch.from_numpy(labels)
 
 def get_npy_lines(filename):
     """
@@ -337,7 +335,7 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
                 for (start, stop) in fragment_boundaries
             ]).astype(np.float32)) # Shape = (n_frags, 4**k)
 
-            feature_arrays.append(x_composition.to(DEVICE))
+            feature_arrays.append(x_composition)
 
         if 'coverage' in repr_h5:
             fragment_slices = np.array([np.arange(start, stop)
@@ -349,7 +347,7 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
                 avg_window(coverage_genome, wsize, wstep, axis=2).astype(np.float32)
             )
 
-            feature_arrays.append(x_coverage.to(DEVICE))
+            feature_arrays.append(x_coverage)
 
         x_repr = model.compute_repr(*feature_arrays)
 
