@@ -103,7 +103,7 @@ def get_labels(pairs_file):
     ctg_names = np.load(pairs_file)['sp']
     labels = (ctg_names[:, 0] == ctg_names[:, 1]).astype(np.float32)[:, None]
 
-    return torch.from_numpy(labels)
+    return torch.from_numpy(labels).to(DEVICE)
 
 def get_npy_lines(filename):
     """

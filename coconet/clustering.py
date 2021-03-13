@@ -299,7 +299,7 @@ def compute_pairwise_comparisons(
             inputs_torch = [x[feature] for x in inputs_torch]
 
         # make prediction
-        probs = model.combine_repr(*inputs_torch).detach().numpy()[:, 0]
+        probs = model.combine_repr(*inputs_torch).detach().cpu().numpy()[:, 0]
 
         if vote_threshold is not None:
             probs = probs > vote_threshold
