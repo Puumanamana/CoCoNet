@@ -1,4 +1,4 @@
-FROM pytorch/pytorch
+FROM pytorch/pytorch:1.8.0
 LABEL author="carisdak@hawaii.edu"
 
 RUN apt-get update \
@@ -10,9 +10,9 @@ COPY conda.yaml .
 
 RUN conda env update -n base --file conda.yaml
 
+WORKDIR /workspace
+
 RUN git clone https://github.com/Puumanamana/CoCoNet.git \
     && cd CoCoNet \
     && pip install . \
     && rm -rf CoCoNet
-
-WORKDIR /workspace

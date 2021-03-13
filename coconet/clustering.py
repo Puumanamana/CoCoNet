@@ -11,7 +11,6 @@ import scipy
 import h5py
 import sklearn.neighbors
 import hnswlib
-import torch
 import igraph
 
 from coconet.util import run_if_not_exists, chunk, format_array
