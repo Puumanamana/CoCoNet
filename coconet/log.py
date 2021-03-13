@@ -10,21 +10,23 @@ import psutil
 class MemoryTracer(logging.Filter):
     """
     To track memory usage at different steps
+    Used memory is computed as the PSS of the main program 
+    + the sum of the PSS of its children. 
     """
 
     def filter(self, record):
         process = psutil.Process()
-        rss = process.memory_full_info().rss
+        pss = process.memory_full_info().pss
 
         for child in process.children(recursive=True):
             try:
-                rss += child.memory_full_info().rss
+                pss += child.memory_full_info().pss
             except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
                 pass
 
-        record.rss = f'{rss/2**30:>5.1f} GB'
+        record.pss = f'{pss/2**30:>5.1f} GB'
 
         return True
 
@@ -54,7 +56,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 
         # Create a Formatter for formatting the log messages
         formatter = logging.Formatter(
-            '{asctime} (RSS:{rss}) {name:^15} {levelname}: {message}',
+            '{asctime} (Mem:{pss}) {name:^15} {levelname}: {message}',
             '%H:%M:%S',
             style="{"
         )
