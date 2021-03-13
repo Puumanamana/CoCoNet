@@ -8,7 +8,7 @@ from math import ceil
 from itertools import combinations
 import numpy as np
 
-from coconet.tools import run_if_not_exists
+from coconet.util import run_if_not_exists
 
 
 logger = logging.getLogger('<learning>')

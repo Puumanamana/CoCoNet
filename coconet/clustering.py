@@ -13,7 +13,8 @@ import sklearn.neighbors
 import hnswlib
 import torch
 import igraph
-from coconet.tools import run_if_not_exists, chunk
+
+from coconet.util import run_if_not_exists, chunk, format_array
 
 
 logger = logging.getLogger('<clustering>')
@@ -289,7 +290,7 @@ def compute_pairwise_comparisons(
 
         # Convert to pytorch
         inputs_torch = [
-            {feature: torch.from_numpy(matrix)
+            {feature: format_array(matrix)
              for feature, matrix in input_j.items()}
             for input_j in inputs
         ]
@@ -306,7 +307,7 @@ def compute_pairwise_comparisons(
 
         # Save edge weight
         for j, contig_pair in enumerate(pairs_buffer):
-            edges[contig_pair] =  sum(probs[j*n_frags**2:(j+1)*n_frags**2])
+            edges[contig_pair] = sum(probs[j*n_frags**2:(j+1)*n_frags**2])
 
         if i % 100 == 0 and i > 0:
             logger.info(f'{i*buffer_size:,} contig pairs processed')

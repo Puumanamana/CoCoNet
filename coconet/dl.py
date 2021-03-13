@@ -17,11 +17,11 @@ import torch
 
 from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.core.generators import CompositionGenerator, CoverageGenerator
-from coconet.tools import run_if_not_exists, get_kmer_frequency, avg_window
+from coconet.util import run_if_not_exists, get_kmer_frequency, avg_window, format_array
+from coconet.util import DEVICE
 
 
 logger = logging.getLogger('<learning>')
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def initialize_model(model_type, input_shapes, architecture):
     """
@@ -101,9 +101,9 @@ def get_labels(pairs_file):
     """
 
     ctg_names = np.load(pairs_file)['sp']
-    labels = (ctg_names[:, 0] == ctg_names[:, 1]).astype(np.float32)[:, None]
+    labels = (ctg_names[:, 0] == ctg_names[:, 1]).astype('float32')[:, None]
 
-    return torch.from_numpy(labels).to(DEVICE)
+    return format_array(labels)
 
 def get_npy_lines(filename):
     """
@@ -246,7 +246,8 @@ def run_test(model, x, y, test_scores, model_output=None, test_output=None):
         torch.save(dict(state=model.state_dict()), model_output)
 
         pred.update(dict(truth=y))
-        pred = pd.DataFrame({key: vec.detach().cpu().numpy()[:, 0] for (key, vec) in pred.items()})
+        pred = pd.DataFrame({key: vec.detach().cpu().numpy()[:, 0]
+                             for (key, vec) in pred.items()})
         pred.to_csv(test_output, index=False)
 
     return scores
@@ -330,21 +331,23 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
         feature_arrays = []
 
         if 'composition' in repr_h5:
-            x_composition = torch.from_numpy(np.stack([
-                get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
-                for (start, stop) in fragment_boundaries
-            ]).astype(np.float32)) # Shape = (n_frags, 4**k)
+            x_composition = format_array(
+                np.stack([
+                    get_kmer_frequency(str(contig.seq)[start:stop], kmer=kmer, rc=rc)
+                    for (start, stop) in fragment_boundaries
+                ]).astype(np.float32) # Shape = (n_frags, 4**k)
+            )
 
             feature_arrays.append(x_composition)
 
         if 'coverage' in repr_h5:
             fragment_slices = np.array([np.arange(start, stop)
                                         for (start, stop) in fragment_boundaries])
-            coverage_genome = np.array(cov_h5[contig.id][:]).astype(np.float32)[:, fragment_slices]
+            coverage_genome = np.array(cov_h5[contig.id][:]).astype('float32')[:, fragment_slices]
             coverage_genome = np.swapaxes(coverage_genome, 1, 0)
 
-            x_coverage = torch.from_numpy(
-                avg_window(coverage_genome, wsize, wstep, axis=2).astype(np.float32)
+            x_coverage = format_array(
+                avg_window(coverage_genome, wsize, wstep, axis=2).astype('float32')
             )
 
             feature_arrays.append(x_coverage)
@@ -352,7 +355,8 @@ def save_repr_all(model, fasta=None, coverage=None, dtr=None, output=None,
         x_repr = model.compute_repr(*feature_arrays)
 
         for key, handle in repr_h5.items():
-            handle.create_dataset(contig.id, data=x_repr[key].detach().cpu().numpy(), dtype=np.float32)
+            handle.create_dataset(contig.id, data=x_repr[key].detach().cpu().numpy(),
+                                  dtype='float32')
 
     for handle in repr_h5.values():
         handle.close()

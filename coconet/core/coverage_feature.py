@@ -10,7 +10,7 @@ import h5py
 import pysam
 
 from coconet.core.feature import Feature
-from coconet.tools import run_if_not_exists
+from coconet.util import run_if_not_exists
 
 
 

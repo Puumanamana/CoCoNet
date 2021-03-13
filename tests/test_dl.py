@@ -1,4 +1,3 @@
-
 '''
 Tests for deep learning procedure
 '''
@@ -12,8 +11,8 @@ import h5py
 
 from coconet.core.config import Configuration
 from coconet.fragmentation import make_pairs
-from coconet.dl_util import initialize_model, load_model, train, save_repr_all
-from coconet.dl_util import get_npy_lines, get_labels, get_test_scores
+from coconet.dl import initialize_model, load_model, train, save_repr_all
+from coconet.dl import get_npy_lines, get_labels, get_test_scores
 from coconet.core.torch_models import CompositionModel, CoverageModel, CoCoNet
 from coconet.core.generators import CompositionGenerator, CoverageGenerator
 

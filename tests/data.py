@@ -12,7 +12,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from coconet.dl_util import initialize_model
+from coconet.dl import initialize_model
 
 TMP_DIR = mkdtemp()
 

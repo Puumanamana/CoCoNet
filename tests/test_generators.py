@@ -8,7 +8,7 @@ import pytest
 import numpy as np
 import h5py
 
-from coconet.tools import get_kmer_frequency, get_coverage, avg_window, kmer_rc_idx
+from coconet.util import get_kmer_frequency, get_coverage, avg_window, kmer_rc_idx
 from tests.data import generate_pair_file, generate_h5_file
 
 

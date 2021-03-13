@@ -11,7 +11,7 @@ from coconet.log import setup_logger
 from coconet.core.config import Configuration
 from coconet.parser import parse_args
 from coconet.fragmentation import make_pairs
-from coconet.dl_util import load_model, train, save_repr_all
+from coconet.dl import load_model, train, save_repr_all
 from coconet.clustering import make_pregraph, refine_clustering, salvage_contigs
 
 

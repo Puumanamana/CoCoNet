@@ -7,12 +7,9 @@ from functools import partial
 
 import numpy as np
 from Bio.SeqIO.FastaIO import SimpleFastaParser
-import torch
 
-from coconet.tools import get_kmer_frequency, get_coverage
+from coconet.util import get_kmer_frequency, get_coverage, format_array
 
-
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class CompositionGenerator:
     """
@@ -66,8 +63,8 @@ class CompositionGenerator:
             if self.i >= self.n_batches:
                 self.pool.close()
 
-            return (torch.FloatTensor(x1).to(DEVICE),
-                    torch.FloatTensor(x2).to(DEVICE))
+            return (format_array(np.array(x1, dtype='float32')),
+                    format_array(np.array(x2, dtype='float32')))
 
         raise StopIteration()
 
@@ -113,8 +110,8 @@ class CoverageGenerator:
             self.i += 1
 
             return (
-                torch.from_numpy(self.x1[idx_inf:idx_sup, :, :]).to(DEVICE),
-                torch.from_numpy(self.x2[idx_inf:idx_sup, :, :]).to(DEVICE)
+                format_array(self.x1[idx_inf:idx_sup, :, :]),
+                format_array(self.x2[idx_inf:idx_sup, :, :])
             )
 
         raise StopIteration()

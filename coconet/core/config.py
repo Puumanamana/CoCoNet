@@ -11,7 +11,7 @@ import copy
 import yaml
 import h5py
 
-from coconet.tools import kmer_count
+from coconet.util import kmer_count
 from coconet.core.composition_feature import CompositionFeature
 from coconet.core.coverage_feature import CoverageFeature
 from coconet.log import setup_logger

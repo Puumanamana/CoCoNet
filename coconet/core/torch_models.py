@@ -5,24 +5,8 @@ Definition of pytorch models for CoCoNet
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import numpy as np
 
-
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-def to_device(x):
-    if isinstance(x, torch.Tensor):
-        if x.device.type == DEVICE.type:
-            return x
-        return x.to(DEVICE)
-    if isinstance(x, list):
-        return [to_device(xi) for xi in x]
-    if isinstance(x, tuple):
-        return tuple(to_device(xi) for xi in x)
-    if isinstance(x, dict):
-        return {k: to_device(v) for (k, v) in x.items()}
-    raise ValueError(f"Data type not supported {type(x)}")
 
 class CompositionModel(nn.Module):
     """
@@ -44,7 +28,6 @@ class CompositionModel(nn.Module):
         (Before merging the 2 inputs)
         """
 
-        x = to_device(x)
         return dict(composition=F.relu(self.compo_shared(x)))
 
     def combine_repr(self, *x):
@@ -53,7 +36,6 @@ class CompositionModel(nn.Module):
         Siamese network to make output symetrical
         """
 
-        x = to_device(x)
         x_siam1 = F.relu(self.compo_siam(torch.cat(x, axis=1)))
         x_siam2 = F.relu(self.compo_siam(torch.cat(x[::-1], axis=1)))
         x = torch.max(x_siam1, x_siam2)
@@ -66,7 +48,6 @@ class CompositionModel(nn.Module):
         It will be used by the CoCoNet model
         """
 
-        x = to_device(x)
         x = [self.compute_repr(xi)['composition'] for xi in x]
         x = self.combine_repr(*x)
 
@@ -77,17 +58,13 @@ class CompositionModel(nn.Module):
         Run the composition model on its own
         """
 
-        x = to_device(x)
         x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.compo_prob(x))
 
         return dict(composition=x)
 
     def compute_loss(self, pred, truth):
-        return self.loss_op(
-            to_device(pred["composition"]),
-            to_device(truth)
-        ).mean()
+        return self.loss_op(pred["composition"], truth).mean()
 
 class CoverageModel(nn.Module):
     """
@@ -113,7 +90,6 @@ class CoverageModel(nn.Module):
         (Before merging the 2 inputs)
         """
 
-        x = to_device(x)
         x = F.relu(self.conv_layer(x))
         x = F.relu(self.cover_shared(x.view(x.shape[0], -1)))
         return dict(coverage=x)
@@ -124,7 +100,6 @@ class CoverageModel(nn.Module):
         Siamese network to make output symetrical
         """
 
-        x = to_device(x)
         x_siam1 = F.relu(self.cover_siam(torch.cat(x, axis=1)))
         x_siam2 = F.relu(self.cover_siam(torch.cat(x[::-1], axis=1)))
 
@@ -138,7 +113,6 @@ class CoverageModel(nn.Module):
         It will be used by the CoCoNet model
         """
 
-        x = to_device(x)
         x = [self.compute_repr(xi)['coverage'] for xi in x]
         x = self.combine_repr(*x)
         return x
@@ -148,13 +122,13 @@ class CoverageModel(nn.Module):
         Run the coverage model on its own
         """
 
-        x = to_device(x)
         x = self.get_coconet_input(*x)
         x = torch.sigmoid(self.cover_prob(x))
 
         return dict(coverage=x)
 
     def compute_loss(self, pred, truth):
+
         return self.loss_op(pred["coverage"], truth).mean()
 
 class CoCoNet(nn.Module):
@@ -179,7 +153,6 @@ class CoCoNet(nn.Module):
         Compute representation for both sub-models
         """
 
-        (x1, x2) = (to_device(x1), to_device(x2))
         latent_repr = self.composition_model.compute_repr(x1)
         latent_repr.update(self.coverage_model.compute_repr(x2))
 
@@ -190,7 +163,6 @@ class CoCoNet(nn.Module):
         Combine representation for both sub-models
         Compute the final probability
         """
-        latent_repr = to_device(latent_repr)
 
         compo_repr = self.composition_model.combine_repr(
             latent_repr[0]["composition"], latent_repr[1]["composition"]
@@ -210,8 +182,6 @@ class CoCoNet(nn.Module):
         (Composition, Coverage, Combined)
         """
 
-        (x1, x2) = (to_device(x1), to_device(x2))
-        
         compo_repr = self.composition_model.get_coconet_input(*x1)
         cover_repr = self.coverage_model.get_coconet_input(*x2)
 
@@ -228,9 +198,6 @@ class CoCoNet(nn.Module):
         """
         Get all 3 losses
         """
-
-        pred = to_device(pred)
-        truth = to_device(truth)
 
         loss_compo = self.loss_op(pred['composition'], truth)
         loss_cover = self.loss_op(pred['coverage'], truth)

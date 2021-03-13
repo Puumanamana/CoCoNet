@@ -12,9 +12,11 @@ from itertools import chain, islice
 
 import h5py
 import numpy as np
-
+import torch
 
 KMER_CODES = {ord('A'): '00', ord('C'): '01', ord('G'): '10', ord('T'): '11'}
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 logger = logging.getLogger('<CoCoNet>')
 
 def run_if_not_exists(keys=('output',)):
@@ -248,3 +250,20 @@ def chunk(*it, size=2):
 
     it = chain(*it)
     return iter(lambda: tuple(islice(it, size)), ())
+
+
+def format_array(x):
+    """
+    Convert numpy matrix into tensor for pytorch
+    """
+    if isinstance(x, torch.Tensor):
+        return x
+    if isinstance(x, np.ndarray):
+        return torch.from_numpy(x).to(DEVICE)
+    if isinstance(x, list):
+        return [format_array(xi) for xi in x]
+    if isinstance(x, tuple):
+        return tuple(format_array(xi) for xi in x)
+    if isinstance(x, dict):
+        return {k: format_array(v) for (k, v) in x.items()}
+    raise ValueError(f"Data type not supported {type(x)}")
