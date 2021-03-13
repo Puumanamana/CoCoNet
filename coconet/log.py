@@ -10,8 +10,8 @@ import psutil
 class MemoryTracer(logging.Filter):
     """
     To track memory usage at different steps
-    Used memory is computed as the PSS of the main program 
-    + the sum of the PSS of its children. 
+    Used memory is computed as the PSS of the main program
+    + the sum of the PSS of its children.
     """
 
     def filter(self, record):
