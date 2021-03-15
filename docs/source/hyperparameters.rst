@@ -1,4 +1,4 @@
-:ref:`hyperparameters`
+.. _hyperparameters:
 
 Hyperparameters
 ---------------

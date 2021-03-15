@@ -27,7 +27,7 @@ To run CoCoNet with the default parameters, you simply need to provide the assem
    coconet --fasta scaffolds.fasta --bam cov/*.bam --output binning_results
 
 
-You can see the usage information for each subcommand by typing :code:`coconet <subcommand> -h`, where `<subcommand>` is either `preprocess`, `learn`, `cluster` or `run`. For more details about the options, see the :ref:`hyperparameters` section
+You can see the usage information for each subcommand by typing :code:`coconet <subcommand> -h`, where `<subcommand>` is either `preprocess`, `learn`, `cluster` or `run`. For more details about the options, see the :ref:`hyperparameters <hyperparameters>` section
 
 You can use the :code:`--continue` flag to resume an interrupted run. However, depending where your run was interrupted, you might have corrupted files, in
 which case you would need to either re-run from the start or delete the corrupted file.
