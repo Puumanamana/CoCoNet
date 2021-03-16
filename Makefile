@@ -1,4 +1,4 @@
-VERSION ?= 1.0.0
+VERSION ?= 1.1.0
 
 test:
 	coconet run --fasta tests/sim_data/assembly.fasta --bam tests/sim_data/*.bam --output output_test --threads 1 \
