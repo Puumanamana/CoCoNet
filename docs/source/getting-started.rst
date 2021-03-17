@@ -38,6 +38,18 @@ You can also install the most up to date version with the following command:
 
 If you encounter any issue with the development version, you should try with the latest release as the development version might not have been thoroughly checked.
 
+Install with bioconda
+^^^^^^^^^^^^^^^^^^^^^
+
+CoCoNet is available in bioconda. You will need `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ or `anaconda <https://anaconda.org/>`_ installed on your computer. CoCoNet can be installed using the following command:
+
+.. code-block:: bash
+
+    # Install in a new environment
+    conda create -n coconet -c bioconda -c conda-forge coconet-binning
+    # Switch environment
+    conda activate coconet
+
 Using Docker
 ^^^^^^^^^^^^
 
@@ -46,13 +58,4 @@ Alternatively, CoCoNet can be pulled directly from DockerHub. Assuming your cont
 .. code-block:: bash
                
     docker run -v /data:/workspace nakor/coconet coconet run --fasta contigs.fasta --bam *.bam
-
-Install with bioconda
-^^^^^^^^^^^^^^^^^^^^^
-
-CoCoNet is available in bioconda. You will need `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ or `anaconda <https://anaconda.org/>`_ installed on your computer. CoCoNet can be installed using the following command:
-
-.. code-block:: bash
-
-    conda install -c bioconda coconet-binning              
 
