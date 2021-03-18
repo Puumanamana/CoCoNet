@@ -29,10 +29,10 @@ setup(name='coconet-binning',
           'scikit-learn',
           'scipy',
           'scikit-bio >=0.5.6',
-          'torch>=1.0',
+          'torch >=1.0',
           'Biopython',
-          'python-igraph>=0.8',
-          'pysam>=0.16',
+          'python-igraph >=0.8',
+          'pysam',
           'pybind11',
           'hnswlib'
       ])
