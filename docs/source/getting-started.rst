@@ -7,13 +7,15 @@ Pre-requisites
 CoCoNet was tested on both MacOS and Ubuntu 18.04.
 To install and run CoCoNet, you will need:
 
-#. `python` (>=3.5)
+#. `python` (>=3.5, recommended: 3.7)
 #. `pip3`, the python package manager or the `conda` installer.
-   
+
+If you encounter any issue during the installation, you should retry in a fresh environment (with conda or virtualenv) with the recommended python version (3.7).
+
 Install the latest release on PyPi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can install CoCoNet, from the `Python Package Index <https://pypi.org/project/coconet-binning/>`_. To install it, you simply need to run the following command (you can omit --user if you're working in a vitualenv):
+You can install CoCoNet, from the `Python Package Index <https://pypi.org/project/coconet-binning/>`_. To install it, you simply need to run the following command (you can omit --user if you're working in a virtual environment).
 
 .. code-block:: bash
 
