@@ -12,10 +12,9 @@ CoCoNet documentation
 .. image:: https://anaconda.org/bioconda/coconet-binning/badges/version.svg
     :target: https://anaconda.org/bioconda/coconet-binning
 
-Citation (Work in progress)
+Citation
 ---------------------------
-Arisdakessian C., Nigro O., Steward G., Poisson G., Belcaid M.
-CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning
+Cédric G Arisdakessian, Olivia Nigro, Grieg Steward, Guylaine Poisson, Mahdi Belcaid, CoCoNet: An Efficient Deep Learning Tool for Viral Metagenome Binning, Bioinformatics, 2021;, btab213, https://doi.org/10.1093/bioinformatics/btab213
 
 Description
 -----------
