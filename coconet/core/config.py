@@ -76,6 +76,8 @@ class Configuration:
         """
 
         if name == 'fasta':
+            if val is None:
+                return
             filepath = Path(val)
             if filepath.suffix not in ['.fa', '.fasta', '.fna']:
                 self.log(f'Unknown file extension: {filepath.suffix}', 'critical')
@@ -119,15 +121,12 @@ class Configuration:
             repr={feature: f'latent-{feature}.h5' for feature in self.features}
         )
 
-        # if coverage_h5 already exists, copy it to the output folder
+        # check if coverage_h5 already exists. If yes, copy it to the output folder
         if 'h5' in self.io:
             src = Path(self.io['h5'])
             dest = Path(self.io['output'], output_files['h5'])
 
-            if not src.is_file() and 'bam' not in self.io:
-                self.log('Could not find any coverage files', 'critical')
-
-            elif not dest.is_file():
+            if not dest.is_file() and src.is_file():
                 shutil.copy(str(src), str(dest))
 
         if hasattr(self, 'theta'):
@@ -195,13 +194,14 @@ class Configuration:
         Return input shapes for neural network
         """
 
-        with h5py.File(self.io['h5'], 'r') as handle:
-            n_samples = handle.get(list(handle.keys())[0]).shape[0]
+        input_shapes = dict(composition=kmer_count(self.kmer, rc=not self.no_rc))
 
-        input_shapes = {
-            'composition': kmer_count(self.kmer, rc=not self.no_rc),
-            'coverage': (ceil((self.fragment_length-self.wsize+1) / self.wstep), n_samples)
-        }
+        if 'coverage' in self.features:
+            with h5py.File(self.io['h5'], 'r') as handle:
+                a_contig = next(iter(handle.keys()))
+                n_samples = handle.get(a_contig).shape[0]
+            feature_len =  ceil((self.fragment_length-self.wsize+1) / self.wstep)
+            input_shapes['coverage'] = (feature_len, n_samples)
 
         return input_shapes.get(''.join(self.features), input_shapes)
 
@@ -221,61 +221,59 @@ class Configuration:
 
         return architecture.get(''.join(self.features), architecture)
 
-    def get_composition_feature(self):
+    def get_composition_feature(self, latent=False):
         """
         Make CompositionFeature object
         """
 
         composition = CompositionFeature(
-            path=dict(fasta=self.io['fasta'],
-                      filt_fasta=self.io['filt_fasta'],
-                      latent=self.io['repr'].get('composition', None))
+            path=dict(fasta=self.io.get('fasta'),
+                      filt_fasta=self.io.get('filt_fasta'),
+                      latent=self.io['repr'].get('composition'))
         )
-        if not composition.check_paths():
-            self.log(
-                ('Could not find the .fasta file. '
-                 'Did you run coconet preprocess with the --fasta flag?'),
-                'error'
-            )
+
+        if latent and not composition.check_h5('latent'):
+            self.log(f'Could not open latent composition file.', 'critical')
+        else:
+            if not (composition.check_file('fasta') or composition.check_file('filt_fasta')):
+                self.log(f'Could not open composition files', 'critical')
 
         return composition
 
-    def get_coverage_feature(self):
+    def get_coverage_feature(self, latent=False):
         """
         Make CoverageFeature object
         """
 
         coverage = CoverageFeature(
-            path=dict(bam=self.io.get('bam', None),
-                      h5=self.io.get('h5', None),
-                      latent=self.io['repr'].get('coverage', None))
+            path=dict(bam=self.io.get('bam'),
+                      h5=self.io.get('h5'),
+                      latent=self.io['repr'].get('coverage'))
         )
 
-        if not coverage.check_paths():
-            self.log(
-                ('Could not find the coverage information. '
-                 'Did you run coconet with the --bam flag?'),
-                'critical'
-            )
-            raise FileNotFoundError
+        if latent and not coverage.check_h5('latent'):
+            self.log(f'Could not open latent coverage file', 'critical')
+        else:
+            if not (coverage.check_h5('h5') or coverage.check_bam('bam')):
+                self.log(f'Could not open coverage files', 'critical')
         return coverage
 
-    def get_features(self):
+    def get_features(self, latent=False):
         """
         Extract all features from self.features
         """
 
         features = []
         if 'coverage' in self.features:
-            features.append(self.get_coverage_feature())
+            features.append(self.get_coverage_feature(latent=latent))
         if 'composition' in self.features:
-            features.append(self.get_composition_feature())
+            features.append(self.get_composition_feature(latent=latent))
 
         return features
 
 def path_to_str(obj):
     if isinstance(obj, Path):
-        return str(Path)
+        return str(obj)
     if isinstance(obj, list):
         return [path_to_str(x) for x in obj]
     if isinstance(obj, dict):

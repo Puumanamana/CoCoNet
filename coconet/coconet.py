@@ -88,7 +88,7 @@ def preprocess(cfg):
     logger.info((f'Complete contigs filtering (DTR > {cfg.min_dtr_size} bp) -> '
                  f'{n_ctg} contigs remaining'))
 
-    if 'bam' in cfg.io or cfg.io['h5'].is_file():
+    if 'coverage' in cfg.features:
         coverage = cfg.get_coverage_feature()
 
     indent = ' ' * 46 # For logging multiline-formatting
@@ -207,21 +207,6 @@ def learn(cfg):
     if 'coverage' in cfg.features:
         inputs['coverage'] = cfg.io['h5']
 
-    for (key, path) in inputs.items():
-        if not path.is_file():
-            logger.critical((
-                f'{key} file not found at {path}. '
-                'Did you run the preprocessing step with the {key} file?'
-            ))
-            raise FileNotFoundError
-
-    if not all(f.is_file() for f in cfg.io['pairs'].values()):
-        logger.critical(
-            (f'Train/test sets not found in {cfg.io["output"]}.'
-             'Did you delete the pair files?')
-        )
-        raise FileNotFoundError
-
     logger.info((
         f'Parameters: batch size={cfg.batch_size}, learning rate={cfg.learning_rate}, '
         f'patience={cfg.patience}, kmer size={cfg.kmer}, canonical={not cfg.no_rc}, '
@@ -289,14 +274,8 @@ def cluster(cfg):
     full_cfg = Configuration.from_yaml('{}/config.yaml'.format(cfg.io['output']))
     model = load_model(full_cfg, from_checkpoint=True)
 
-    if not all(x.is_file() for x in cfg.io['repr'].values()):
-        logger.critical((
-            f'Could not find the latent representations in {cfg.io["output"]}. '
-            'Did you run coconet learn before?'
-        ))
-        raise FileNotFoundError
-
-    latent_vectors = [(feature.name, feature.get_h5_data()) for feature in cfg.get_features()]
+    latent_vectors = [(feature.name, feature.get_h5_data())
+                      for feature in cfg.get_features(latent=True)]
 
     logger.info('Pre-clustering contigs')
     logger.info((

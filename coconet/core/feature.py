@@ -2,9 +2,11 @@
 Abstract feature class
 """
 
+from pathlib import Path
 import logging
 import h5py
 import numpy as np
+import pysam
 
 
 logger = logging.getLogger('<preprocessing>')
@@ -34,12 +36,34 @@ class Feature:
         ]
         return '\n'.join(msg)
 
-    def check_paths(self):
-        for p in self.path.values():
-            if isinstance(p, list):
-                return all(pi.is_file() for pi in p)
-            if p is not None and p.is_file():
-                return True
+    def check_file(self, key):
+        if key not in self.path:
+            return False
+        try:
+            open(self.path[key])
+        except (IOError, TypeError):
+            return False
+        return True
+    
+    def check_h5(self, key):
+        if self.check_file(key):
+            try:
+                ids = next(iter(h5py.File(self.path[key])))
+            except (OSError, UnicodeDecodeError, StopIteration):
+                return False
+            return True
+        return False
+
+    def check_bam(self, key):
+        if self.path.get(key) is None:
+            return False
+        for bam in self.path[key]:
+            try:
+                pysam.AlignmentFile(bam, 'rb').check_index()
+            except (IOError, ValueError):
+                return False
+            return True
+        return False
 
     def synchronize(self, other, keys):
         contigs_1 = self.get_contigs(keys[0])
