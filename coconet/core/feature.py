@@ -2,7 +2,6 @@
 Abstract feature class
 """
 
-from pathlib import Path
 import logging
 import h5py
 import numpy as np
@@ -44,11 +43,11 @@ class Feature:
         except (IOError, TypeError):
             return False
         return True
-    
+
     def check_h5(self, key):
         if self.check_file(key):
             try:
-                ids = next(iter(h5py.File(self.path[key])))
+                next(iter(h5py.File(self.path[key])))
             except (OSError, UnicodeDecodeError, StopIteration):
                 return False
             return True
