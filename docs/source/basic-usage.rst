@@ -24,7 +24,7 @@ To run CoCoNet with the default parameters, you simply need to provide the assem
 
 .. code-block:: bash
 
-   coconet --fasta scaffolds.fasta --bam cov/*.bam --output binning_results
+   coconet run --fasta scaffolds.fasta --bam cov/*.bam --output binning_results
 
 
 You can see the usage information for each subcommand by typing :code:`coconet <subcommand> -h`, where `<subcommand>` is either `preprocess`, `learn`, `cluster` or `run`. For more details about the options, see the :ref:`hyperparameters <hyperparameters>` section
